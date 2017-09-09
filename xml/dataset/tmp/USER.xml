@@ -1,0 +1,164 @@
+<data_set_category name="USER"
+	description="User Setup"
+	windowTitle="User Setup"
+	entityName="User"
+	icon="user"
+	screenWidth="600"
+	screenHeight="370"
+    objectType="User"
+    extends="COMMON_UTILS, DOC_DATA">
+
+    <parameters>
+        <parameter name="setPassword" description="" type="Component" noSerialization="yes">
+			<attribute name="componentClass">"axiomsl.gui.user_management.PasswordButton"</attribute>
+		</parameter>
+
+        <parameter name="fullName" description="Full Name" group="Parameters" type="String"
+		           defaultValue="" length="20">
+        </parameter>
+
+        <parameter name="email" description="E-mail" group="Parameters" type="String"
+		           defaultValue="" length="20">
+        </parameter>
+
+        <parameter name="group" description="User Group"
+                   group="Parameters" type="String" defaultValue="" length="20">
+            <choices>
+                   var sources = editor.getRemoteProxy().lookupObjects("UserGroup");
+            </choices>
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+        </parameter>
+        <parameter name="dbUserGroup" description="DB User Group"
+                   group="Parameters" type="String" defaultValue="" length="20">
+            <choices>
+                var sources = editor.getRemoteProxy().lookupObjects("DBUserGroup");
+                sources.remove(new("axiomsl.util.basic.NameDescriptionObject", "SYSTEM", l("System DB User Group").toString()));
+                ;sources
+            </choices>
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+        </parameter>
+        <parameter name="accountIsActive" description="Active" group="Parameters" type="boolean"
+                   defaultValue="true">
+        </parameter>
+        <parameter name="canChangePassword" description="Can Change Password" group="Parameters"
+                   type="boolean" defaultValue="true">
+        </parameter>
+        <parameter name="daysPasswordValid" description="Days Password Valid" type="Integer"
+                   length="10">
+		</parameter>
+        <parameter name="allowedNumberOfLoginAttempts" description="Number Of Attempts" type="Integer"
+                   defaultValue="99" length="10">
+		</parameter>
+        <parameter name="forceAxiomAuthentication" description="Do not use external authentication" type="boolean"
+                   defaultValue="false">
+		</parameter>
+        <parameter name="nameForExternalAuthentication" description="User Name for External Authentication" group="Parameters" type="String"
+		           defaultValue="" length="20">
+            <if>param("forceAxiomAuthentication")
+                <then><removed/></then>
+                <else><enabled/></else>
+            </if>
+        </parameter>
+        <parameter name="nameForSSOLogin" description="User Name for SSO" group="Parameters" type="String"
+                   defaultValue="" length="20">
+            <verifyForSave>
+                var userNames = editor.getRemoteProxy().lookupObjects("User");
+                var newValue = param("nameForSSOLogin");
+                var name = editor.getDataSetName();
+                <if>!newValue.equals("")
+                    <then>
+                        <for>var index = 0<comma/>index &lt; userNames.size()<comma/>index++
+                            <do>
+                                var userObject = editor.locateObjectByName("User", userNames.get(index).getName());
+                                var ssoName = userObject.getOptionalValue("nameForSSOLogin","");
+                                <if>!ssoName.equals("") and !name.equals(userNames.get(index).getName()) and ssoName.equals(newValue)
+                                    <then>
+                                        errorMessage(l("There is user with same SSO Name"));
+                                        return false;
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+                    </then>
+                </if>
+                ;true
+            </verifyForSave>
+        </parameter>
+    </parameters>
+    <loadCode>
+        var user_load = <originalAxiom/>;
+
+        param("fullName") = user_load.getProperty("fullName");
+        param("email") = user_load.getProperty("email");
+        param("group") = user_load.getReference("group").getTargetObjectNativeName();
+        param("dbUserGroup") = user_load.getReference("dbUserGroup").getTargetObjectNativeName();
+        param("accountIsActive") = user_load.getProperty("accountIsActive");
+        param("canChangePassword") = user_load.getProperty("canChangePassword");
+        param("daysPasswordValid") = user_load.getProperty("daysPasswordValid");
+        param("allowedNumberOfLoginAttempts") = user_load.getProperty("allowedNumberOfLoginAttempts");
+        param("forceAxiomAuthentication") = user_load.getProperty("forceAxiomAuthentication");
+        param("nameForExternalAuthentication") = user_load.getOptionalValue("nameForExternalAuthentication", "");
+        param("nameForSSOLogin") = user_load.getOptionalValue("nameForSSOLogin", "");
+
+    </loadCode>
+    <saveCode>
+        var user_save = <axiomForSave/>;
+
+        user_save.setProperty("fullName", param("fullName"));
+        user_save.setProperty("email", param("email"));
+        user_save.setProperty("group", user_save.createReferencePropertyValue("UserGroup", param("group")));
+        user_save.setProperty("dbUserGroup", user_save.createReferencePropertyValue("DBUserGroup", param("dbUserGroup")));
+        user_save.setProperty("accountIsActive", param("accountIsActive"));
+        user_save.setProperty("canChangePassword", param("canChangePassword"));
+        user_save.setProperty("daysPasswordValid", param("daysPasswordValid"));
+        user_save.setProperty("allowedNumberOfLoginAttempts", param("allowedNumberOfLoginAttempts"));
+        user_save.setProperty("forceAxiomAuthentication", param("forceAxiomAuthentication"));
+        var nameForExternalAuthentication = param("nameForExternalAuthentication");
+        <if>nameForExternalAuthentication != null and !nameForExternalAuthentication.equals("")
+            <then>
+                user_save.setProperty("nameForExternalAuthentication", nameForExternalAuthentication);
+            </then>
+        </if>
+        var nameForSSOLogin = param("nameForSSOLogin");
+        <if> operationType == editor.getManager().SAVE_AS
+            <then>
+                var userNames = editor.getRemoteProxy().lookupObjects("User");
+                var newValue = nameForSSOLogin;
+                <if>!newValue.equals("")
+                    <then>
+                        <for>var index = 0<comma/>index &lt; userNames.size()<comma/>index++
+                            <do>
+                                var userObject = editor.locateObjectByName("User", userNames.get(index).getName());
+                                var ssoName = userObject.getOptionalValue("nameForSSOLogin","");
+                                <if>!ssoName.equals("") and  and ssoName.equals(newValue)
+                                    <then>
+                                        errorMessage(l("There is user with same SSO Name, SSO Name will be reset"));
+                                        nameForSSOLogin = "";
+                                        param("nameForSSOLogin")="";
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+                    </then>
+                </if>
+            </then>
+        </if>
+        <if>nameForSSOLogin != null and !nameForSSOLogin.equals("")
+            <then>
+                user_save.setProperty("nameForSSOLogin", nameForSSOLogin);
+            </then>
+        </if>
+
+    </saveCode>
+    <afterSave>
+	<if> operationType != editor.getManager().SAVE_EXISTING &amp;&amp; (dataSet.isNew() || !dataSet.isOverwriteOnSave()) &amp;&amp; (param("forceAxiomAuthentication") || editor.getRemoteProxy().getServerProxy().getServerSystemProperty("axiom.externallogin.class")== null) 
+		<then>
+			new("axiomsl.gui.user_management.Password",editor,dataSetName,l("Set password for %1",dataSetName),true);
+		</then>
+	</if>
+    </afterSave>
+    </data_set_category>

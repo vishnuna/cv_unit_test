@@ -1,0 +1,282 @@
+<data_set_category name="MODEL_DATES"
+        extendsBefore="STREAMS">
+<!--this is used in model based reports-->
+    <events>
+        <event name="dmis_date">
+            <filter property="eventType" value="AXIOM_OBJECT_UPDATE_EVENT"/>
+            <filter property="objectType" value="DataModelInstances"/>
+        </event>
+    </events>
+
+    <parameters>
+
+
+        <parameter name="modelDates" description="Model Dates" keyParameter="modelName" type="table" group="Dates/Streams for Preview" fixedLength="true" allowAddRemove="false" reorder="false" allowCopyPaste="false">
+            <parameter name="modelName" description="Model Name" type="string" freehand="no">
+                <readonly/>
+            </parameter>
+
+            <parameter name="modelDate" description="Model Instance" type="axiomsl.util.dynamicparameters.InstanceSpecWrapper" noValidationAgainstChoices="true" noTypeConversions="true" defaultValue="Please select">
+                <attribute name="freehandLookup">
+                    var parameters = list();
+                    var modelName = param("modelName");
+                    parameters.add(ndo("modelReference", l("Reference to %1 model", modelName).toString()));
+                    parameters.add(ndo("ASOF_DATE", l("ASOF_DATE")));
+                    parameters.add(ndo("@USER_NAME", l("@USER_NAME")));
+                    parameters.add(ndo("@BRANCH_ID", l("@BRANCH_ID")));
+                    parameters.add(ndo("@PROJECT_ID", l("@PROJECT_ID")));
+                    parameters.add(ndo("@BRANCH_NAME", l("@BRANCH_NAME")));
+                    parameters.add(ndo("@PROJECT_NAME", l("@PROJECT_NAME")));
+
+                    new("axiomsl.util.ui.NamedList", "Parameters", l("Parameters"), parameters)
+                    macro("sqlMacros"),
+                    macro("axiomExpressionLanguage"),
+                    macro("userDefinedFunctions");
+                </attribute>
+                <onParameterChange>
+                    macro("modelDateChanged", param("modelName"));
+                </onParameterChange>
+
+                <default>"Please Select"</default>;
+
+                <if> event("dmis_date") != null
+                    <then>
+                        <!--This should be done more elegantly, the current implementation does not work for soft DMs and  leads to overwrite valid values .-->
+                        <!--var previousRRP = editor.getRrp();-->
+                        <!--<if> previousRRP == null-->
+                            <!--<then>-->
+                                <!--editor.setRrp(class("axiomsl.server.object_framework.ObjectProxiesUtils").createRrp(param("asOfDate"), null, editor.getAxiomObjectManager()));-->
+                            <!--</then>-->
+                        <!--</if>-->
+                        <if> event("dmis_date").getDbId() == editor.resolveObjectIdIfExists("DataModelInstances", <currentParameters/>.getID()) and !currentParameter.m_PlugIn.isFreehandMode() <!-- data model id -->
+                            <then>
+                                var dates = usableSpecsDates("DataModel", param("modelName"));
+                                <choices> dates </choices>
+                            </then>
+                        </if>
+                        <!--editor.setRrp(previousRRP);-->
+                    </then>
+                    <else>
+                        <!--var previousRRP = editor.getRrp();-->
+                        <!--<if> previousRRP == null-->
+                            <!--<then>-->
+                                <!--editor.setRrp(class("axiomsl.server.object_framework.ObjectProxiesUtils").createRrp(param("asOfDate"), null, editor.getAxiomObjectManager()));-->
+                            <!--</then>-->
+                        <!--</if>-->
+                        var dates = usableSpecsDates("DataModel", param("modelName"));
+                        <!--editor.setRrp(previousRRP);-->
+                        <choices> dates </choices>;
+
+                        <if> currentParameter != null and currentParameter.m_PlugIn != null and currentParameter.m_PlugIn.isFreehandMode()
+                            <then>
+                                <equals> param("modelName"); param("asOfDate"); param("streams"); param("modelDate")</equals>
+                            </then>
+                            <else>
+                                var curPar = currentParameter;
+                                <if> curPar != null AND
+                                    curPar.getValue() != null AND
+                                    curPar.getValue().getSelection() instanceof "axiomsl.util.dynamicparameters.InstanceSpecWrapper" AND
+                                    "ALL INSTANCES".equals(curPar.getValue().getSelection().toString())
+                                    <else>
+                                        <!--equals() only works for dependency update, not for deserialization-->
+                                        var matchingInst = function("axiomsl.util.dynamicparameters.InstanceSpecWrapper", "getMatchingInstance", param("asOfDate"), null, param("streams"), dates);
+                                        <if> matchingInst != null
+                                            <then>
+                                                <equals> param("modelName"); param("asOfDate"); param("streams"); matchingInst</equals>
+                                            </then>
+                                            <else>
+                                                <equals> param("modelName"); param("asOfDate"); param("streams"); "Please Select"</equals>
+                                            </else>
+                                        </if>
+                                    </else>
+                                </if>
+                            </else>
+                        </if>
+                    </else>
+                </if>
+
+                <verifyForSave>
+                    <if> operationType == editor.getManager().GENERATE and currentParameter != null and currentParameter.m_PlugIn != null and !currentParameter.m_PlugIn.isFreehandMode() <!-- tabular report preview -->
+                        <then>
+                           var date = param("modelDate");
+                           <if> ! (date instanceof "axiomsl.util.dynamicparameters.InstanceSpecWrapper") or !date.isRealSpec()
+                                <then>
+                                    errorMessage(l("Please select a valid instance for Data Model '%1'", param("modelName")));
+                                    return false
+                                </then>
+                            </if>
+                        </then>
+                        <else>
+                            <if> currentParameter != null and currentParameter.m_PlugIn != null and currentParameter.m_PlugIn.isFreehandMode()
+                                <then>
+                                    macro("verifyNonEmpty");
+                                </then>
+                            </if>
+                        </else>
+                    </if>
+                    ;true
+                </verifyForSave>
+            </parameter>
+
+
+            <!--dependency on models-->
+            <if> updateInfo.isDependencyUpdate
+                <then>
+                    <equals>
+                        <!-- the code to match new layout to old values -->
+                        var prevConfig = param("modelDates");
+                        var newModelDates = list();
+                        var newModels = param("models");
+                        <for> var i = 0 <comma/> i &lt; newModels.size() <comma/> i++
+                            <do>
+                                var row = tableRow();
+                                row.setID(newModels.get(i).getID());
+                                row.param("modelName") = newModels.get(i).param("name");
+                                var orig = null;
+                                <if> prevConfig != null
+                                    <then>
+                                        <for> var j = 0 <comma/> j &lt; prevConfig.size() <comma/> j++
+                                            <do>
+                                                <if> prevConfig.get(j).param("modelName") == row.param("modelName")
+                                                    <then>
+                                                        orig = prevConfig.get(j);
+                                                        break;
+                                                    </then>
+                                                </if>
+                                            </do>
+                                        </for>
+                                    </then>
+                                </if>
+                                trace("name " + row.param("modelName"));
+                                var dates = usableSpecsDates("DataModel", row.param("modelName"));;
+                                var date;
+                                <if> orig != null
+                                    <then>
+                                        date = orig.param("modelDate");
+                                    </then>
+                                    <else>
+                                        date = function("axiomsl.util.dynamicparameters.InstanceSpecWrapper", "getMatchingInstance", param("asOfDate"), null, param("streams"), dates);
+                                    </else>
+                                </if>
+                                trace("date " + date);
+                                <if> date == null
+                                    <then>
+                                        date = "Please Select";
+                                    </then>
+                                </if>
+                                row.param("modelDate") = date;
+                                newModelDates.add(row);
+                            </do>
+                        </for>
+                        return newModelDates;
+                    </equals>
+                </then>
+            </if>
+
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        var dates = <originalAxiom/>.getProperty("modelDates");
+        var modelDates = new("java.util.HashMap");
+        <for> var i = 0
+                <comma/>
+                i &lt; dates.size()
+                <comma/> i++
+           <do>
+               var name = dates.get(i).getReference("dataModel").getTargetObjectName(dataSet.getRouteFromCurrentBranch());
+               modelDates.put(name, dates.get(i).getObject("instanceDateAndKeysValues"));
+            </do>
+        </for>
+
+        <!--deserialization in empty case-->
+        param("modelDates");
+        
+        <for> var i = 0
+                <comma/>
+                i &lt; param("models").size()
+                <comma/> i++
+           <do>
+               var model = param("models").get(i);
+               var dateRow = param("modelDates").addLine();
+               dateRow.setID(model.getID());
+               <if> modelDates.containsKey(model.param("name"))
+                   <then>
+                       var instanceDateAndKeysValues = modelDates.get(model.param("name"));
+                       <if> instanceDateAndKeysValues.propertyIsSet("instanceDate") and instanceDateAndKeysValues.propertyIsFreehand("instanceDate");
+                           <then>
+                               dateRow.param("modelDate") = new("axiomsl.server.object_framework.FreehandPropertyValue", instanceDateAndKeysValues.getFreehand("instanceDate"));
+                           </then>
+                           <else>
+                               dateRow.param("modelDate") = new("axiomsl.util.dynamicparameters.InstanceSpecWrapper", instanceDateAndKeysValues, editor.getAxiomEnvironment());
+                           </else>
+                       </if>
+                   </then>
+                   <else>
+                       dateRow.param("modelDate") = "Please Select";
+                   </else>
+               </if>
+               dateRow.param("modelName") = model.param("name");
+            </do>
+        </for>
+    </loadCode>
+
+    <saveCode>
+        <if>
+            dataSet.isSaveAsIs()
+            <then>
+                <!--converter - preserve model dates-->
+                <if> dataSet.getAxiomObject() != null
+                    <then>
+                        <axiomForSave/>.setProperty("modelDates", dataSet.getAxiomObject().getProperty("modelDates").cloneTo(<axiomForSave/>));
+                    </then>
+                </if>
+            </then>
+            <else>
+                var dates = <axiomForSave/>.createTablePropertyValue();
+                <axiomForSave/>.setProperty("modelDates", dates);
+                <for> var i = 0
+                        <comma/>
+                        i &lt; param("modelDates").size()
+                        <comma/> i++
+                   <do>
+                       var row = param("modelDates").get(i);
+                       <if> row.param("modelDate") instanceof "axiomsl.util.dynamicparameters.InstanceSpecWrapper"
+                           <then>
+                               var dateRow = dates.addRow("ModelBasedReport:modelDate");
+                               row.param("modelDate").copyPropertiesTo(dateRow.getObject("instanceDateAndKeysValues"));
+                               var modelName = row.param("modelName");
+                               dateRow.setProperty("dataModel", dateRow.createReferencePropertyValue("DataModel", if(operationType == editor.getManager().SAVE_EXISTING, dataSet.subtractRouteFromCurrentBranch(modelName), modelName)));<!-- subtract route for saving free form adjustments (save into orig branch) -->
+                           </then>
+                       </if>
+                       <if> row.param("modelDate") instanceof "axiomsl.server.object_framework.FreehandPropertyValue"
+                           <then>
+                               var dateRow = dates.addRow("ModelBasedReport:modelDate");
+                               var modelName = row.param("modelName");
+                               var modelRef = dateRow.createReferencePropertyValue("DataModel", if(operationType == editor.getManager().SAVE_EXISTING, dataSet.subtractRouteFromCurrentBranch(modelName), modelName));<!-- subtract route for saving free form adjustments (save into orig branch) -->
+                               dateRow.setProperty("dataModel", modelRef);
+                               var instanceDateAndKeysValues = dateRow.createObjectPropertyValue("InstanceDateAndKeysValues");
+                               dateRow.setProperty("instanceDateAndKeysValues", instanceDateAndKeysValues);
+                               <if> operationType == editor.getManager().GENERATE  <!-- tabular report preview -->
+                                   <then>
+                                       var specDates = usableSpecsDates("DataModel", modelName);
+                                       var modelDate = function("axiomsl.util.dynamicparameters.InstanceSpecWrapper", "evaluateModelDateFreehand", manager, axiomEnvironment, currentBranch, modelRef, param("parameterValuesForPreview"), param("asOfDate"), row.param("modelDate"), specDates);
+                                       modelDate.copyPropertiesTo(dateRow.getObject("instanceDateAndKeysValues"));
+                                   </then>
+                                   <else>
+                                       instanceDateAndKeysValues.setProperty("instanceDate", row.param("modelDate"));
+                                   </else>
+                               </if>
+                           </then>
+                       </if>
+                    </do>
+                </for>
+            </else>
+        </if>
+    </saveCode>
+
+    <macros>
+        <!--to be overriden-->
+        <macro name="modelDateChanged" arguments="modelName"/>
+    </macros>
+</data_set_category>

@@ -1,0 +1,112 @@
+<data_set_category name="ARCHIVE_FREQUENCY_DEFAULTS"
+                   description="Archive Frequency Defaults"
+                   windowTitle="Archive Frequency Defaults Setup"
+                   entityName="Archive Frequency Defaults"
+                   icon="image.reports"
+                   windowIcon="windowicon.branch"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="ArchiveFrequencyDefaults"
+                   singleDataSet="ArchiveFrequencyDefaults"
+                   fixedNameMode="true">
+
+    <parameters>
+        <parameter name="frequencies" description="Category Frequency" type="table" keyParameter="name" length="7" reorder="false" allowAddRemove="false">
+            <parameter name="name" description="Name" type="string">
+                <readonly/>
+            </parameter>
+            
+            <parameter name="archiveAfter" description="Archive After" type="integer">
+                <validation>
+                   return macro("isPositiveOrZero", "Archive After", newValue);
+                </validation>
+            </parameter>
+            
+            <parameter name="deleteAfter" description="Delete After" type="integer">
+                <validation>
+                    return macro("isPositiveOrZero", "Delete After", newValue);
+                </validation>
+            </parameter>
+
+            <parameter name="signOffArchiveAfter" description="Sign Off Archive After" type="integer">
+                <validation>
+                   return macro("isPositiveOrZero", "Sign Off Archive After", newValue);
+                </validation>
+            </parameter>
+        </parameter>
+    </parameters>
+                                                
+    <newCode>
+        var row;
+
+        row = param("frequencies").addLine();
+        row.param("name") = "daily";
+        row.param("archiveAfter") = 7;
+        row.param("deleteAfter") = 31;
+        row.param("signOffArchiveAfter") = 7;
+
+        row = param("frequencies").addLine();
+        row.param("name") = "weekly";
+        row.param("archiveAfter") = 31;
+        row.param("deleteAfter") = 120;
+        row.param("signOffArchiveAfter") = 31;
+
+        row = param("frequencies").addLine();
+        row.param("name") = "monthly";
+        row.param("archiveAfter") = 120;
+        row.param("deleteAfter") = 365;
+        row.param("signOffArchiveAfter") = 120;
+
+        row = param("frequencies").addLine();
+        row.param("name") = "quarterly";
+        row.param("archiveAfter") = 365;
+        row.param("deleteAfter") = 730;
+        row.param("signOffArchiveAfter") = 365;
+
+        row = param("frequencies").addLine();
+        row.param("name") = "semiAnnually";
+        row.param("archiveAfter") = 730;
+        row.param("deleteAfter") = 1460;
+        row.param("signOffArchiveAfter") = 730;
+
+        row = param("frequencies").addLine();
+        row.param("name") = "annually";
+        row.param("archiveAfter") = 1460;
+        row.param("deleteAfter") = 2520;
+        row.param("signOffArchiveAfter") = 1460;
+
+        row = param("frequencies").addLine();
+        row.param("name") = "intraDay";
+        row.param("archiveAfter") = 3;
+        row.param("deleteAfter") = 14;
+        row.param("signOffArchiveAfter") = 3;
+
+    </newCode>
+
+    <loadCode>
+        var route = dataSet.getRouteFromCurrentBranch();
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(<originalAxiom/>, currentParameters, array("frequencies"), route);
+    </loadCode>
+
+    <saveCode>
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(<axiomForSave/>, currentParameters, array("frequencies"), route);
+    </saveCode>
+    <macros>
+         <macro name="isPositiveOrZero" arguments="name, value">
+            trace(<value/> +"=======================");
+               <if> <value/> &lt; 0
+                   <then>
+                       trace('true');
+                       errorMessage(l("Parameter '%1' should be positive or zero.", <name/>));
+                       return false;
+                   </then>
+                   <else>
+                       return true;
+                   </else>
+               </if>
+          </macro>
+    </macros>
+</data_set_category>

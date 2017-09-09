@@ -1,0 +1,26 @@
+<metadata>
+	<object type="Branch" extends="GlobalObject, DocData" version="4" downgraderClass="axiomsl.metadata_downgraders.BranchDowngrader">
+		<!-- projectId in essence is a root id of the branch -->
+		<property name="projectId" valueType="string"/>
+		<!-- no direct link to project to prevent circular dependencies, plus we don't need one anyway -->
+		<property name="dependencies" valueType="table" rowTypes="Branch:dependency" essential="true"/>
+		<property name="isFrozen" valueType="boolean" optional="true"/>
+
+        <!--id of the Groups:node to which the branch belongs, if any-->
+        <property name="groupNodeId" valueType="string" optional="true"/>
+
+        <property name="defaultDBSource" valueType="url" targetObjectType="DBSource" optional="true"/>
+        <property name="hideSystemObjects" valueType="boolean" optional="true"/>
+
+        <!-- branch contains taxonomy or taxonomy mapping objects, or is an generic branch-->
+        <property name="branchType" valueType="string" choices="GENERIC, TAXONOMY, TAXONOMY_MAPPING" optional="true" />
+	</object>
+	<object type="Branch:dependency" extends="ReferencibleSubobject" version="2">
+		<!-- dependency alias is its name -->
+
+        <!--allow reference to itself-->
+        <property name="branch" valueType="url" urlStructure="Branch[this], Branch[*]" targetObjectType="Branch" essential="true"/>
+
+        <property name="branchExpression" valueType="string" optional="true"/>
+	</object>
+</metadata>

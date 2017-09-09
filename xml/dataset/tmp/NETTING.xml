@@ -1,0 +1,886 @@
+<data_set_category name="NETTING" description="Netting Setup" windowTitle="Netting Setup" entityName="Netting" icon="netting" screenWidth="800" screenHeight="500" objectType="Netting" extends="ARCHIVAL_PROPERTIES, COMMON_UTILS, MAPPING, DOC_DATA, FREEZE_PROPERTIES">
+	<parameters>
+        <macro name="modelParameter"/>
+
+        <parameter name="requiresAllModels" description="Requires all models for execution" group="Models" type="Boolean" optional="true" defaultValue="true"/>
+
+		<parameter name="details" description="Details" type="table" length="7" group="Details" keyParameter="name" compareByID="true">
+			<parameter name="name" description="Detail Name" type="String" length="20">
+				<attribute name="lookupFromFieldList"> l("Select Detail") <comma/>
+
+                    editor.getRemoteProxy().lookupFieldsInModelsAsStrings(macro("getResolvedModels"), editor.getBranchId());                       
+                </attribute>
+				<convertInputValue>                    
+                    inputValue.get(1);
+                </convertInputValue>
+				<validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("calcFields"), param("sorting")));
+                </validation>
+				<verifyForSave>
+
+                    var name = currentParameter.getParameterValue();
+
+                    var instanceKeysNames = macro("instanceKeysNames");
+
+                    <if> instanceKeysNames.contains(name)
+                        <then>
+                            errorMessage(l("Detail %1 column name is already defined among instance key fields. Please rename it.",
+                            name));
+                            return false;
+                        </then>
+                    </if>
+
+                    macro("verifyNonEmpty");
+				</verifyForSave>
+				<onParameterChange>
+                    macro("onFieldNameChange", null, "detailGroup");
+                </onParameterChange>
+			</parameter>
+			<parameter name="description" description="Detail Description" type="String" wrapOnReport="true"/>
+			<confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("calcFields"), param("sorting")));
+            </confirmAddRow>
+            <onRowAdded>
+                macro("onFieldRowAdded", null, "detailGroup");
+            </onRowAdded>
+            <onRowDeleted>
+                macro("onFieldRowDeleted", "detailGroup");
+            </onRowDeleted>
+            <onRowMoved>
+                macro("onFieldRowMoved", null, "detailGroup");
+            </onRowMoved>
+            <parameter name="isExactMatch" description="Exact Match" type="boolean" defaultValue="false"/>
+        </parameter>
+		<parameter name="calcFields" description="Calculated Fields" type="table" length="7" group="Calculated Fields" keyParameter="name" tableTransposed="true" compareByID="true">
+			<parameter name="name" description="Calculated Field Name" type="string" length="20">
+				<attribute name="lookupFromFieldList"> l("Calculated Field") <comma/>
+                    var l = list();
+                    l.add("FLOAT");
+                    l.add("INTEGER");
+                    l.add("NUMBER");
+                    
+                    editor.getRemoteProxy().lookupFieldsInModelsAsStrings(macro("getResolvedModels"), editor.getBranchId(), l);
+                </attribute>
+				<convertInputValue>
+                    inputValue.get(1);
+                </convertInputValue>
+				<onParameterChange>
+                    macro("onFieldNameChange", null, "calcGroup");
+                </onParameterChange>
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("details"), param("sorting")));
+
+                </validation>
+                <verifyForSave>
+                    var l = editor.getRemoteProxy().lookupKeyFieldsInModelsAsStrings(macro("getResolvedModels"),
+                    editor.getBranchId());
+
+                    var name = currentParameter.getParameterValue();
+
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; l.size()
+                        <comma/>
+                        i ++
+                        <do>
+                            var curName = l.get(i);
+                            <if>
+                                curName == name
+                                <then>
+                                    errorMessage(l("Calc field %1 column name is already defined among key fields. Please rename it.",
+                                    name));
+                                    return false;
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+
+                    var instanceKeysNames = macro("instanceKeysNames");
+
+                    <if> instanceKeysNames.contains(name)
+                        <then>
+                            errorMessage(l("Calc field %1 column name is already defined among instance key fields. Please rename it.",
+                            name));
+                            return false;
+                        </then>
+                    </if>
+
+                    return macro("verifyNonEmpty");
+                </verifyForSave>
+                
+            </parameter>
+			<parameter name="description" description="Calculated Field Description" type="string" length="20"/>
+
+			<confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("details"), param("sorting")));
+            </confirmAddRow>
+            <onRowAdded>
+                macro("onFieldRowAdded", null, "calcGroup");
+            </onRowAdded>
+            <onRowDeleted>
+                macro("onFieldRowDeleted", "calcGroup");
+            </onRowDeleted>
+            <onRowMoved>
+                macro("onFieldRowMoved", null, "calcGroup");
+            </onRowMoved>
+            <verifyForSave>
+                <if>currentParameter.getParameterValue().size() == 0
+                    <then>
+                        errorMessage(l("At least one calculation field should be defined."));
+                        return false;
+                    </then>
+                </if>
+            </verifyForSave>
+        </parameter>
+
+        <!-- SORTING FIELDS -->
+        <parameter name="sorting" description="Sorting" type="table" length="7" group="Sorting" keyParameter="name" compareByID="true">
+
+            <parameter name="name"  description="Field Name" type="String" length="20">
+                <attribute name="lookupFromFieldList"> l("Select Sorting Field") <comma/>
+                    editor.getRemoteProxy().lookupFieldsInModelsAsStrings(macro("getResolvedModels"), editor.getBranchId());
+                </attribute>
+                <convertInputValue>
+                    inputValue.get(1);
+                </convertInputValue>
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("details"), param("calcFields")));
+                </validation>
+                <verifyForSave>
+
+                    var name = currentParameter.getParameterValue();
+
+                    var instanceKeysNames = macro("instanceKeysNames");
+
+                    <if> instanceKeysNames.contains(name)
+                        <then>
+                            errorMessage(l("Sorting %1 column name is already defined among instance key fields. Please rename it.", name));
+                            return false;
+                        </then>
+                    </if>
+
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+                <onParameterChange>
+                    macro("onFieldNameChange", null, "sortingGroup");
+                </onParameterChange>
+            </parameter>
+
+            <parameter name="description"   description="Sorting Description" type="String" wrapOnReport="true"/>
+
+            <parameter name="order"         description="Ordering"      type="String"   defaultValue="Descending">
+                choices( <asDescription>
+                    ndo('Descending', l('Highest value nets first')),
+                    ndo('Ascending' , l('Lowest value nets first' ))
+                </asDescription>)
+            </parameter>
+
+            <parameter name="applicableTo"  description="Applicable To" type="String"   defaultValue="All">
+                choices( <asDescription>
+                    ndo('All'      , l('For All Amounts')),
+                    ndo('Positive' , l('For Positive Amounts' )),
+                    ndo('Negative' , l('For Negative Amounts' ))
+                </asDescription>)
+            </parameter>
+
+
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("details"), param("calcFields")));
+            </confirmAddRow>
+
+            <onRowAdded>
+                macro("onFieldRowAdded", null, "sortingGroup");
+            </onRowAdded>
+
+            <onRowDeleted>
+                macro("onFieldRowDeleted", "sortingGroup");
+            </onRowDeleted>
+
+            <onRowMoved>
+                macro("onFieldRowMoved", null, "sortingGroup");
+            </onRowMoved>
+
+        </parameter>
+
+        <!-- FIELDS MAPPING -->
+		<parameter name="mappings" description="Mapping" type="tree" group="Fields Mapping" rootNodeType="rootMappingNode" tableTransposed="true" compareByID="true">
+			<nodeType name="rootMappingNode" description="Mapping" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="detailGroup, calcGroup, sortingGroup"/>
+			<nodeType name="detailGroup" description="Details Mapping" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="fieldMappingNode"/>
+			<nodeType name="calcGroup" description="Calculated Fields Mapping" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="fieldMappingNode"/>
+            <nodeType name="sortingGroup" description="Sorting Fields Mapping" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="fieldMappingNode"/>
+			<!--hasID = true to facilitate comparison of mapping nodes by id -->
+			<nodeType name="fieldMappingNode" description="Field" renameAllowed="false" deleteAllowed="false" hasChildren="false" childrenAreFixed="false" hasID="true">
+				<parameter name="fieldMapping" description="Field Mapping" type="table" keyParameter="model" allowAddRemove="false" reorder="false" length="5" tableTransposed="true" mergeOnComparison="true">
+					<parameter name="model" description="Model" type="string" wrapOnReport="true">
+						<readonly/>
+					</parameter>
+					<parameter name="expression" description="Expression" type="string" wrapOnReport="true">
+						<attribute name="allowAppend"/>
+						<attribute name="lookupFromFieldList"> l("Field") <comma/>
+                            macro("expressionAndMappingLookup")
+                        </attribute>
+						<convertInputValue>                            
+                            <if> inputValue instanceof "[Ljava.lang.String;"
+                                <then>
+                                    <!--field-->
+                                    ;"$" + inputValue.get(0) +  "." + inputValue.get(1)
+                                </then>
+                                <else>
+                                    <!--macro-->
+                                    ;inputValue.getName()
+                                </else>
+                            </if>
+                        </convertInputValue>
+						<if>
+                            param("model") == "UNRESOLVED"
+                            <then>
+								<disabled/>
+							</then>
+							<else>
+								<enabled/>
+							</else>
+						</if>
+						<validation>
+                            macro("validateMappingExpression");
+                        </validation>
+						<verifyForSave>
+                            macro("verifyMappingExpression");
+                        </verifyForSave>
+					</parameter>
+					<parameter name="valueType" description="Value Type" type="string">
+						<if>
+                            param("model") == "UNRESOLVED" || macro("isSingleFieldReference")
+                            <then>
+                                <equals>
+                                    param("expression");  <!-- so it always depends on it-->
+                                    <if> param("model") != "UNRESOLVED"
+                                        <then>
+                                            trace("value type 2");
+                                            var model = editor.locateObjectByName("DataModel", param("model"));
+                                            var accessor = new("axiomsl.accessors.DataModelAccessor", model);
+                                            var route = function("axiomsl.server.object_framework.RouteToObject", "createNameRouteFromObjectName", editor.getAxiomObjectManager(), editor.getBranchId(), param("model"));
+                                            var parser = new("axiomsl.accessors.ExpressionParserImpl", editor.createObject("DataModel"), accessor, route);
+                                            var table = parser.parseExpression(param("expression"));
+                                            var type = table.get(0).getProperty("value").getTargetObject().getString("type");
+                                            return case(type == "TEXT", "VARCHAR", type == "UNICODE_TEXT", "UNICODE", type);
+                                        </then>
+                                    </if>
+                                </equals>
+                                <readonly/>
+							</then>
+							<else>
+								<enabled/>
+                            </else>
+						</if>
+                        macro("valueType", "FLOAT");
+					</parameter>
+					<parameter name="valueSize" description="Value Size" type="integer">
+						<if>
+                            param("model") == "UNRESOLVED" || macro("isSingleFieldReference")
+                            <then>
+								<disabled/>
+							</then>
+							<else>
+								<enabled/>
+                                macro("valueSize");
+                            </else>
+						</if>
+					</parameter>
+					<parameter name="valueNullable" description="Value Nullable?" type="boolean">
+						<if>
+                            param("model") == "UNRESOLVED" || macro("isSingleFieldReference")
+                            <then>
+								<disabled/>
+							</then>
+							<else>
+								<enabled/>
+							</else>
+						</if>
+					</parameter>
+				</parameter>
+				<parameter name="help_info_mapping" description="" type="Component" noSerialization="yes">
+					<attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+					<attribute name="text">l("SQL syntax must be used in expressions")</attribute>
+					<attribute name="color">macro("LIGHT_GREEN")</attribute>
+				</parameter>
+			</nodeType>
+		</parameter>
+
+        <parameter name="parameters" description="Variable Definitions" type="table" length="3" keyParameter="name" group="Variables">
+            <parameter name="name" description="Variable Name" type="String" freehand="no">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniqueness", list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="description" description="Description" type="String" freehand="no"/>
+            <parameter name="dataType" description="Type" type="String" freehand="no">
+                choices(<asDescription>
+                    ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE"))
+                </asDescription>)
+                <default>
+                'VARCHAR'
+                </default>
+            </parameter>
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirm", list());
+            </confirmAddRow>
+        </parameter>
+		<!--conditions properties-->
+		<parameter name="condition" description="Conditions" type="Condition" length="7" group="Conditions"
+                plugInClass="axiomsl.toolkit.dataset_editor.dynamicparameters.NettingCondParameterValue">
+            <attribute name="models">
+                var l = list();
+                var models = param("models");
+                <for>var i = 0
+                        <comma/>
+                        i &lt; models.size()
+                        <comma/>
+                        i ++
+                        <do>
+                            var model = models.get(i);
+                            l.add(model.param("name"));
+                        </do>
+				</for>
+                l
+            </attribute>
+            <attribute name="fields">
+                var group = param("mappings").findNode("detailGroup", null);
+                var l = list();
+
+                <if>group != null and !param("models").isEmpty()
+                    <then>
+                        var fieldFactory = new("axiomsl.util.condition.FieldFactory");
+                        var modelName = param("models").get(0).param("name");
+                        
+                        <for>var i = 0;
+                            <comma/>
+                            i &lt; group.childCount()
+                            <comma/>
+                            i ++
+                            <do>
+                                var entityNode = group.child(i);
+                                var detailName = entityNode.getName();
+
+                               <if>entityNode.param("fieldMapping").size() &gt; 0
+                                    <then>
+                                        var fieldMappings = entityNode.param("fieldMapping");
+                                        var type = null;
+                                        var firstRow = fieldMappings.get(0);
+
+                                        <if>firstRow.param("valueType") != null &amp;&amp; modelName != null &amp;&amp; modelName != ""
+                                            <then>
+                                                type = firstRow.param("valueType");
+                                                var accessor = null;
+                                                <try>
+                                                    var model = editor.locateObjectByName("DataModel", modelName);
+                                                    accessor = new("axiomsl.accessors.DataModelAccessor", model);
+                                                    <!--DataModel doesn't exist-->
+                                                    <catch>var e</catch>
+                                                    trace(e);
+                                                </try>
+                                                <if> accessor != null &amp;&amp; firstRow.param("expression") != null &amp;&amp; firstRow.param("expression").indexOf("!!!") &lt; 0
+                                                    and firstRow.param("expression").indexOf("!!!") &lt; 0
+                                                    and accessor.isValidExpression(firstRow.param("expression")) and accessor.isSingleFieldReference(firstRow.param("expression"))
+                                                    <then>
+                                                        var route = function("axiomsl.server.object_framework.RouteToObject", "createNameRouteFromObjectName", editor.getAxiomObjectManager(), editor.getBranchId(), modelName);
+                                                        var parser = new("axiomsl.accessors.ExpressionParserImpl", editor.createObject("DataModel"), accessor, route);
+                                                        var table = parser.parseExpression(firstRow.param("expression"));
+                                                        var dsFieldRef = table.get(0).getProperty("value");
+                                                        var dsField = dsFieldRef.getTargetObject();
+                                                        var dsAlias = dsFieldRef.getTargetObjectFromElement(1).getString("name");
+                                                        var hasLookUp = dsField.propertyIsSet("lookupSource") &amp;&amp; !dsField.propertyIsEmpty("lookupSource");
+
+                                                        l.add(fieldFactory.createMappedField("first", detailName, "", type, dsAlias, dsField.getString("name"), hasLookUp, false));
+                                                        l.add(fieldFactory.createMappedField("second", detailName, "", type, dsAlias, dsField.getString("name"), hasLookUp, false));
+                                                    </then>
+                                                    <else>
+                                                        l.add(fieldFactory.createMappedField("first", detailName, "", type, null, null, false, false));
+                                                        l.add(fieldFactory.createMappedField("second", detailName, "", type, null, null, false, false));
+                                                    </else>
+                                                </if>
+
+                                            </then>
+                                        </if>
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+                    </then>
+                </if>
+                ; l
+
+
+                <!--var l = list();-->
+                <!--var models = param("models");-->
+                <!--<for>var i = 0-->
+                <!--<comma/>-->
+                <!--i &lt; models.size()-->
+                <!--<comma/>-->
+                <!--i ++-->
+                <!--<do>-->
+                <!--var model = models.get(i);-->
+                <!--l.add(model.param("name"));                            -->
+                <!--</do>-->
+                <!--</for>-->
+                <!--l-->
+            </attribute>
+		</parameter>
+		<!--additional properties-->
+		<macro name="storageTypeParameter"/>
+		<parameter name="dbSourceForResults" description="DB Source" group="Parameters" type="String" defaultValue="" length="20">
+			<choices>
+				<!--<asDescription>-->
+                    var sources = editor.getRemoteProxy().lookupObjects("DBSource");
+                <!--</asDescription>-->
+			</choices>
+			<default>
+                macro("getDefaultDBSource");
+            </default>
+		</parameter>
+
+		<parameter name="removeNettedRecords" description="Remove netted records" group="Parameters" type="boolean" defaultValue="false" length="20">
+            <if>
+                !param("prepareJournal")
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <disabled/>
+                </else>
+            </if>
+        </parameter>
+
+        <parameter name="prepareJournal" description="Prepare journal" group="Parameters" type="boolean" defaultValue="false" length="20"/>
+
+        <parameter name="makeAsOfDateColumnNullable" description="Make As Of Date column nullable" group="Parameters" type="Boolean" defaultValue="false"/>
+        <parameter name="computeStatistics" description="Compute Statistics On Results" type="String" group="Parameters" length="20">
+            choices(<asDescription>
+                 ndo("NONE", l("NONE")), ndo("FOR_ALL_COLUMNS", l("FOR_ALL_COLUMNS")), ndo("FOR_KEY_COLUMNS", l("FOR_KEY_COLUMNS"))
+            </asDescription>)
+            <default>
+                'FOR_ALL_COLUMNS'
+            </default>
+		</parameter>
+        <parameter name="doublePrecisionInFile" description="Precision for writing FLOAT values(digits after decimal point)" group="Parameters" type="integer" defaultValue="3" length="20">
+            <validation>
+                <if> newValue&lt;=0 or newValue &gt;=15
+                    <then>
+                        errorMessage(l("Precision needs to be greater than 0 and less than 15"));
+                        return false;
+                    </then>
+                </if>
+
+            </validation>
+        </parameter>
+
+        <parameter name="instanceRebuildRestriction" description="Resulting Data Source Instance Rebuild Restrictions" type="String"
+                   group="Parameters" defaultValue="AlterFullRebuild">
+            choices( <asDescription>
+                ndo('AlterFullRebuild', l('Alter, Full Rebuild')),
+                ndo('AlterOnly'       , l('Alter Only'         )),
+                ndo('FullRebuildOnly' , l('Full Rebuild Only'  ))
+            </asDescription>)
+        </parameter>
+
+        <parameter name="allowExternalDataPermissions" description="Allow External Data Permissions" group="Parameters" type="Boolean" optional="true" defaultValue="true"/>
+
+    </parameters>
+    
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+	<loadCode>
+        var netting = <originalAxiom/>;
+        var accessor = new("axiomsl.accessors.NettingAccessor", netting);
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor, dataSet.getRouteFromCurrentBranch());
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var templates = array(
+            "default(sorting)"
+        );
+        var params1 = array(
+            "sorting"
+        );
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(netting, currentParameters, params1, null, templates, parser, route);
+
+        <!--model setup -->
+        var models = netting.getTable("models");
+        <!--deserialization in empty case-->
+        param("models");
+        <for>var i = 0
+            <comma/>
+            i &lt; models.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("models").addLine();
+                var modelRef = models.get(i).getReference("dataModel");
+                row.param("name") = modelRef.getTargetObjectName(dataSet.getRouteFromCurrentBranch());
+                <!--TODO use context-->
+                row.setID(modelRef.getTargetObjectID(dataSet.getRouteFromCurrentBranch(), editor.getBranchId()).getObjectId());
+            </do>
+		</for>
+
+        param("requiresAllModels") = netting.getOptionalValue("requiresAllModels", false);
+
+		<!--details setup -->
+        var details = netting.getTable("details");
+        param("details");<!--deserializing-->
+		<for>var i = 0
+            <comma/>
+            i &lt; details.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("details").addLine();
+                var detail = details.get(i);
+                row.param("name") = detail.getString("name");
+                row.param("description") = detail.getString("description");
+                row.param("isExactMatch") = detail.getBoolean("isExactMatch");
+                row.setID(detail.getString("id"));
+            </do>
+		</for>
+		<!--calc fields setup -->
+        var calcFields = netting.getTable("calcFields");
+        param("calcFields");<!--deserializing-->
+		<for>var i = 0
+            <comma/>
+            i &lt; calcFields.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("calcFields").addLine();
+                var calcField = calcFields.get(i);
+                row.param("name") = calcField.getString("name");
+                row.param("description") = calcField.getString("description");
+                macro("loadTypeParameters_noNull", calcField, row);
+                parser.setContext(calcField);
+                row.setID(calcField.getString("id"));
+            </do>
+		</for>
+
+        parser.setContext(netting);
+<!--		--><!--mapping setup --><!--
+        var mappings = aggregation.getTable("mappings");
+        --><!--deserialization in empty case--><!--
+        param("mappings");
+        <for>var i = 0
+            <comma/>
+            i &lt; mappings.size()
+            <comma/>
+            i ++
+            <do>
+                var mapping = mappings.get(i);
+                var object = mapping.getObject("field").getReference("value").getTargetObject();
+                var type = mapping.getObject("field").getObjectType();
+                var group = null;
+                <if> ! (type.indexOf("CalcField") &gt; 0 &amp;&amp; !object.getTable("calcFormula").isEmpty())
+                    <then>
+						<case>
+                            type.indexOf("Detail") &gt; 0
+                                <then>
+                                    group = macro("createGroup", "detailGroup");
+                                </then>
+
+                            type.indexOf("AuxField") &gt; 0
+                                <then>
+                                    group = macro("createGroup", "auxGroup");
+                                </then>
+
+                            type.indexOf("CalcField") &gt; 0
+                                <then>
+                                    group = macro("createGroup", "calcGroup");
+                                </then>
+						</case>
+                        var node = group.createChild("fieldMappingNode", object.getString("name"));
+                        node.setID(object.getString("id"));
+                        var fieldMapping = mapping.getTable("fieldMapping");
+                        <for> var k = 0 <comma/> k &lt; param("models").size() <comma/> k++
+                                <do>
+                                    var curModelID = param("models").get(k).getID();
+                                    --><!--trace("curModelID  " + curModelID);--><!--
+                                    var isMappingSet = false;
+                                    --><!--try to find mapping for each model in mapping table otherwise insert empty row--><!--
+								<for>var j = 0
+                                        <comma/>
+                                        j &lt; fieldMapping.size()
+                                        <comma/>
+                                        j ++
+                                        <do>
+                                            var model = fieldMapping.get(j).getObject("model").getReference("value");
+                                            --><!--curModelID == model.getTargetObjectID().getObjectId() - model matched--><!--
+										--><!--trace("ref  " + model.getTargetObjectID(dataSet.getRouteFromCurrentBranch(), editor.getBranchId()).getObjectId());--><!--
+										<if> curModelID == model.getTargetObjectID(dataSet.getRouteFromCurrentBranch(), editor.getBranchId()).getObjectId()
+                                                <then>
+                                                    var row = node.param("fieldMapping").addLine();
+                                                    row.param("model") = model.getTargetObjectName(dataSet.getRouteFromCurrentBranch());
+                                                    var warnings = list();
+                                                    row.param("expression") = parser.getExpressionString(fieldMapping.get(j).getTable("expression"));
+                                                    row.setID(curModelID);
+                                                    macro("loadTypeParameters", fieldMapping.get(j), row);
+                                                    isMappingSet = true;
+                                                    break;
+                                                </then>
+										</if>
+									</do>
+								</for>
+								--><!--add empty row--><!--
+								<if> isMappingSet
+                                        <else>
+                                            var row = node.param("fieldMapping").addLine();
+                                            row.param("model") = param("models").get(k).param("name");
+                                            trace("Mapping for " + object.getString("name") + "/" +  row.param("model") + " is not set");
+                                            --><!--TODO mark dataSet cahnged--><!--
+                                            dataSet.dataChanged();
+                                        </else>
+								</if>
+							</do>
+						</for>
+                        node.addToParent();
+                    </then>
+				</if>
+			</do>
+		</for>-->
+        param("dbSourceForResults") = netting.getReference("dbSourceForResults").getTargetObjectNativeName();
+        param("storageType") = netting.getString("storageType");
+
+        param("prepareJournal") = netting.getOptionalValue("prepareJournal", false);
+        param("removeNettedRecords") = netting.getBoolean("removeNettedRecords");
+        param("makeAsOfDateColumnNullable") = netting.getBoolean("makeAsOfDateColumnNullable");
+        param("computeStatistics") = netting.getOptionalValue("computeStatistics", "FOR_ALL_COLUMNS");
+        param("doublePrecisionInFile")= netting.getOptionalValue("doublePrecisionInFile", 3);
+        param("instanceRebuildRestriction") = netting.getOptionalValue("instanceRebuildRestriction", "AlterFullRebuild");
+        param("allowExternalDataPermissions") = netting.getOptionalValue("allowExternalDataPermissions",false);
+
+        <!--index setup-->
+
+		<if> netting.propertyIsSet("condition")
+            <then>                
+                param("condition") =  new("axiomsl.util.condition.ConditionSequence", netting.getTree("condition").getRootNode(), parser);
+            </then>
+			<else>
+                param("condition") =  new("axiomsl.util.condition.ConditionSequence");
+            </else>
+		</if>
+
+        param("parameters");
+        <if>netting.propertyIsSet("parameters")
+            <then>
+            var parameters = netting.getTable("parameters");
+            <for>var i = 0
+                <comma/>
+                i &lt; parameters.size()
+                <comma/>
+                i ++
+                <do>
+                    var row = param("parameters").addLine();
+                    row.param("name") = parameters.get(i).getString("name");
+                    row.param("dataType") = parameters.get(i).getString("dataType");
+                    row.param("description") = parameters.get(i).getString("description");
+                </do>
+            </for>
+            </then>
+        </if>
+	</loadCode>
+	<saveCode>
+        var nettingForSave = <axiomForSave/>;
+        var accessor = new("axiomsl.accessors.NettingAccessor", nettingForSave);
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor);
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+
+        var params1 = array("sorting");
+
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(nettingForSave, currentParameters, params1, null, null, parser, route);
+
+        <!--model save -->
+        var modelTable = nettingForSave.getTable("models");
+        var models = param("models");
+        <for>var i = 0
+            <comma/>
+            i &lt; models.size()
+            <comma/>
+            i ++
+            <do>
+                var row = models.get(i);
+                var modelName = row.param("name");                
+                var modelRow = modelTable.addRow("ModelBasedTask:modelEntry");
+                modelRow.setProperty("dataModel", modelRow.createReferencePropertyValue("DataModel", modelName));
+            </do>
+		</for>
+        
+        nettingForSave.setProperty("requiresAllModels", param("requiresAllModels"));
+
+		<!--details save -->
+        var detailsTable = nettingForSave.getTable("details");
+        var details = param("details");
+        <for>var i = 0
+            <comma/>
+            i &lt; details.size()
+            <comma/>
+            i ++
+            <do>
+                var detail = details.get(i);
+                var detailRow = detailsTable.addRow("Netting:detail");
+                macro("copyRefProperties", detail, detailRow);
+                detailRow.setProperty("isExactMatch", detail.param("isExactMatch"))
+            </do>
+		</for>
+
+		<!--calc fields save -->        
+        var calcFieldsTable = nettingForSave.getTable("calcFields");
+        var calcFields = param("calcFields");
+
+        <!--<if>calcFields.size() == 0-->
+            <!--<then>-->
+                <!--errorMessage(l("At least one calculation field should be defined."));-->
+                <!--return false;-->
+            <!--</then>-->
+        <!--</if>-->
+
+        <for>var i = 0
+            <comma/>
+            i &lt; calcFields.size()
+            <comma/>
+            i ++
+            <do>
+                var calcField = calcFields.get(i);
+                var calcFieldRow = calcFieldsTable.addRow("Netting:calcField");
+                macro("copyRefProperties", calcField, calcFieldRow);
+
+                <!--calcFieldRow.setProperty("aggrMethod", calcField.param("aggrMethod"));-->
+                <!--calcFieldRow.setProperty("calcTotal", calcField.param("calcTotal"));-->
+
+                <!--<if> calcField.param("calcFormula") != ""-->
+                    <!--<then>                        -->
+                        <!--macro("copyTypeProperties", calcField, calcFieldRow);-->
+                    <!--</then>-->
+				<!--</if>-->
+                parser.setContext(calcFieldRow);
+                <!--var formulaTable = parser.parseExpression(calcField.param("calcFormula"));-->
+                <!--calcFieldRow.setProperty("calcFormula", formulaTable);-->
+            </do>
+		</for>
+
+		<!--mapping save -->
+        var mappingsTable = nettingForSave.getTable("mappings");
+        var mappingsTree = param("mappings");
+        parser.setContext(nettingForSave);
+
+        <if> true;
+            <then>
+                macro("saveMappingForTable", "details", "Netting:localDetailReference", null);
+            </then>
+		</if>
+        <if> true;
+            <then>
+                macro("saveMappingForTable", "calcFields", "Netting:localCalcFieldReference", null);
+            </then>
+        </if>
+        <if> true;
+            <then>
+                macro("saveMappingForTable", "sorting", "Netting:localSortingFieldReference", null);
+            </then>
+        </if>
+
+        nettingForSave.setProperty("dbSourceForResults",
+                                    nettingForSave.createReferencePropertyValue("DBSource", param("dbSourceForResults")));
+        nettingForSave.setProperty("storageType", param("storageType"));
+
+        <if>
+            param("removeNettedRecords") != null
+            <then>
+                nettingForSave.setProperty("removeNettedRecords", param("removeNettedRecords"));
+            </then>
+        </if>
+
+        nettingForSave.setProperty("prepareJournal", param("prepareJournal"));
+        nettingForSave.setProperty("computeStatistics", param("computeStatistics"));
+        nettingForSave.setProperty("makeAsOfDateColumnNullable", param("makeAsOfDateColumnNullable"));
+        nettingForSave.setProperty("doublePrecisionInFile", param("doublePrecisionInFile"));
+        nettingForSave.setProperty("instanceRebuildRestriction", param("instanceRebuildRestriction"));
+        nettingForSave.setProperty("allowExternalDataPermissions", param("allowExternalDataPermissions"));
+
+        var condSeq = new("axiomsl.util.condition.ConditionSequence", param("condition"));
+        <if>
+            !condSeq.isEmpty();
+            <then>
+                var condTree = nettingForSave.createTreePropertyValue("Condition");
+                nettingForSave.setProperty("condition", condTree);
+                condSeq.assembleCondition(condTree.getRootNode(),  parser);
+            </then>
+		</if>
+
+        var parametersTable = null;
+        var parameters = param("parameters");
+
+        <if> !nettingForSave.propertyIsSet("parameters")
+            <then>
+                parametersTable = nettingForSave.createTablePropertyValue();
+                nettingForSave.setProperty("parameters", parametersTable);
+            </then>
+            <else>
+                parametersTable = nettingForSave.getTable("parameters");
+            </else>
+        </if>
+
+        <for>var i = 0
+            <comma/>
+            i &lt; parameters.size()
+            <comma/>
+            i ++
+            <do>
+                var variable = parametersTable.addRow("WorkFlow:parameter");
+
+                variable.setProperty("name", parameters.get(i).param("name"));
+                variable.setProperty("dataType", parameters.get(i).param("dataType"));
+                variable.setProperty("description", parameters.get(i).param("description"));
+             </do>
+		</for>
+	</saveCode>
+	<macros>
+		<macro name="copyRefProperties" arguments="source_xxx, dest_xxx">
+			<dest_xxx/>.setProperty("name", <source_xxx/>.param("name"));
+            <dest_xxx/>.setProperty("description", <source_xxx/>.param("description"));
+            <!--<dest_xxx/>.setProperty("isExactMatch", <source_xxx/>.param("isExactMatch"));-->
+        <dest_xxx/>.setProperty("id", <source_xxx/>.getID());
+    </macro>
+
+        <macro name="getFieldType" arguments="fieldId, groupType">
+            var type = currentParameters.param("valueType");            
+            <if> type != null and "" != type
+                <else>
+                    var node = macro("getNodeInMapping", <fieldId/>, <groupType/>);
+                    <if> node.param("fieldMapping").size() != 0;
+                        <then>
+                            var row = node.param("fieldMapping").get(0);
+                            type = row.param("valueType");
+                            <if> type != null and "" != type
+                                <else>
+                                    type = macro("getFieldTypeFromModel", row.param("model"), row.param("expression"));                                    
+                                </else>
+                            </if>
+                        </then>
+                    </if>
+                </else>
+            </if>
+            ;type
+        </macro>
+        <macro name="expressionAndMappingLookupForNetting">
+            var modelList = list();
+            modelList.add(param("model"));
+            var fields = editor.getRemoteProxy().lookupFieldsInModelsAsStrings(modelList, editor.getBranchId());
+            var namedList = new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), fields.toArray());
+            namedList.setColumnTitles(array(l("Alias").toString(), l("Field Name").toString(), l("Description").toString()));
+            var result = new("java.util.Vector");
+            result.add(namedList);
+            ;result
+        </macro>
+
+    </macros>
+</data_set_category>

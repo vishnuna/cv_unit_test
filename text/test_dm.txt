@@ -1,0 +1,18 @@
+Type:	DataModel
+Name:	test_dm
+Desc:	Test DM
+Object ID:	3d9b27a9-7cf2-4784-b2f2-5678c2582114
+Branch ID:	68b7506a-69d3-4255-9a4b-a03c53614e96
+
+Enum	Name	Value	ValueType	Text
+1	name	test_dm	string	None
+2	description	Test DM	string	None
+3	objectId	3d9b27a9-7cf2-4784-b2f2-5678c2582114	string	None
+4	branchId	68b7506a-69d3-4255-9a4b-a03c53614e96	string	None
+5	isPermanent	false	boolean	None
+6	instanceKeys	None	table	None
+7	hierarchy	None	tree	
+8	streamKeys	None	table	None
+9	freezeLevel	1	integer	None
+10	performJoinOnAllStreamColumns	false	boolean	None
+11	mustInheritSourceIKs	true	boolean	None

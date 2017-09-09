@@ -1,0 +1,49 @@
+<!-- this object encapsulates all instances for a given data source -->
+<!-- to minimize storage and search burden, we'll store a DataSourceTables object
+ - a collection of DataTableLayout objects for a data source - 
+ separately from DataSourceInstances object (as the table objects are used much less frequently, only for
+ rebuilding the tables). We will even serialize them to a separate table.
+ 
+ DataSourceTables object will have an id matching the id of the data source, and
+ each individual DataTableLayout subobject will have the same id as the data source instance subobject inside
+ DataSourceInstances.
+ -->
+<metadata>
+	<object type="DataSourceInstances" extends="ObjectInBranch" version="9">
+		<!-- a table for manual adjustments, which is created upon first usage -->
+		<property name="adjustmentsTable" optional="true" valueType="object" objectType="DataSourceInstance:dataTableInfo"/>
+		<!--dataTableForNewInstances is used only for continuous sources
+		  When the first (up-to-date) instance is created the dataTableForNewInstances is populated and all subsequent new instances
+		  go to the same table
+		  dataTableForNewInstances is cleared when data source storage type or layout changes, and also when the last instance
+		  using that table is deleted -->
+		<property name="dataTableForNewInstances" optional="true" valueType="object" objectType="DataSourceInstance:dataTableInfo"/>
+		<!-- for permanent, there is at most one instance in the 'instances' property-->
+		<property name="instances" valueType="table" rowTypes="DataSourceInstances:instance"/>
+		<property name="storageType" valueType="string" choices="PERMANENT, CONTINUOUS, CONTINUOUS_PARTITION, SEGMENTED" defaultValue="PERMANENT" upgraderClass="axiomsl.metadata_upgraders.InstancesUpgrader"/>
+        <property name="instanceKeys" valueType="table" rowTypes="InstanceKey" upgraderClass="axiomsl.metadata_upgraders.InstancesUpgrader"/>
+        <property name="hosting" valueType="string" canBeEmpty="false" choices="INTERNAL, EXTERNAL" defaultValue="INTERNAL" upgraderClass="axiomsl.metadata_upgraders.InstancesUpgrader"/>
+        <property name="computeStatistics" valueType="string" canBeEmpty="false" upgraderClass="axiomsl.metadata_upgraders.InstancesUpgrader"/>
+    </object>
+	<object type="DataSourceInstances:instance" extends="InstanceObject" version="6" sortKeyProperties="instanceDate, instanceKeyValues" sortDescending="true">
+		<!-- name and id should match instance object's name and id -->
+		<!-- for a permanent data source instance, instanceDate and instanceKeyValues are not used -->
+		<!-- for segmented data sources only (for continuous, see dataTableForNewInstances) -->
+		<!-- each instance table can be up to date or not (in terms of layout/structure).
+		  This is in addition to the status (readiness) flag of the instance. 
+		  
+		  UPDATE: when an existing instance is reset (recreated) we always keep the old table name,
+		   even if table prefix in datasource has changed since. We do this to preserve explicit table-
+		   dependent reports.
+
+			datatable property will exist if the instance exists.
+			table is created when instance is being created.
+			if table creation fails, instance is not created.
+			if instance is removed, table is removed as well.
+			if cannot remove table, instance stays.
+		  -->
+		<property name="instance" valueType="url" urlStructure="DataSourceInstance[*]" targetObjectType="DataSourceInstance"/>
+	</object>
+	<!-- a shortened object, contains just enough info on the DataTableLayout object to be able to use
+	 the table (query, update) -->
+</metadata>

@@ -1,0 +1,382 @@
+<data_set_category name="ENTITLEMENTS" description="Roles Setup" windowTitle="Entitlements" entityName="Roles" screenWidth="800" screenHeight="500"
+                   objectType="ObjectList" extends="COMMON_UTILS" fixedNameMode="true" singleDataSet=" ">
+
+    <parameters>
+        <parameter name="entitlements" description="Entitlements" type="tree" group="Entitlements" rootNodeType="rootNode" reorder="false">
+            <nodeType name="rootNode" description="Entitlements" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true"
+                      childrenTypes="Entitlements:signOff, Entitlements:notifications, Entitlements:dashboardDirectory, Entitlements:submit, Entitlements:dashboard, Entitlements:dashboards, Entitlements:userTaskTypes, Entitlements:userTaskType"/>
+            <nodeType name="Entitlements:signOff" description="Sign Off" renameAllowed="false" deleteAllowed="false" hasChildren="true"
+                      childrenAreFixed="false" childrenTypes="Entitlements:role" autoSort="true">
+                <parameter name="level" type="integer" hidden="true"/>
+            </nodeType>
+
+            <nodeType name="Entitlements:role" description="Role" renameAllowed="false" deleteAllowed="true" hasChildren="false">
+                <nodeNameLookup>
+                    editor.getRemoteProxy().lookupObjects("Role", null);
+                </nodeNameLookup>
+
+                <macro name="conditionsParameter" arguments="false">
+                    false
+                </macro>
+
+            </nodeType>
+
+            <nodeType name="Entitlements:dashboardDirectory" description="Dashboard Directory" renameAllowed="false" deleteAllowed="false" hasChildren="true"
+                      childrenAreFixed="false" childrenTypes="Entitlements:dashboardDirectoryRole" autoSort="true"/>
+
+            <nodeType name="Entitlements:dashboardDirectoryRole" description="Dashboard Directory Role" renameAllowed="false" deleteAllowed="true" hasChildren="false">
+                <nodeNameLookup>
+                    editor.getRemoteProxy().lookupObjects("Role", null);
+                </nodeNameLookup>
+                <parameter name="paths" description="Allowed paths for current role. Path is related from dashboard url." type="table">
+                    <parameter name="path" description="Allowed Path" type="string" freehand="no"/>
+                    <parameter name="comment" description="Comment" type="string" freehand="no" optional="true"/>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="Entitlements:notifications" description="Notifications" renameAllowed="false" deleteAllowed="false" hasChildren="true"
+                      childrenAreFixed="false" childrenTypes="Entitlements:notificationRole" autoSort="true"/>
+
+            <nodeType name="Entitlements:notificationRole" description="Notification Role" renameAllowed="false" deleteAllowed="true" hasChildren="false">
+                <nodeNameLookup>
+                    editor.getRemoteProxy().lookupObjects("Role", null);
+                </nodeNameLookup>
+
+               <macro name="conditionsParameter" arguments="true">
+                    true
+               </macro>
+            </nodeType>
+
+            <nodeType name="Entitlements:submit" description="Submit" renameAllowed="false" deleteAllowed="false" hasChildren="true"
+                      childrenAreFixed="false" childrenTypes="Entitlements:role" autoSort="true"/>
+
+            <nodeType name="Entitlements:dashboards" description="Dashboard" renameAllowed="false" deleteAllowed="false" hasChildren="true"
+                      childrenAreFixed="true" childrenTypes="Entitlements:dashboard" autoSort="true"/>
+
+            <nodeType name="Entitlements:dashboard" description="Dashboard" renameAllowed="false" deleteAllowed="false" hasChildren="true"
+                      childrenAreFixed="false" childrenTypes="Entitlements:dashboardRole" autoSort="true">
+                <parameter name="dbId" type="string" hidden="true"/>
+            </nodeType>
+
+            <nodeType name="Entitlements:dashboardRole" description="Role" renameAllowed="false" deleteAllowed="true" hasChildren="false">
+                <nodeNameLookup>
+                    editor.getRemoteProxy().lookupObjects("Role", null);
+                </nodeNameLookup>
+                <parameter name="isDefault" description="Is dashboard default" type="boolean">
+                    <validation>
+                        <if> <newValue/>==true
+                            <then>
+                                var leaves = currentNode.root().findNodeByPath("Entitlements/Dashboards").getAllLeaves();
+                                var name = currentNode.name();
+                                var toReset = list();
+                                <for>var i = 0
+                                    <comma/>
+                                    i &lt; leaves.size();
+                                    <comma/>
+                                    i++
+                                    <do>
+                                        var node = leaves.get(i);
+                                        <if> name.equals(node.name()) and "Entitlements:dashboardRole".equals(node.type()) and
+                                            true == node.param("isDefault")
+                                            <then>
+                                                toReset.add(node);
+                                            </then>
+                                        </if>
+                                    </do>
+                                </for>
+                                <if> !toReset.isEmpty()
+                                            <then>
+                                                msg("Only one default dashboard per role is permitted.
+All other dashboards for this role will be reset
+to non-default status");
+                                                <for>var i = 0 <comma/> i &lt; toReset.size(); <comma/> i++
+                                                    <do>
+                                                        toReset.get(i).param("isDefault") = false;
+                                                    </do>
+                                                </for>
+                                            </then>
+                                </if>
+                            </then>
+                        </if>
+                    </validation>
+                </parameter>
+            </nodeType>
+
+
+            <nodeType name="Entitlements:userTaskTypes" description="User Task Type" renameAllowed="false" deleteAllowed="false" hasChildren="true"
+                      childrenAreFixed="true" childrenTypes="Entitlements:userTaskType" autoSort="true"/>
+
+            <nodeType name="Entitlements:userTaskType" description="User Task Type" renameAllowed="false" deleteAllowed="false" hasChildren="true"
+                      childrenAreFixed="false" childrenTypes="Entitlements:userTaskTypeRole" autoSort="true"/>
+
+
+            <nodeType name="Entitlements:userTaskTypeRole" description="Roles" renameAllowed="false" deleteAllowed="true" hasChildren="false">
+                <nodeNameLookup>
+                    editor.getRemoteProxy().lookupObjects("Role", null);
+                </nodeNameLookup>
+                <macro name="dashboardConditionsParameter" />
+            </nodeType>
+
+
+        </parameter>
+    </parameters>
+
+    <newCode>
+        var signOffs = editor.locateObjectById("SignOffs", "SignOffs").getTable("levels");
+        var name2Node = new("java.util.TreeMap");
+        <for>var i = 0
+            <comma/>
+            i &lt; signOffs.size()
+            <comma/>
+            i++
+            <do>
+                var level = signOffs.get(i);
+                var signName = level.getString("name");
+                var signOffNode = param("entitlements").createChild("Entitlements:signOff", signName);
+                signOffNode.param("level") = level.getInteger("signOffLevel");
+                name2Node.put("" + level.getInteger("signOffLevel"), signOffNode);
+            </do>
+        </for>
+        trace(name2Node);
+
+        var dashboardNodes = param("entitlements").createChild("Entitlements:dashboards", "Dashboards");
+        name2Node.put("Dashboards", dashboardNodes);
+        var dashboardMappingId = function("axiomsl.server.object_framework.ObjectID", "createId", "DashboardMapping", null, "DashboardMapping");
+        var dashboardsMapping = editor.getAxiomObjectManager().locate(dashboardMappingId);
+        var dashboardsMappingParameters = dashboardsMapping.getTable("parameters");
+        <for>var i = 0
+            <comma/>
+            i &lt; dashboardsMappingParameters.size()
+            <comma/>
+            i++
+            <do>
+                var dashboard = dashboardsMappingParameters.get(i);
+                var dashboardName = dashboard.getString("name");
+                var dashboardNode = dashboardNodes.createChild("Entitlements:dashboard", "" + dashboardName);
+                <!--var dashboardNode = param("entitlements").createChild("Entitlements:dashboard", "" + dashboardName);-->
+                dashboardNode.param("dbId") = dashboard.getProperty("id");
+                name2Node.put("Dashboards/" + dashboardName, dashboardNode);
+            </do>
+        </for>
+
+        var dashboardDirectories = param("entitlements").createChild("Entitlements:dashboardDirectory", "Dashboard Directory");
+        name2Node.put("DashboardDirectories", dashboardDirectories);
+
+        var userTaskTypeNodes = param("entitlements").createChild("Entitlements:userTaskTypes", "BPMTaskTypes");
+        name2Node.put("BPMTaskTypes", userTaskTypeNodes);
+
+        var userTaskTypes = editor.getAxiomObjectManager().listObjectsOfType("UserTaskType", null, axiomEnvironment);
+        <for>var i = 0
+            <comma/>
+            i &lt; userTaskTypes.size()
+            <comma/>
+            i++
+            <do>
+                var userTaskType = editor.locateObjectById("UserTaskType", userTaskTypes.get(i).getDbId());
+                var userTaskTypeName = userTaskType.getString("name");
+                var userTaskTypeNode = userTaskTypeNodes.createChild("Entitlements:userTaskType", "" + userTaskTypeName);
+                <!--var dashboardNode = param("entitlements").createChild("Entitlements:dashboard", "" + dashboardName);-->
+                <!--userTaskTypeNode.param("dbId") = userTaskTypes.get(i).getDbId();-->
+                name2Node.put("BPMTaskTypes/" + userTaskTypeName, userTaskTypeNode);
+            </do>
+        </for>
+
+        var notificationKey = "Notifications";
+        var signOffNode = param("entitlements").createChild("Entitlements:notifications", "E-mail Notifications");
+        name2Node.put(notificationKey, signOffNode);
+
+        var submitKey = "Submit";
+        var submitPermission = param("entitlements").createChild("Entitlements:submit", "Submit");
+        name2Node.put(submitKey, submitPermission);
+
+        var existingGrants = editor.getAxiomObjectManager().listObjectsOfType("Entitlements", null, editor.getAxiomEnvironment());
+
+        <for> var i = 0 <comma/> i &lt; existingGrants.size() <comma/> i++
+            <do>
+                var dbId = existingGrants.get(i);
+                var grant = editor.getAxiomObjectManager().locate(function("axiomsl.server.object_framework.ObjectID", "createDbId", dbId));
+                var roleName = grant.getProperty("role").getTargetObjectName();
+                var members = grant.getProperty("entitlements");
+                var accessor = new("axiomsl.accessors.ConditionAccessor", grant);
+                accessor.setStoreEverythingInFieldName(false);
+                var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor);
+                <for> var j = 0 <comma/> j &lt; members.size() <comma/> j++
+                    <do>
+                        var grantTemplate = members.get(j);
+                        var isNotification = notificationKey == grantTemplate.getProperty("type");
+                        var parameter = grantTemplate.getProperty("parameter");
+                        var parentName = grantTemplate.getProperty("type");
+                        var childType = "Entitlements:notificationRole";
+                        var isDashboard = false;
+                        var isDashboardDirectory = false;
+                        var isUserTaskType = false;
+                        <if>"SignOff".equals(parentName)
+                            <then>
+                                parentName = parameter.getProperty("signOffLevel").getTargetObject().getInteger("signOffLevel");
+                                childType = "Entitlements:role";
+                            </then>
+                            <else>
+                                <if>"Submit".equals(parentName)
+                                    <then>
+                                        childType = "Entitlements:role";
+                                    </then>
+                                </if>
+                            </else>
+                        </if>
+                        <if>"Dashboard".equals(parentName)
+                            <then>
+                                isDashboard = true;
+                                parentName = "Dashboards/" + parameter.getProperty("dashboard").getTargetObject().getString("name");
+                                childType = "Entitlements:dashboardRole";
+                            </then>
+                        </if>
+                        <if>"UserTaskType".equals(parentName)
+                            <then>
+                                isUserTaskType = true;
+                                parentName = "BPMTaskTypes/" + parameter.getProperty("userTaskType").getTargetObject().getString("name");
+                                childType = "Entitlements:userTaskTypeRole";
+                            </then>
+                        </if>
+                        <if>"DashboardDirectoryPermission".equals(parentName)
+                            <then>
+                                isDashboardDirectory = true;
+                                parentName = "DashboardDirectories";
+                                childType = "Entitlements:dashboardDirectoryRole";
+                            </then>
+                        </if>
+
+                        var parent = name2Node.get("" + parentName);
+                        var child = parent.createChild(childType, roleName);
+
+                        <if> !isDashboard
+                            <then>
+                                <if> !isDashboardDirectory
+                                    <then>
+                                        child.param("conditions") = new("axiomsl.util.condition.ConditionSequence", parameter.getTree("condition").getRootNode(), parser);
+                                    </then>
+                                    <else>
+                                        var paths = parameter.getTable("paths");
+                                        var childPaths = child.param("paths");
+                                        <for> var k = 0 <comma/> k &lt; paths.size() <comma/> k++
+                                            <do>
+                                                var row = childPaths.addLine();
+                                                row.param("path") = paths.get(k).getString("path");
+                                                row.param("comment") = paths.get(k).getString("comment");
+                                            </do>
+                                        </for>
+                                    </else>
+                                </if>
+                            </then>
+                            <else>
+                                child.param("isDefault") = parameter.getOptionalBoolean("isDefault");
+                            </else>
+                        </if>
+
+                        var found = false;
+                        <for> var k = 0 <comma/> k &lt; parent.childCount() <comma/> k++
+                            <do>
+                                <if>!found and parent.child(k).getName().compareTo(roleName) > 0
+                                    <then>
+                                        found = true;
+                                        child.addToParent(k)
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+                        <if> !found
+                            <then>
+                                child.addToParent();
+                            </then>
+                        </if>
+                    </do>
+                </for>
+            </do>
+        </for>
+
+        var list = new("java.util.ArrayList", name2Node.values());
+        
+        <!--skip first: it's notifications, add it at the end-->
+        <for> var i = 0 <comma/> i &lt; list.size() <comma/> i++
+            <do>
+                list.get(i).addToParent();
+            </do>
+        </for>
+    </newCode>
+
+    <loadCode>
+
+
+    </loadCode>
+
+    <saveCode>
+        editor.saveRoles();
+    </saveCode>
+
+    <macros>
+        <macro name="conditionsParameter" arguments="addLevels">
+            <parameter name="conditions" description="Conditions" type="condition"
+                       plugInClass="axiomsl.gui.user_management.roles.EntitlementConditionParameterValue">
+                <attribute name="fields">
+                    var l = list();
+                    var fieldFactory = new("axiomsl.util.condition.FieldFactory");
+                    l.add(fieldFactory.createField("report", "name", "", "TEXT", true, false));
+                    l.add(fieldFactory.createField("report", "entity", "", "TEXT", true, false));
+                    l.add(fieldFactory.createField("report", "firm", "", "TEXT", true, false));
+                    <if> <addLevels/>
+                        <then>
+                            l.add(fieldFactory.createField("signOff", "level", "", "INTEGER", false, false));
+                        </then>
+                    </if>
+                    ;l
+                </attribute>
+                <attribute name="disabledConditions">
+                    var l = list();
+                    l.add("EXTERNAL_LIST");
+                    l.add("DATE_INTERVAL_BUSINESS");
+                    l.add("DATE_INTERVAL_REGULAR");
+                    l.add("EXPRESSION_SHORTHAND");
+                    l.add("AGGREGATED");
+                    ;l
+                </attribute>
+            </parameter>
+        </macro>
+
+        <macro name="dashboardConditionsParameter">
+            <parameter name="conditions" description="Conditions" type="condition"
+                       plugInClass="axiomsl.gui.user_management.roles.EntitlementConditionParameterValue">
+                <attribute name="fields">
+                    var userTaskName = currentNode.parent().getName();
+                    var userTaskType = editor.locateObjectByName("UserTaskType", currentNode.parent().getName());
+                    var l = list();
+
+                    var fieldFactory = new("axiomsl.util.condition.FieldFactory");
+                    var userTaskParameters = userTaskType.getTable("parameters");
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; userTaskParameters.size()
+                        <comma/>
+                        i++
+                        <do>
+                            l.add(fieldFactory.createField(userTaskName, userTaskParameters.get(i).getString("name"), "",
+                            "TEXT", userTaskParameters.get(i).propertyIsSet("lookupSource"), false));
+                        </do>
+                    </for>
+                    ;l
+                </attribute>
+                <attribute name="disabledConditions">
+                    var l = list();
+                    l.add("EXTERNAL_LIST");
+                    l.add("DATE_INTERVAL_BUSINESS");
+                    l.add("DATE_INTERVAL_REGULAR");
+                    l.add("EXPRESSION_SHORTHAND");
+                    l.add("AGGREGATED");
+                    ;l
+                </attribute>
+                <attribute name="datasourceLookup">true</attribute>
+                <attribute name="userTask">
+                    currentNode.parent().getName()
+                </attribute>
+            </parameter>
+        </macro>
+    </macros>
+</data_set_category>

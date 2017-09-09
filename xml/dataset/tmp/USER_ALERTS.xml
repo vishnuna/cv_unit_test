@@ -1,0 +1,163 @@
+<data_set_category name="USER_ALERTS"
+                   description="User Alerts"
+                   windowTitle="User Alerts"
+                   entityName="UserAlerts"
+                   icon="windowicon.limits.large"
+                   windowIcon="windowicon.limits"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="UserAlerts"
+                   extends="COMMON_UTILS"
+                   readOnlyMode="true"
+                   singleDataSet=" "
+       >
+
+    <events>
+        <event name="userAlertUpdate">
+            <filter property="eventType" value="AXIOM_OBJECT_UPDATE_EVENT"/>
+            <filter property="objectType" value="UserAlerts"/>
+        </event>
+    </events>
+
+    <parameters>
+        <parameter name="justNew" description="Just New" type="boolean" defaultValue="true">
+            <onParameterChange>
+                macro("refresh", dataSet.getAxiomObject(), newValue);
+            </onParameterChange>
+        </parameter>
+
+        <parameter name="selectAll" description="" type="Component" noSerialization="yes" row="0">
+			<attribute name="componentClass">"axiomsl.gui.project.SelectAllButton"</attribute>
+		</parameter>
+
+        <parameter name="deselectAll" description="" type="Component" noSerialization="yes" row="0">
+			<attribute name="componentClass">"axiomsl.gui.project.DeselectAllButton"</attribute>
+		</parameter>
+
+        <parameter name="download" description="" type="Component" noSerialization="yes" row="0">
+            <attribute name="componentClass">"axiomsl.gui.project.UserAlertDownload"</attribute>
+        </parameter>
+
+
+        <parameter name="alerts" description="Alerts" type="table" allowAddRemove="false" reorder="false">
+
+            <if> event("userAlertUpdate") != null
+                <then>
+                    <if> event("userAlertUpdate").getDbId().getDbId() == dataSet.getAxiomObject().getDbId()
+                        <then>
+                            dataSet.setAxiomObject(event("userAlertUpdate").getObject());
+                            macro("refresh", event("userAlertUpdate").getObject(), false);
+                        </then>
+                    </if>
+                </then>
+            </if>
+
+            <parameter name="processed" description="processed" type="boolean" hidden="true"/>
+
+            <parameter name="toProcess" description="Download" type="boolean">
+            </parameter>
+            <parameter name="date" description="Date" type="string">
+                <readonly/>
+            </parameter>
+            <parameter name="project" description="Project" type="string">
+                <readonly/>
+            </parameter>
+            <parameter name="branch" description="Branch" type="string">
+                <readonly/>
+            </parameter>
+            <parameter name="report" description="Report" type="string">
+                <readonly/>
+            </parameter>
+            <parameter name="asOfDate" description="As of Date" type="string">
+                <readonly/>
+            </parameter>
+            <parameter name="entities" description="Streams" type="string">
+                <readonly/>
+            </parameter>
+        </parameter>
+    </parameters>
+
+
+
+    <loadCode>
+        macro("refresh", <originalAxiom/>, true);
+    </loadCode>
+
+    <saveCode>
+        <axiomForSave/>.setProperty("user", new("axiomsl.server.object_framework.ObjectReferenceImpl",
+                    <axiomForSave/>,
+                    new("axiomsl.server.object_framework.RouteToObject"),
+                    dataSet.getAxiomObject().getReference("user")));
+        var alerts = <axiomForSave/>.getTable("alerts");
+        <for> var i = 0 <comma/> i &lt; param("alerts").size() <comma/> i++
+            <do>
+                var row = param("alerts").get(i);
+                var alert = alerts.addRow("UserAlerts:alert");
+                alert.setProperty("processed", row.param("processed") or row.param("toProcess"));
+                alert.setProperty("taskId", row.getID());
+            </do>
+        </for>
+    </saveCode>
+
+    <macros>
+        <macro name="refresh" arguments="axiomObject, justNew">
+            var alerts = <axiomObject/>.getTable("alerts");
+            <!--var manager = null; editor.getAxiomObjectManager();-->
+            var env = editor.getAxiomEnvironment();
+            var newTable = list();
+            <for> var i = alerts.size()-1 <comma/> i &gt;= 0  <comma/> i--
+                <do>
+                    var alert = alerts.get(i);
+                    <if> !<justNew/> or !alert.getProperty("processed")
+                        <then>
+
+                            var prefix = "";
+                            var suffix = "";
+                            <if> !alert.getProperty("processed")
+                                <then>
+                                    <!--prefix = <string>&lt;html&gt;&lt;body&gt;&lt;b'&gt;</string>;-->
+                                    <!--suffix = <string>&lt;/b&gt;&lt;/body&gt;&lt;/html&gt;</string>;-->
+                                    prefix = <string>*</string>;
+                                    suffix = <string>*</string>;
+                                </then>
+                            </if>
+
+                            var taskId = alert.getString("taskId");
+                            var taskObjectId = function("axiomsl.server.object_framework.ObjectID", "createId", "Task", null, taskId);
+                            var exists = manager.objectExists(taskObjectId, env);
+                            <if>exists
+                                <then>
+                                    var newLine = tableRow();
+                                    newTable.add(newLine);
+
+                                    newLine.param("processed") = alert.getProperty("processed");
+
+                                    var task = manager.locate(taskObjectId, env);
+
+                                    var branchName = task.getReference("underlyingObject").getRouteToTarget().getNameRoute();
+                                    newLine.param("project") = prefix + branchName.substring(0, branchName.indexOf("!")) + suffix;
+                                    newLine.param("branch") = prefix + branchName.substring(branchName.indexOf("!") + 1, branchName.length()-1) + suffix;
+
+                                    newLine.param("report") = prefix +
+                                    task.getReference("underlyingObject").getTargetObjectNativeName() + suffix;
+                                    newLine.param("asOfDate") = prefix + function("axiomsl.util.basic.ObjectFormatter", "toGUIString", task.getProperty("asOfDate"))+ suffix;
+                                    newLine.param("date") = prefix + function("axiomsl.util.basic.ObjectFormatter", "toGUIString", task.getProperty("endTime"))+ suffix;
+
+                                    var streams = new("axiomsl.server.lock.StreamList",
+                                    task.getObject("keyParameters").getTable("streams"));
+                                    newLine.param("entities") = prefix + streams.toString() + suffix;
+                                    newLine.param("processed") = alert.getProperty("processed");
+
+                                    newLine.setID(taskObjectId.getObjectId());
+                                </then>
+                            </if>
+                        </then>
+                    </if>
+                </do>
+            </for>
+
+            param("alerts") = newTable;
+        </macro>
+    </macros>
+
+</data_set_category>

@@ -1,0 +1,38 @@
+<data_set_category name="DOC_DATA">
+
+    <parameters>
+        <parameter name="view" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+            <attribute name="componentClass">"axiomsl.gui.project.ViewDocFileButton"</attribute>
+        </parameter>
+        <parameter name="upload" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+            <attribute name="componentClass">"axiomsl.gui.project.UploadHelpButton"</attribute>
+        </parameter>
+
+        <parameter name="docFile" description="Documentation File" type="string" length="40" group="Documentation" row="0" freehand="no">
+        </parameter>
+
+        <parameter name="comment" description="Notes" type="String" length="7" group="Documentation" freehand="no">
+            <attribute name="multiLine">3</attribute>
+            <attribute name="unlimitedSize"> true </attribute>
+        </parameter>
+
+    </parameters>
+
+    <loadCode>
+        param("comment") =  <originalAxiom/>.getOptionalValue("comment", "");
+        param("docFile") =  <originalAxiom/>.getOptionalValue("docFile", "");
+    </loadCode>
+
+    <saveCode>
+        <if> param("comment") != ""
+            <then>
+                <axiomForSave/>.setProperty("comment", param("comment"));
+            </then>
+        </if>
+        <if> param("docFile") != ""
+            <then>
+                <axiomForSave/>.setProperty("docFile", param("docFile"));
+            </then>
+        </if>
+    </saveCode>
+</data_set_category>

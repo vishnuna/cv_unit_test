@@ -1,0 +1,138 @@
+<data_set_category name="WORKFLOW"
+	description="WORKFLOW"
+	windowTitle="Workflow Setup"
+	entityName="Workflow"
+	icon="workflow"
+	screenWidth="600"
+	screenHeight="600"
+    objectType="WorkFlow"
+    extends="ARCHIVAL_PROPERTIES, COMMON_UTILS, DOC_DATA">
+
+    <parameters>
+
+        <parameter name="runIteratorsInParallel" description="Run iterations in parallel" group="Iterators"
+                   type="boolean" defaultValue="false" length="20" freehand="no">
+
+            <if>
+                param("iterators").size() != 0
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <disabled/>
+                </else>
+            </if>
+
+        </parameter>
+
+
+        <parameter name="iterationsPoolSize" description="Size of the iterations threads pool" group="Iterators"
+                   type="integer" defaultValue="5" length="3" freehand="no">
+
+            <if>
+                param("iterators").size() != 0
+                <then>
+
+                    <if>
+                        <param name="runIteratorsInParallel"/>
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <disabled/>
+                        </else>
+                    </if>
+
+                </then>
+                <else>
+                    <disabled/>
+                </else>
+            </if>
+
+
+            <verifyForSave>
+                macro("isPositiveAndLessCurrentValue", 32);  <!--max 32 threads-->
+            </verifyForSave>
+
+        </parameter>
+
+        <parameter name="iterators" description="Iterators" type="table" length="10" keyParameter="name" group="Iterators">
+            <parameter name="name" description="Iterator Name" type="String" freehand="no">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("keyParameters"), param("nonKeyParameters")));
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+
+            </parameter>
+            <parameter name="valuesListFormula" description="Value List Expression" type="String" wrapOnReport="true" freehand="yes">
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+        </parameter>
+
+        <parameter name="keyParameters" description="Key Parameters" type="table" length="4" keyParameter="name" group="Variables">
+            <parameter name="name" description="Variable Name" type="String" freehand="no">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("iterators"), param("nonKeyParameters")));
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="description" description="Description" type="String" freehand="no"/>
+            <parameter name="dataType" description="Type" type="String" freehand="no">
+                choices(<asDescription>
+                    ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE"))
+                </asDescription>)
+                <default>
+                'VARCHAR'
+                </default>
+            </parameter>
+            <!--<parameter name="lookupFormula" description="Lookup Expression" type="String" wrapOnReport="true" freehand="yes"/>-->
+        </parameter>
+
+        <parameter name="nonKeyParameters" description="NonKey Parameters" type="table" length="4" keyParameter="name" group="Variables">
+            <parameter name="name" description="Variable Name" type="String" freehand="no">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("iterators"), param("keyParameters")));
+                </validation>
+                <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+                </parameter>
+            <parameter name="description" description="Description" type="String" freehand="no"/>
+            <parameter name="dataType" description="Type" type="String" freehand="no">
+                choices(<asDescription>
+                    ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE"))
+                </asDescription>)
+                <default>
+                'VARCHAR'
+                </default>
+            </parameter>
+            <!--<parameter name="lookupFormula" description="Lookup Expression" type="String" wrapOnReport="true" freehand="yes"/>-->
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        var route = dataSet.getRouteFromCurrentBranch();
+        var templates = null;
+        var params = array("iterators", "keyParameters", "nonKeyParameters", "runIteratorsInParallel", "iterationsPoolSize");
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(<originalAxiom/>, currentParameters, params, array("keyParameters.lookupFormula", "nonKeyParameters.lookupFormula"), templates, null, route);
+    </loadCode>
+
+    <saveCode>
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var templates = null;
+        var params = array("iterators", "keyParameters", "nonKeyParameters", "runIteratorsInParallel", "iterationsPoolSize");
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(<axiomForSave/>, currentParameters, params, array("keyParameters.lookupFormula", "nonKeyParameters.lookupFormula"), templates, null, route);
+    </saveCode>
+
+</data_set_category>

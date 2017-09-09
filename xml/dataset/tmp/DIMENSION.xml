@@ -1,0 +1,1122 @@
+<data_set_category name="DIMENSION" description="Dimension Setup"
+                   windowTitle="Dimension Setup" entityName="Dimension"
+                   icon="dimension" screenWidth="800" screenHeight="500" objectType="Dimension"
+                   extends="COMMON_UTILS, DOC_DATA">
+    <parameters>
+        <parameter name="isLoading" description="Data Set Is Loading" type="boolean" hidden="true"/>
+
+        <parameter name="longName" description="Long Name" type="String" group="Parameters" length="80">
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+
+            <validation>
+                <if>newValue == ""
+                    <then>
+                        return l("%1 cannot be empty", currentParameter.getDescription(false));
+                    </then>
+                </if>
+            </validation>
+        </parameter>
+
+        <parameter name="dimensionType" description="Dimension Type" type="String" group="Parameters">
+            <choices>
+                <asDescription>
+                    ndo("FIXED", l("Fixed")),
+                    ndo("DATA_DRIVEN", l("Data-Driven"))
+                </asDescription>
+            </choices>
+
+            <onParameterChange>
+                <if>newValue == "FIXED" and oldValue == "DATA_DRIVEN"
+                    <then>
+                        var invisRootParam = param("hierarchies");
+                        invisRootParam.setName("invisibleRoot");
+                        invisRootParam.setID("invisibleRoot");
+                    </then>
+                </if>
+            </onParameterChange>
+        </parameter>
+
+        <parameter name="dataType" description="Data Type" group="Parameters" type="String">
+            <if>param("dimensionType") == "FIXED"
+                <then>
+                    <removed/>
+                </then>
+                <else>
+                    <enabled/>
+                    <choices>
+                        <asDescription>
+                            ndo("VARCHAR",l("VARCHAR")),
+                            ndo("INTEGER",l("INTEGER")),
+                            ndo("FLOAT",l("FLOAT")),
+                            ndo("DATE",l("DATE"))
+                        </asDescription>
+                    </choices>
+                </else>
+            </if>
+        </parameter>
+
+        <parameter name="xbrlDimensionId" description="XBRL Dimension ID" type="String" group="Parameters" length="50"/>
+
+        <parameter name="xbrlDomainId" description="XBRL Domain ID" type="String" group="Parameters" length="50"/>
+
+        <parameter name="xbrlDimensionNamespace" description="XBRL Dimension Namespace" type="String" group="Parameters" length="80"/>
+
+        <parameter name="xbrlDomainNamespace" description="XBRL Domain Namespace" type="String" group="Parameters" length="80"/>
+
+        <parameter name="additionalXbrlDomainNamespaces" description="Additional XBRL Domain Namespaces" type="table" group="Parameters">
+            <parameter name="name" description="Namespace prefix" type="String">
+                <validation>
+                    macro("checkUniquenessIgnoreCase", list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="namespaceLocation" description="Namespace" type="String">
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list());
+            </confirmAddRow>
+        </parameter>
+
+        <!--
+            root node      -> of "invisibleNode" type
+            hier node      -> of "hierarchyNode" type
+            child nodes    -> of "memberNode" type
+        -->
+        <parameter name="hierarchies" description="Hierarchies" type="tree" group="Hierarchies"
+                   rootNodeType="invisibleNode" showsRoot="false"
+                   plugInClass="axiomsl.gui.xbrl.editor.dimension.HierarchyTreeParameterValue">
+            <if>param("dimensionType") == "DATA_DRIVEN"
+                <then>
+                    <removed/>
+                </then>
+                <else>
+                    <enabled/>
+                </else>
+            </if>
+
+            <!-- introduced due to Multi Trees, which is actually the One Tree with invisible root. -->
+            <!-- "invisibleNode" name/id is used at TreeAuxiliaryPanel#getAllPathsToMember - so, if it is going to be renamed - then rename it there accordingly -->
+            <nodeType name="invisibleNode" description="Invisible Node" renameAllowed="true" deleteAllowed="true"
+                      hasChildren="true" childrenAreFixed="false" alphaNumericName="false"
+                      childrenTypes="hierarchyNode, standaloneMemberNode" icon="image.xbrl.hierarchy" childrenNamesAreUnique="false">
+                <parameter name="isInvisibleRoot" description="Is This Node Invisible Root" type="boolean" group="Dev"
+                           defaultValue="false" hidden="true"/>
+            </nodeType>
+
+            <nodeType name="hierarchyNode" description="Hierarchy" renameAllowed="true" deleteAllowed="true"
+                      hasChildren="true" childrenAreFixed="false" alphaNumericName="false"
+                      childrenTypes="memberNode" icon="image.xbrl.hierarchy" childrenNamesAreUnique="false"
+                      maxChildrenNumber="1">
+
+                <parameter name="longName" description="Long Name" type="string" group="Hierarchy Properties" length="40">
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+
+                    <validation>
+                        <if>newValue == ""
+                            <then>
+                                return l("%1 cannot be empty", currentParameter.getDescription(false));
+                            </then>
+                        </if>
+
+                        var mes = editor.validateLongName(newValue, currentNode, currentNode.parent());
+                        <if>mes != null
+                            <then>
+                                return mes;
+                            </then>
+                        </if>
+                    </validation>
+
+                    <onParameterChange>
+                        currentNode.setName(newValue);
+                        editor.updateMemberOccurrences();
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="name" description="Name" type="string" group="Hierarchy Properties" length="40">
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+
+                    <validation>
+                        <if>newValue == ""
+                            <then>
+                                return l("%1 cannot be empty", currentParameter.getDescription(false));
+                            </then>
+                        </if>
+
+                        var mes = editor.validateName(newValue, currentNode, currentNode.parent());
+                        <if>mes != null
+                            <then>
+                                return mes;
+                            </then>
+                        </if>
+                    </validation>
+
+                </parameter>
+
+                <parameter name="id" description="ID" type="string" group="Hierarchy Properties" length="30">
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+
+                    <validation>
+                        <if>newValue == ""
+                            <then>
+                                return l("%1 cannot be empty", currentParameter.getDescription(false));
+                            </then>
+                        </if>
+                        var mes = editor.validateHierarchyId(newValue, currentNode, currentNode.parent());
+                        <if>mes != null
+                            <then>
+                                return mes;
+                            </then>
+                        </if>
+                    </validation>
+
+                    <onParameterChange>
+                        currentNode.setID("hierarchy_" + newValue);
+                        editor.updateMemberOccurrences();
+                    </onParameterChange>
+
+                </parameter>
+
+                <parameter name="description" description="Description" type="string" group="Hierarchy Properties" length="30"/>
+
+                <!--documentation-->
+                <parameter name="view" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.ViewDocFileButton"</attribute>
+                </parameter>
+                <parameter name="upload" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.UploadHelpButton"</attribute>
+                </parameter>
+
+                <parameter name="docFile" description="Documentation File" type="string" length="30"
+                           group="Documentation" row="0"/>
+
+                <parameter name="comment" description="Notes" type="String" length="7" group="Documentation">
+                    <attribute name="multiLine">3</attribute>
+                    <attribute name="unlimitedSize">true</attribute>
+                </parameter>
+
+            </nodeType>
+
+            <nodeType name="standaloneMemberNode" description="Member" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false" alphaNumericName="false"
+                      iconFactory="axiomsl.gui.xbrl.editor.dimension.MemberIconFactory">
+                <macro name="longNameParameter"/>
+
+                <macro name="memberIdParameter"/>
+
+                <parameter name="description" description="Description" type="string" group="Member Properties" length="30"/>
+
+                <parameter name="isUsedInStandardReports" description="Is Used in Standard Reports" type="boolean" group="Member Properties" defaultValue="true">
+                    <onParameterChange>
+                        <if>newValue
+                            <then>
+                                currentNode.setForeground("0,0,0");
+                            </then>
+                            <else>
+                                currentNode.setForeground("128,128,128");
+                            </else>
+                        </if>
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="skipForSubmission" description="Skip in Submission File" type="boolean" group="Member Properties" defaultValue="false"/>
+
+                <!--documentation-->
+                <parameter name="view" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.ViewDocFileButton"</attribute>
+                </parameter>
+                <parameter name="upload" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.UploadHelpButton"</attribute>
+                </parameter>
+
+                <parameter name="docFile" description="Documentation File" type="string" length="30"
+                           group="Documentation" row="0"/>
+
+                <parameter name="comment" description="Notes" type="String" length="7" group="Documentation">
+                    <attribute name="multiLine">3</attribute>
+                    <attribute name="unlimitedSize">true</attribute>
+                </parameter>
+
+            </nodeType>
+
+            <nodeType name="memberNode" description="Member" renameAllowed="true" deleteAllowed="true"
+                      hasChildren="true" childrenAreFixed="false" alphaNumericName="false"
+                      childrenTypes="memberNode" iconFactory="axiomsl.gui.xbrl.editor.dimension.MemberIconFactory"
+                      childrenNamesAreUnique="true">
+
+                <parameter name="childCount" description="Child Count" type="integer" group="Dev" defaultValue="0"
+                           hidden="true"/>
+
+                <!-- for now all the children implied to have ICB == true -->
+                <parameter name="isLastICBChild" description="Is Last ICB child" type="boolean" group="Dev" defaultValue="true"
+                           hidden="true"/>
+
+                <!-- separator "Common member properties" -->
+                <parameter name="commonMemberProps" description="" type="Component" group="Member Properties"
+                           noSerialization="yes">
+                    <attribute name="componentClass">"axiomsl.gui.core.LocalHeaderComponent"</attribute>
+                    <attribute name="text">l("Common member properties")</attribute>
+                </parameter>
+
+                <macro name="longNameParameter"/>
+
+                <macro name="memberIdParameter"/>
+
+                <parameter name="description" description="Description" type="string" group="Member Properties" length="30">
+                    <onParameterChange>
+                        editor.updateMemberPropertiesInNodes(currentNode);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="isOrphan" description="Is Orphan" type="boolean" group="Member Properties" defaultValue="false">
+                    <if>currentNode.parent().type() == "hierarchyNode"
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if> param("isLastICBChild")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <disabled/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+
+                    <onParameterChange>
+                        editor.updateMemberPropertiesInNodes(currentNode);
+                    </onParameterChange>
+
+                    <validation>
+                        <!-- check that it is the last ICB child. -->
+                        <if>newValue == true
+                            <then>
+                                var parent = currentNode.parent();
+                                var ourChildFound = false;
+                                <for>var i = 0 <comma/> i &lt; parent.childCount() <comma/> i++
+                                    <do>
+                                        var aChild = parent.child(i);
+                                        <if>aChild.param("id") == currentNode.param("id")
+                                            <then>
+                                                ourChildFound = true;
+                                                continue;
+                                            </then>
+                                        </if>
+                                        <if>ourChildFound and aChild.param("isCompleteBreakdown")
+                                            <then>
+                                                <!-- get hier for node -->
+                                                var hierNode;
+                                                macro("getHierForNode", currentNode, hierNode);
+                                                return l("isOrphan property is set for not latest ICB child %1 in hierarchy %2.", currentNode.param("id"), hierNode.param("id"));
+                                            </then>
+                                        </if>
+                                    </do>
+                                </for>
+
+                            </then>
+                        </if>
+                    </validation>
+
+                </parameter>
+
+                <parameter name="isUsedInStandardReports" description="Is Used in Standard Reports" type="boolean"
+                           group="Member Properties" defaultValue="true">
+                    <onParameterChange>
+                        <if>newValue
+                            <then>
+                                currentNode.setForeground("0,0,0");
+                            </then>
+                            <else>
+                                currentNode.setForeground("128,128,128");
+                            </else>
+                        </if>
+
+                        editor.updateMemberPropertiesInNodes(currentNode);
+                    </onParameterChange>
+                </parameter>
+
+
+                <parameter name="skipForSubmission" description="Skip in Submission File" type="boolean"
+                           group="Member Properties" defaultValue="false">
+                    <onParameterChange>
+                        editor.updateMemberPropertiesInNodes(currentNode);
+                    </onParameterChange>
+                </parameter>
+
+                <!-- separator "Member appears in" -->
+                <parameter name="memberAlsoAppearsAt" description="" type="Component" group="Member Properties"
+                           noSerialization="yes">
+                    <attribute name="componentClass">"axiomsl.gui.core.LocalHeaderComponent"</attribute>
+                    <attribute name="text">l("Member appears in")</attribute>
+                </parameter>
+
+                <parameter name="pathsTable" description="" type="Component" group="Member Properties"
+                           noSerialization="yes">
+                    <attribute name="componentClass">"axiomsl.gui.xbrl.editor.dimension.MemberOccurrenceTable"</attribute>
+                </parameter>
+
+                <!-- separator "Properties specific to position of member in hierarchy" -->
+                <parameter name="nodeProps" description="" type="Component" group="Member Properties"
+                           noSerialization="yes">
+                    <attribute name="componentClass">"axiomsl.gui.core.LocalHeaderComponent"</attribute>
+                    <attribute name="text">l("Properties specific to position of member in hierarchy")</attribute>
+                </parameter>
+
+                <parameter name="hasHiddenOrphans" description="Contains More Than its Children" type="boolean"
+                           group="Member Properties" defaultValue="false">
+                    <if>param("childCount") == 0 or currentNode.parent() == null
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+
+                <parameter name="weight" description="Weight" type="double" group="Member Properties" defaultValue="1.0">
+                    <if>currentNode.parent().type() == "hierarchyNode"
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+
+                <parameter name="isCompleteBreakdown" description="Is Complete Breakdown" type="boolean"
+                           group="Member Properties" defaultValue="true" hidden="true">
+                    <if>currentNode.parent().type() == "hierarchyNode"
+                        <then>
+                            <removed/>
+                        </then>
+                    </if>
+                </parameter>
+
+                <!--documentation-->
+                <parameter name="view" description="ads" type="Component" noSerialization="yes" group="Documentation"
+                           row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.ViewDocFileButton"</attribute>
+                </parameter>
+                <parameter name="upload" description="ads" type="Component" noSerialization="yes" group="Documentation"
+                           row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.UploadHelpButton"</attribute>
+                </parameter>
+
+                <parameter name="docFile" description="Documentation File" type="string" length="30"
+                           group="Documentation" row="0">
+                    <onParameterChange>
+                        editor.updateMemberPropertiesInNodes(currentNode);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="comment" description="Notes" type="String" length="7" group="Documentation">
+                    <attribute name="multiLine">3</attribute>
+                    <attribute name="unlimitedSize">true</attribute>
+
+                    <onParameterChange>
+                        editor.updateMemberPropertiesInNodes(currentNode);
+                    </onParameterChange>
+                </parameter>
+            </nodeType>
+
+            <onNodeAdded>
+                var allNodes = addedNode.getAllNodes();
+                <for> var i = 0 <comma/> i &lt; allNodes.size() <comma/> i++
+                    <do>
+                        var node = allNodes.get(i);
+                        <if>(node.type() == "memberNode" or node.type() == "standaloneMemberNode") and !node.param("isUsedInStandardReports")
+                            <then>
+                                node.setForeground("128,128,128");
+                            </then>
+                        </if>
+                    </do>
+                </for>
+
+                <if>addedNode.parent().type() == "memberNode"
+                    <then>
+                        addedNode.parent().param("childCount") = addedNode.parent().childCount();
+                        macro("updateIsLastICBChild", addedNode);
+                    </then>
+                </if>
+                addedNode.param("longName") = addedNode.getName();
+            </onNodeAdded>
+
+            <onNodeDeleted>
+                <if>deletedNode.parent().type() == "memberNode"
+                    <then>
+                        deletedNode.parent().param("childCount") = deletedNode.parent().childCount();
+                        macro("updateIsLastICBChild", deletedNode);
+                    </then>
+                </if>
+
+                editor.updateMemberOccurrences();
+            </onNodeDeleted>
+
+            <onNodeRenamed>
+                <if>renamedNode.type() != "invisibleNode"
+                    <then>
+                        var prevLongName = renamedNode.param("longName");
+
+                        <try>
+                            renamedNode.param("longName") = renamedNode.getName();
+                            <catch/>
+                            <if>renamedNode.param("longName") != renamedNode.getName()
+                                <then>
+                                    renamedNode.param("longName") = prevLongName;
+                                </then>
+                            </if>
+                        </try>
+
+                        editor.updateMemberOccurrences();
+                    </then>
+                </if>
+            </onNodeRenamed>
+
+            <validateNode>
+                var res = null;
+                <if>!param("isLoading")
+                    and newNode.type() != "invisibleNode"
+                    and newNode.param("id") != null
+                    and parentNode.getNode().getParent() != null
+                    <then>
+                        res = editor.validateNewNodeId(newNode.param("id"), newNode, parentNode);
+
+                        <if>res == null
+                            <then>
+                                res = editor.validateLongName(newNode.param("longName"), newNode, parentNode);
+                            </then>
+                        </if>
+                    </then>
+                </if>
+
+                <if>res != null
+                    <then>
+                        return res;
+                    </then>
+                </if>
+            </validateNode>
+
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        param("isLoading") = true;
+
+        var dimAxiomObject = <originalAxiom/>;
+
+        param("longName") = dimAxiomObject.getString("longName");
+        param("dimensionType") = dimAxiomObject.getString("dimensionType");
+
+        <if>dimAxiomObject.propertyIsSet("xbrlDimensionId")
+            <then>
+                param("xbrlDimensionId") = dimAxiomObject.getOptionalString("xbrlDimensionId");
+            </then>
+            <else>
+                param("xbrlDimensionId") = ""
+            </else>
+        </if>
+        <if>dimAxiomObject.propertyIsSet("xbrlDomainId")
+            <then>
+                param("xbrlDomainId") = dimAxiomObject.getOptionalString("xbrlDomainId");
+            </then>
+            <else>
+                param("xbrlDomainId") = ""
+            </else>
+        </if>
+        <if>dimAxiomObject.propertyIsSet("xbrlDimensionNamespace")
+            <then>
+                param("xbrlDimensionNamespace") = dimAxiomObject.getOptionalString("xbrlDimensionNamespace");
+            </then>
+            <else>
+                param("xbrlDimensionNamespace") = ""
+            </else>
+        </if>
+        <if>dimAxiomObject.propertyIsSet("xbrlDomainNamespace")
+            <then>
+                param("xbrlDomainNamespace") = dimAxiomObject.getOptionalString("xbrlDomainNamespace");
+            </then>
+            <else>
+                param("xbrlDomainNamespace") = ""
+            </else>
+        </if>
+
+        <if>param("dimensionType") == "DATA_DRIVEN" and dimAxiomObject.propertyIsSet("dataType")
+            <then>
+                param("dataType") = dimAxiomObject.getOptionalString("dataType");
+            </then>
+            <else>
+                param("dataType") = "VARCHAR";
+            </else>
+        </if>
+
+        <if>param("dimensionType") == "FIXED"
+            <then>
+                var invisRootParam = param("hierarchies");
+                var hierarchiesProp = dimAxiomObject.getTable("hierarchies");
+
+                invisRootParam.name() = "invisibleRoot";
+                invisRootParam.setID("invisibleRoot");
+                invisRootParam.param("isInvisibleRoot") = true;
+
+                var memberIds = new("java.util.HashSet");
+
+                var hiersPropList = hierarchiesProp.getAllRows();
+                <for>var i = 0 <comma/> i &lt; hiersPropList.size() <comma/> i++
+                    <do>
+                        <!-- this is one hierarchy -->
+                        var hierProp = hiersPropList.get(i);
+
+                        <!-- hier param -->
+                        var currHierParam = invisRootParam.createChild("hierarchyNode", hierProp.getProperty("longName"));
+                        currHierParam.setID("hierarchy_" + hierProp.getProperty("id"));
+                        currHierParam.param("description") = hierProp.getProperty("description");
+                        currHierParam.param("longName") = hierProp.getProperty("longName");
+                        currHierParam.param("name") = hierProp.getProperty("name");
+                        currHierParam.param("id") = hierProp.getProperty("id");
+                        currHierParam.param("comment") = hierProp.getOptionalValue("comment", "");
+                        currHierParam.param("docFile") = hierProp.getOptionalValue("docFile", "");
+                        currHierParam.addToParent();
+
+                        <if>!hierProp.propertyIsSet("hierarchy")
+                            <then>continue;</then>
+                        </if>
+                        var nodesPropList = hierProp.getTree("hierarchy").getAllNodes();
+
+                        <for>var j = 0 <comma/> j &lt; nodesPropList.size() <comma/> j++
+                            <do>
+                                var nodeProp = nodesPropList.get(j);
+                                var nodeParam;
+                                var parentNodeParam = null;
+
+                                <!-- get appropriate member -->
+                                var membersProp = dimAxiomObject.getTable("members");
+                                var memberProp = membersProp.locateById(nodeProp.getProperty("id"));
+
+                                memberIds.add(nodeProp.getProperty("id"));
+
+                                <if>j == 0
+                                    <then>
+                                        <!-- root param -->
+                                        var currRootParam = currHierParam.createChild("memberNode", memberProp.getProperty("longName"));
+                                        parentNodeParam = currHierParam;
+                                        nodeParam = currRootParam; <!-- nodeParam.addToParent() is called in the very below for it! -->
+
+                                        nodeParam.param("isLastICBChild") = true;
+                                    </then>
+                                    <else>
+                                        var parentID = nodeProp.getParentNode().getProperty("id");
+                                        parentNodeParam = currHierParam.findNodeByID("member_" + parentID);
+                                        nodeParam = parentNodeParam.createChild("memberNode", memberProp.getProperty("longName"));
+
+                                        <!-- get to know position of the node among siblings -->
+                                        <for>var k = 0 <comma/> k &lt; nodeProp.getParentNode().getChildCount() <comma/> k++
+                                            <do>
+                                                <if> nodeProp.getProperty("id").equals(nodeProp.getParentNode().getChildNode(k).getProperty("id")) and k == nodeProp.getParentNode().getChildCount() - 1
+                                                    <then>
+                                                        nodeParam.param("isLastICBChild") = true;
+                                                    </then>
+                                                    <else>
+                                                        nodeParam.param("isLastICBChild") = false;
+                                                    </else>
+                                                </if>
+                                            </do>
+                                        </for>
+                                    </else>
+                                </if>
+
+                                <!-- hack in order to prevent "default serialization" if there is no rows to fill the table -->
+                                <!--nodeParam.param("pathsTable");-->
+
+                                nodeParam.setID("member_" + nodeProp.getProperty("id"));
+                                nodeParam.param("description") = memberProp.getProperty("description");
+                                <!--nodeParam.param("longName") = nodeProp.getProperty("name"); - see below - member longName is assigned instead -->
+                                nodeParam.param("id") = nodeProp.getProperty("id");
+                                nodeParam.param("isCompleteBreakdown") = nodeProp.getOptionalValue("isCompleteBreakdown", true);
+
+                                nodeParam.param("comment") = memberProp.getOptionalValue("comment", "");
+                                nodeParam.param("docFile") = memberProp.getOptionalValue("docFile", "");
+                                nodeParam.param("childCount") = nodeProp.getChildCount();
+                                nodeParam.param("hasHiddenOrphans") = nodeProp.getOptionalValue("hasHiddenOrphans",
+                                false);
+
+                                <!-- transfer member props: -->
+                                nodeParam.param("longName") = memberProp.getProperty("longName");
+                                nodeParam.param("weight") = nodeProp.getOptionalValue("weight", 1.0);
+                                nodeParam.param("isOrphan") = memberProp.getOptionalValue("isOrphan", false);
+                                nodeParam.param("isUsedInStandardReports") = memberProp.getOptionalValue("usedInReports", false);
+                                nodeParam.param("skipForSubmission") = memberProp.getOptionalValue("skipForSubmission", false);
+                                <if>!nodeParam.param("isUsedInStandardReports")
+                                    <then>
+                                        nodeParam.setForeground("128,128,128");
+                                    </then>
+                                </if>
+
+                                <!-- in our new impl do always, the only children are here. -->
+                                nodeParam.addToParent();
+                            </do>
+                        </for>
+                    </do>
+                </for>
+
+                var memberTable = dimAxiomObject.getTable("members");
+                <for> var i = 0 <comma/> i &lt; memberTable.size() <comma/> i++
+                    <do>
+                        var member = memberTable.get(i);
+                        var memberId = member.getString("id");
+                        <if>!memberIds.contains(memberId)
+                            <then>
+                                var memberNode = invisRootParam.createChild("standaloneMemberNode", member.getProperty("longName"));
+
+                                memberNode.setID("member_" + member.getProperty("id"));
+                                memberNode.param("description") = member.getProperty("description");
+                                memberNode.param("id") = member.getProperty("id");
+
+                                memberNode.param("longName") = member.getProperty("longName");
+                                memberNode.param("isUsedInStandardReports") = member.getOptionalValue("usedInReports", false);
+                                memberNode.param("skipForSubmission") = member.getOptionalValue("skipForSubmission", false);
+
+                                memberNode.param("comment") = member.getOptionalValue("comment", "");
+                                memberNode.param("docFile") = member.getOptionalValue("docFile", "");
+
+                                <if>!memberNode.param("isUsedInStandardReports")
+                                    <then>
+                                        memberNode.setForeground("128,128,128");
+                                    </then>
+                                </if>
+
+                                memberNode.addToParent();
+                            </then>
+                        </if>
+                    </do>
+                </for>
+
+            </then>
+            <else>
+                var invisRootParam = param("hierarchies");
+                invisRootParam.param("isInvisibleRoot") = true;
+            </else>
+        </if>
+
+
+        <if>dimAxiomObject.propertyIsSet("additionalXbrlDomainNamespaces") and !dimAxiomObject.propertyIsEmpty("additionalXbrlDomainNamespaces")
+            <then>
+                var additionalNamespaces = dimAxiomObject.getTable("additionalXbrlDomainNamespaces");
+                <for> var i = 0 <comma/> i &lt; additionalNamespaces.size() <comma/> i++
+                    <do>
+                        var row = tableRow();
+                        row.param("name") =  additionalNamespaces.get(i).getString("namespacePrefix");
+                        row.param("namespaceLocation") =  additionalNamespaces.get(i).getString("namespaceLocation");
+                        param("additionalXbrlDomainNamespaces").add(row);
+                    </do>
+                </for>
+            </then>
+            <else>
+                param("additionalXbrlDomainNamespaces");
+            </else>
+        </if>
+
+        param("isLoading") = false;
+    </loadCode>
+
+    <saveCode>
+        var dimAxiomObject=<axiomForSave/>;
+        var hasWeight=false;
+        dimAxiomObject.setProperty("longName", param("longName"));
+        dimAxiomObject.setProperty("dimensionType", param("dimensionType"));
+        <if>!"".equals(param("xbrlDimensionId"))
+            <then>
+                dimAxiomObject.setProperty("xbrlDimensionId", param("xbrlDimensionId"));
+            </then>
+        </if>
+        <if>!"".equals(param("xbrlDomainId"))
+            <then>
+                dimAxiomObject.setProperty("xbrlDomainId", param("xbrlDomainId"));
+            </then>
+        </if>
+        <if>!"".equals(param("xbrlDimensionNamespace"))
+            <then>
+                dimAxiomObject.setProperty("xbrlDimensionNamespace", param("xbrlDimensionNamespace"));
+            </then>
+        </if>
+        <if>!"".equals(param("xbrlDomainNamespace"))
+            <then>
+                dimAxiomObject.setProperty("xbrlDomainNamespace", param("xbrlDomainNamespace"));
+            </then>
+        </if>
+
+        <if>param("dimensionType") == "DATA_DRIVEN"
+            <then>
+                dimAxiomObject.setProperty("dataType", param("dataType"));
+            </then>
+
+        </if>
+
+        <if>param("dimensionType") == "FIXED"
+            <then>
+                var invisRootParam = param("hierarchies");
+
+                <!-- "hierarchies" table prop -->
+                var hierarchiesTableProp = dimAxiomObject.createTablePropertyValue();
+                dimAxiomObject.setProperty("hierarchies", hierarchiesTableProp);
+
+                <!-- "members" table prop -->
+                var membersTableProp = dimAxiomObject.createTablePropertyValue();
+                dimAxiomObject.setProperty("members", membersTableProp);
+
+                var hierParams = invisRootParam.children();
+
+                var i = 0;
+                <for> <comma/>  (i &lt; hierParams.size()) and (hierParams.get(i).type() == "hierarchyNode")<comma/> i ++
+                    <do>
+                        <!-- curr hier -->
+                        var hierParam = hierParams.get(i);
+
+                        var hierRowProp = hierarchiesTableProp.addRow("Dimension:hierarchy");
+                        hierRowProp.setProperty("name", hierParam.param("name"));
+                        hierRowProp.setProperty("longName", hierParam.param("longName"));
+                        hierRowProp.setProperty("id", hierParam.param("id"));
+                        hierRowProp.setProperty("description", hierParam.param("description"));
+
+                        <if>hierParam.param("comment") != ""
+                            <then>
+                                hierRowProp.setProperty("comment", hierParam.param("comment"));
+                            </then>
+                        </if>
+                        <if>hierParam.param("docFile") != ""
+                            <then>
+                                hierRowProp.setProperty("docFile", hierParam.param("docFile"));
+                            </then>
+                        </if>
+
+                        <if>hierParam.children().size() == 0
+                            <then>continue;</then>
+                        </if>
+
+                        var hierRootNodeProp = dimAxiomObject.createTreePropertyValue("Dimension:hierarchyNode");
+                        hierRowProp.setProperty("hierarchy", hierRootNodeProp);
+
+                        <!-- root of curr hier -->
+                        var root = hierParam.children().get(0);
+                        var allNodesParams = root.getAllNodes();
+
+                        <for>var j = 0
+                            <comma/>
+                            j &lt; allNodesParams.size()
+                            <comma/>
+                            j ++
+                            <do>
+                                var nodeParam = allNodesParams.get(j);
+
+                                var parentNodeProp = null;
+                                var nodeProp;
+                                <if>j != 0
+                                    <then>
+                                        parentNodeProp = hierRootNodeProp.locateById(nodeParam.parent().param("id"),
+                                        null);
+                                        nodeProp = parentNodeProp.addChild("Dimension:hierarchyNode");
+                                        <!-- the below fork is temporary! the root node must be excluded -->
+                                        <if>nodeParam.param("isCompleteBreakdown") == null
+                                            <then>nodeProp.setProperty("isCompleteBreakdown", true);</then>
+                                            <!--<else>nodeProp.setProperty("isCompleteBreakdown",
+                                                nodeParam.param("isCompleteBreakdown"));
+                                            </else>-->
+                                        </if>
+                                    </then>
+                                    <else>
+                                        nodeProp = hierRootNodeProp.getRootNode();
+                                    </else>
+                                </if>
+
+                                <!-- check if this member has already been added -->
+                                var memberRowProp = null;
+                                <for>var k = 0
+                                    <comma/>
+                                    k &lt; membersTableProp.size()
+                                    <comma/>
+                                    k ++
+                                    <do>
+                                        memberRowProp = membersTableProp.get(k);
+                                        <if>nodeParam.param("id") == memberRowProp.getString("id")
+                                            <then>break;</then>
+                                            <else>memberRowProp = null;</else>
+                                        </if>
+                                    </do>
+                                </for>
+
+                                <if>memberRowProp == null
+                                    <then>
+                                        <!-- do Dimension:member -->
+                                        memberRowProp = membersTableProp.addRow("Dimension:member");
+
+                                        <!--    from hier node -> to -> member
+                                                copy props just one time.
+                                                ids are the same for nodes in different hiers
+                                                the rest is optional. -->
+                                        memberRowProp.setProperty("usedInReports",
+                                        nodeParam.param("isUsedInStandardReports"));
+                                        memberRowProp.setProperty("skipForSubmission",
+                                        nodeParam.param("skipForSubmission"));
+                                        memberRowProp.setProperty("longName", nodeParam.param("longName"));
+                                        memberRowProp.setProperty("id", nodeParam.param("id"));
+                                        memberRowProp.setProperty("name", nodeParam.param("id"));
+                                        memberRowProp.setProperty("description", nodeParam.param("description"));
+
+                                        <if>nodeParam.param("comment") != ""
+                                            <then>
+                                                memberRowProp.setProperty("comment", nodeParam.param("comment"));
+                                            </then>
+                                        </if>
+                                        <if>nodeParam.param("docFile") != ""
+                                            <then>
+                                                memberRowProp.setProperty("docFile", nodeParam.param("docFile"));
+                                            </then>
+                                        </if>
+                                    </then>
+                                    <else>
+                                        <!--
+                                            getting existing memberRowProp
+                                        -->
+                                    </else>
+                                </if>
+
+                                <!--    isOrphan
+                                        if hier node is marked as isOrphan somewhere in GUI, then this is moved to corresponding member. -->
+                                <if>nodeParam.param("isOrphan") != null
+                                    <then>
+                                        memberRowProp.setProperty("isOrphan", nodeParam.param("isOrphan") ||
+                                        memberRowProp.getOptionalBoolean("isOrphan"));
+                                    </then>
+                                </if>
+
+                                <if>nodeParam.param("weight") != null and nodeParam.param("weight") != 1.0
+                                    <then>
+                                        nodeProp.setProperty("weight", nodeParam.param("weight"));
+                                        <if>nodeParam.param("weight") != 1.0
+                                        <then>
+                                            hasWeight=true;
+                                        </then>
+                                        </if>
+                                    </then>
+                                </if>
+
+                                <if>nodeParam.param("childCount") > 0
+                                    <then>
+                                        nodeProp.setProperty("hasHiddenOrphans", nodeParam.param("hasHiddenOrphans"));
+                                    </then>
+                                </if>
+
+                                <!--nodeProp.setProperty(-->
+                                <!--"member",-->
+                                <!--memberRowProp.createReferencePropertyValue( "Dimension:member", array(dimAxiomObject,"members", memberRowProp) )-->
+                                <!--);-->
+                                nodeProp.setProperty(
+                                "member",
+                                memberRowProp.createReferencePropertyValue( memberRowProp.getString("name"),
+                                array(dimAxiomObject,"members", memberRowProp) )
+                                );
+
+                                nodeProp.setProperty("id", nodeParam.param("id"));
+                                nodeProp.setProperty("name", nodeParam.param("id"));
+
+                            </do>
+                        </for>
+                    </do>
+                </for>
+
+                <for> <comma/>  i &lt; hierParams.size()<comma/> i ++
+                    <do>
+                        var memberNode = hierParams.get(i);
+                        var member = membersTableProp.addRow("Dimension:member");
+
+                        member.setProperty("usedInReports", memberNode.param("isUsedInStandardReports"));
+                        member.setProperty("skipForSubmission", memberNode.param("skipForSubmission"));
+                        member.setProperty("longName", memberNode.param("longName"));
+                        member.setProperty("id", memberNode.param("id"));
+                        member.setProperty("name", memberNode.param("id"));
+                        member.setProperty("description", memberNode.param("description"));
+                        member.setProperty("isOrphan", false);
+
+                        <if>memberNode.param("comment") != ""
+                            <then>
+                                member.setProperty("comment", memberNode.param("comment"));
+                            </then>
+                        </if>
+                        <if>memberNode.param("docFile") != ""
+                            <then>
+                                member.setProperty("docFile", memberNode.param("docFile"));
+                            </then>
+                        </if>
+                    </do>
+                </for>
+            </then>
+        </if>
+        dimAxiomObject.setProperty("hasNonStandardWeight", hasWeight);
+
+        <if>param("additionalXbrlDomainNamespaces").size() &gt; 0
+            <then>
+                var additionalNamespaces = dimAxiomObject.createTablePropertyValue();
+                <for> var i = 0 <comma/> i &lt; param("additionalXbrlDomainNamespaces").size() <comma/> i++
+                    <do>
+                        var row = dimAxiomObject.createObjectPropertyValue("Dimension:xbrlDomainNamespace");
+                        row.setProperty("namespacePrefix", param("additionalXbrlDomainNamespaces").get(i).param("name"));
+                        row.setProperty("namespaceLocation", param("additionalXbrlDomainNamespaces").get(i).param("namespaceLocation"));
+                        additionalNamespaces.addRow(row);
+                    </do>
+                </for>
+                dimAxiomObject.setProperty("additionalXbrlDomainNamespaces", additionalNamespaces);
+            </then>
+        </if>
+
+    </saveCode>
+
+    <newCode>
+        var invisRootParam = param("hierarchies");
+        invisRootParam.setName("invisibleRoot");
+        invisRootParam.setID("invisibleRoot");
+    </newCode>
+
+    <macros>
+        <macro name="memberIdParameter">
+            <parameter name="id" description="ID" type="string" group="Member Properties" length="30">
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+
+                <validation>
+                    <if>newValue == ""
+                        <then>
+                            return l("%1 cannot be empty", currentParameter.getDescription(false));
+                        </then>
+                    </if>
+
+                    var mes = editor.validateMemberId(newValue, currentNode, currentNode.parent());
+
+                    <if>mes != null
+                        <then>
+                            return mes;
+                        </then>
+                    </if>
+                </validation>
+
+                <onParameterChange>
+                    currentNode.setID("member_" + newValue);
+                    <if>currentNode.type() == "memberNode"
+                        <then>
+                            editor.updateMemberIdsInNodes(oldValue, newValue, currentNode);
+                            editor.updateMemberOccurrences();
+                        </then>
+                    </if>
+
+                </onParameterChange>
+
+            </parameter>
+        </macro>
+
+        <macro name="longNameParameter">
+            <parameter name="longName" description="Long Name" type="string" group="Member Properties" length="30">
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+
+                <validation>
+                    <if>newValue == ""
+                        <then>
+                            return l("%1 cannot be empty", currentParameter.getDescription(false));
+                        </then>
+                    </if>
+                    var mes = editor.validateLongName(newValue, currentNode, currentNode.parent());
+                    <if>mes != null
+                        <then>
+                            return mes;
+                        </then>
+                    </if>
+                </validation>
+
+                <onParameterChange>
+                    currentNode.setName(newValue);
+
+                    <if>currentNode.type() == "memberNode"
+                        <then>
+                            editor.updateMemberPropertiesInNodes(currentNode);
+                        </then>
+                    </if>
+
+                    editor.updateMemberOccurrences();
+                </onParameterChange>
+            </parameter>
+        </macro>
+
+        <macro name="clearTable" arguments="table">
+            <!-- clears from the end! if removed from the beginning, the actual size would be descreasing while it would be "fixed" in our loop -->
+            <if>
+                <table/>
+                != null
+                <then>
+                    var tableSize =<table/>.size();
+                    <for>var i = tableSize - 1 <comma/> i &gt; -1 <comma/> i --
+                        <do>
+                            <table/>.remove(i);
+                        </do>
+                    </for>
+                </then>
+            </if>
+        </macro>
+
+        <macro name="updateIsLastICBChild" arguments="node">
+            <for>var k = 0 <comma/> k &lt; <node/>.parent().childCount() <comma/> k++
+                <do>
+                    var loopNode = <node/>.parent().child(k);
+                    <if> k == <node/>.parent().childCount() - 1
+                        <then>
+                            loopNode.param("isLastICBChild") = true;
+                        </then>
+                        <else>
+                            loopNode.param("isLastICBChild") = false;
+                        </else>
+                    </if>
+                </do>
+            </for>
+        </macro>
+
+        <macro name="getHierForNode" arguments="aNode, hierNode">
+            <!-- get hierarchy id for currentNode -->
+            var currOuterHierId = "-1";
+            var tmpNode =<aNode/>;
+            <if>currentNode.type() == "memberNode"
+                <then>
+                    <for> <comma/> currOuterHierId == "-1" <comma/>
+                        <do>
+                            <if>tmpNode.type() == "hierarchyNode"
+                                <then>
+                                    currOuterHierId = tmpNode.param("id");
+                                    break;
+                                </then>
+                            </if>
+                            tmpNode = tmpNode.parent();
+                        </do>
+                    </for>
+                </then>
+            </if>
+
+            <hierNode/> = tmpNode;
+        </macro>
+
+    </macros>
+
+</data_set_category>

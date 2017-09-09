@@ -1,0 +1,80 @@
+<data_set_category name="EMAIL_TEMPLATE" description="E-mail Template" windowTitle="E-mail Template Setup" entityName="Email Template"
+                   screenWidth="800" screenHeight="500" objectType="EmailTemplate" extends="COMMON_UTILS" >
+    <parameters>
+        <parameter name="subject" description="Subject" type="String" length="40" group="Parameters"
+                   plugInClass="axiomsl.toolkit.dataset_editor.dynamicparameters.EmailBodyAndSubjectParameterValue">
+            <attribute name="lookupAppend">true</attribute>
+        </parameter>
+
+        <parameter name="classification" type="string" hidden="true" group="Variables">
+            <default>"CUSTOM"</default>
+        </parameter>
+
+        <parameter name="variables" description="Variables" type="table" keyParameter="name" group="Variables">
+            <if>  "SYSTEM".equals(param("classification"))
+                <then>
+                    <readonly/>
+                </then>
+                <else>
+                    <enabled/>
+                </else>
+            </if>
+            <parameter name="name" description="Variable Name" type="String">
+                <validation>
+                    macro("validateColumnName");
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="description" description="Variable Description" type="String"/>
+        </parameter>
+
+        <parameter name="body" description="Body" type="String" length="7" group="Parameters"
+                plugInClass="axiomsl.toolkit.dataset_editor.dynamicparameters.EmailBodyAndSubjectParameterValue">
+            <attribute name="multiLine">10</attribute>
+            <attribute name="unlimitedSize"> true </attribute>
+            <attribute name="lookupAppend">true</attribute>
+        </parameter>
+
+    </parameters>
+
+    <lookupCode>
+        var list1 = list();
+        var names = objectManager.getResolver().lookupObjects('EmailTemplate', null);
+        <for> var i = 0 <comma/> i &lt; names.size() <comma/> i++
+            <do>
+                var nameDescription = ndo(names.get(i).getName(), "");
+                <if> !list1.contains(nameDescription)
+                    <then>
+                        list1.add(nameDescription);
+                    </then>
+                </if>
+            </do>
+        </for>
+        list1;
+    </lookupCode>
+
+    <loadCode>
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(<originalAxiom/>, currentParameters, array("subject", "body", "classification", "variables"), null, array("default(subject)","default(body)", "default(classification)", "forward(variables.name, name)"), null, route);
+    </loadCode>
+
+    <saveCode>
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(<axiomForSave/>, currentParameters, array("subject", "body", "variables"), null, array("default(subject)", "default(body)"), null, route);
+        <if> (class("axiomsl.server.object_repository.AxiomSubscriptionConstants").EMAIL_NOTIFICATION_TYPES_SET.contains(<axiomForSave/>.getProperty("name")))
+            <then>
+                <axiomForSave/>.setProperty("classification", "SYSTEM");
+                param("classification")="SYSTEM";
+            </then>
+            <else>
+                <axiomForSave/>.setProperty("classification", "CUSTOM");
+                param("classification")="CUSTOM";
+            </else>
+        </if>
+    </saveCode>
+
+</data_set_category>

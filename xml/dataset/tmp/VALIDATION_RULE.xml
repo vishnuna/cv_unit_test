@@ -1,0 +1,47 @@
+<data_set_category name="VALIDATION_RULE" extends="COMMON_UTILS, DOC_DATA, SUBMISSION_UTILS"
+	description="ValidationRule Setup"
+	windowTitle="ValidationRule Setup"
+	entityName="ValidationRule"
+	icon=""
+	screenWidth="600"
+	screenHeight="350"
+    objectType="ValidationRule">
+
+<parameters>
+
+    <parameter name="rrConcepts" description="RR concepts" group = "General" type="String" freehand="no" defaultValue="">
+        <attribute name="hasViewButton">true</attribute>
+    </parameter>
+
+    <parameter name="rule" description="Validation formulas" group = "Taxonomy" type="String" freehand="no" defaultValue="">
+        <attribute name="hasViewButton">true</attribute>
+    </parameter>
+    <parameter name="rrTaxonomy" description="RR formulas" group = "Taxonomy" type="String" freehand="no" defaultValue="">
+        <attribute name="hasViewButton">true</attribute>
+    </parameter>
+    <parameter name="formulaMessage" description="Validation messages" group = "Taxonomy" type="String" freehand="no" defaultValue="">
+        <attribute name="hasViewButton">true</attribute>
+    </parameter>
+    <parameter name="rrMessages" description="RR messages" group = "Taxonomy" type="String" freehand="no" defaultValue="">
+        <attribute name="hasViewButton">true</attribute>
+    </parameter>
+
+</parameters>
+
+<loadCode>
+    param("rule") = <originalAxiom/>.getOptionalString("rule");
+    param("formulaMessage") = <originalAxiom/>.getOptionalString("formulaMessage");
+    param("rrMessages") = <originalAxiom/>.getOptionalString("rrMessages");
+    param("rrConcepts") = <originalAxiom/>.getOptionalString("rrConcepts");
+    param("rrTaxonomy") = <originalAxiom/>.getOptionalString("rrTaxonomy");
+</loadCode>
+
+<saveCode>
+            <axiomForSave/>.setProperty("rule", param("rule"));
+            <axiomForSave/>.setProperty("formulaMessage", param("formulaMessage"));
+            <axiomForSave/>.setProperty("rrMessages", param("rrMessages"));
+            <axiomForSave/>.setProperty("rrConcepts", param("rrConcepts"));
+            <axiomForSave/>.setProperty("rrTaxonomy", param("rrTaxonomy"));
+</saveCode>
+    
+</data_set_category>

@@ -1,0 +1,31 @@
+<data_set_category name="USER_GROUP"
+	description="User Group"
+	windowTitle="User Group Setup"
+	entityName="User Group"
+	icon="user_group"
+	screenWidth="600"
+	screenHeight="350"
+    objectType="UserGroup"
+    extends="DOC_DATA">
+
+    <parameters/>
+
+    <loadCode/>
+
+    <saveCode/>
+
+    <!--<deleteCode>-->
+        <!--var id = editor.getDataSet().getAxiomObject().getId();-->
+        <!--var list = editor.locateObjectById("UserListInGroup", id);-->
+        <!--var table = list.getProperty("list");-->
+        <!--<if> table.size() != 0-->
+            <!--<then>-->
+                <!--errorMessage(l("UserGroup[%1] contains users. Delete aborted!", editor.getDataSet().getAxiomObject().getName()));-->
+            <!--</then>-->
+            <!--<else>-->
+                <!--var nameId = editor.getDataSet().getAxiomObject().createNameID();-->
+                <!--editor.removeObjectByName(nameId.getType(), nameId.getName(), dataSet.getComment());-->
+            <!--</else>-->
+        <!--</if>-->
+    <!--</deleteCode>-->
+</data_set_category>

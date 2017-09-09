@@ -1,0 +1,779 @@
+<data_set_category name="MEASURE" description="Measure Setup" windowTitle="Measure Setup" entityName="Measure" icon="measure" screenWidth="800" screenHeight="500" objectType="Measure" extends="COMMON_UTILS, DOC_DATA">
+    <parameters>
+        <parameter name="longName" description="Long name" type="String"  group="Parameters" length="20">
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+        </parameter>
+        <parameter name="measureType" description="Measure Type" type="String" group="Parameters" length="20">
+            choices(
+                <asDescription>
+                    ndo("NATIVE", l("NATIVE")), ndo("CALCULATED", l("CALCULATED")), ndo("DIMENSION_DRIVEN", l("DIMENSION_DRIVEN")), ndo("ENUMERATOR", l("ENUMERATOR"))
+                </asDescription>
+            )
+            <default>
+                'NATIVE'
+            </default>
+            <!--onParameterChange>
+                <if><param name="measureType"/>=="DIMENSION_DRIVEN"
+                    <then>
+                        <param name="dataType"/>="VARCHAR"
+                    </then>
+                </if>
+                <if><param name="measureType"/>=="ENUMERATOR"
+                    <then>
+                        <param name="dataType"/>="INTEGER"
+                    </then>
+                </if>
+            </onParameterChange-->
+        </parameter>
+        <parameter name="periodType" description="Period Type" type="String" group="Parameters" length="20">
+            choices(
+            <asDescription>
+                ndo("DURATION", l("DURATION")), ndo("INSTANT", l("INSTANT"))
+            </asDescription>
+            )
+            <default>
+                'INSTANT'
+            </default>
+        </parameter>
+        <parameter name="valueType" description="Value Type" type="String" group="Parameters" length="20">
+            <if>param("measureType") != "DIMENSION_DRIVEN"
+                <then>
+                    <enabled/>
+                    choices(
+                    <asDescription>
+                        ndo("Monetary",l("Monetary")), ndo("Percent",l("Percent")), ndo("Integer",l("Integer")), ndo("Decimal",l("Decimal")), ndo("Boolean",l("Boolean")), ndo("Text",l("Text")), ndo("Date",l("Date"))
+                    </asDescription>
+                    )
+                    <default>
+                        'Monetary'
+                    </default>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+            <onParameterChange>
+                <if>param("measureType") in ("NATIVE", "DIMENSION_DRIVEN")
+                    <then>
+                        <if>newValue in ("Monetary", "Integer")
+                            <then>
+                                param("useFallbackValueInViewer") = true;
+                            </then>
+                            <else>
+                                param("useFallbackValueInViewer") = false;
+                            </else>
+                        </if>
+                    </then>
+                </if>
+                <if>param("measureType") == "NATIVE" and param("valueType") != "Boolean" and param("valueType") != "Text" and !editor.isFormatSuitable(param("format"), newValue)
+                    <then>
+                        param("format") = editor.getDefaultFormat(newValue);
+                    </then>
+                </if>
+
+            </onParameterChange>
+        </parameter>
+        <parameter name="valueTypeNotes" description="Value Type Notes" type="String" group="Parameters" length="20">
+            <if>param("measureType") == "DIMENSION_DRIVEN"
+            <then>
+                <removed/>
+            </then>
+                <else>
+                    <if> param("valueType") in ("Monetary", "Integer", "Decimal", "Text", "Date")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <readonly/>
+                            <equals>
+                                <case>
+                                    param("valueType") == "Percent"
+                                    <then>
+                                        <readonly/>
+                                        l('in fractions of 1')
+                                    </then>
+                                    param("valueType") == "Boolean"
+                                    <then>
+                                        <readonly/>
+                                        '0/1'
+                                    </then>
+                                </case>
+                            </equals>
+                        </else>
+                    </if>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="dataType" description="Data Type" type="String" group="Parameters" length="20">
+            <if>param("measureType") == "DIMENSION_DRIVEN"
+                <then>
+                    <disabled/>
+                </then>
+                <else>
+                    <enabled/>
+                    <readonly/>
+                    <equals>
+                        function("axiomsl.xbrl.impl.MeasureImpl", "getDataType", param("valueType"));
+                    </equals>
+                </else>
+            </if>
+        </parameter>
+
+        <parameter name="calcFormula" description="Calculation Formula" type="String" group="Parameters" wrapOnReport="true">
+            <attribute name="lookupAppend">true</attribute>
+            <attribute name="lookupFromValues">l("Expression")<comma/>
+                trace("validations: expression lookup");
+                var measure = function("axiomsl.gui.xbrl.editor.measure.MeasureOverridenFreeStyleEditor", "getMeasureList", editor.getDataSet().getAxiomObject(), editor.getRemoteProxy(), editor.getBranchId(), editor.getDataSetName());
+                measure,
+                macro("sqlMacros"),
+                macro("axiomExpressionLanguage"),
+                macro("userDefinedFunctions")
+            </attribute>
+            <validation>
+                macro("validateExpression");
+            </validation>
+            <verifyForSave>
+                macro("verifyExpression");
+            </verifyForSave>
+            <if>
+                <param name="measureType"/> == "CALCULATED"
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <disabled/>
+                </else>
+            </if>
+        </parameter>
+
+        <parameter name="dimension" description="Dimension" type="String" length="27" group="Parameters" isDataSet="Dimension">
+            <if>
+                <param name="measureType"/> == "DIMENSION_DRIVEN"
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <disabled/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="useFallbackValueInViewer" description="Show Fallback Value in Report Viewer" group="Display Settings" type="Boolean">
+            <if>param("measureType") in ("NATIVE", "DIMENSION_DRIVEN")
+                <then>
+                    <enabled/>
+                    <equals>
+                        param("valueType") in ("Monetary", "Integer");
+                    </equals>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="fallbackValueForVarchar" description="Fallback Value for Missing Data" type="String" group="Display Settings" length="20">
+            <if>param("measureType") == "NATIVE"
+                <then>
+                    <if> param("dataType") == "VARCHAR" || param("valueType") == "Boolean"
+                        <then>
+                            <if> param("useFallbackValueInViewer") == true
+                                <then>
+                                    <enabled/>
+                                    <default>
+                                        "";
+                                    </default>
+                                </then>
+                                <else>
+                                    <disabled/>
+                                </else>
+                            </if>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="fallbackValueForInteger" description="Fallback Value for Missing Data" type="Integer" group="Display Settings" length="20">
+            <if> param("measureType") == "NATIVE"
+                <then>
+                    <if>param("valueType") in ("Integer")
+                        <then>
+                            <if> param("useFallbackValueInViewer") == true
+                                <then>
+                                    <enabled/>
+                                    <default>
+                                        0;
+                                    </default>
+                                </then>
+                                <else>
+                                    <disabled/>
+                                </else>
+                            </if>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+
+        </parameter>
+        <parameter name="fallbackValueForDate" description="Fallback Value for Missing Data" type="Date" group="Display Settings" length="20">
+            <if> param("measureType") == "NATIVE"
+                <then>
+                    <if>param("valueType") == "Date"
+                        <then>
+                            <if> param("useFallbackValueInViewer") == true
+                                <then>
+                                    <enabled/>
+                                    <default>
+                                        2000/01/01;
+                                    </default>
+                                </then>
+                                <else>
+                                    <disabled/>
+                                </else>
+                            </if>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="fallbackValueForFloat" description="Fallback Value for Missing Data" type="Double" group="Display Settings" length="20">
+            <if>param("measureType") == "NATIVE"
+                <then>
+                    <if>param("valueType") in ("Monetary", "Decimal", "Percent")
+                        <then>
+                            <if> param("useFallbackValueInViewer") == true
+                                <then>
+                                    <enabled/>
+                                    <if>param("valueType") == "Monetary"
+                                        <then>
+                                            <readonly/>
+                                        </then>
+                                    </if>
+                                    <default>
+                                        0.0
+                                    </default>
+                                </then>
+                                <else>
+                                    <disabled/>
+                                </else>
+                            </if>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="fallbackValueForDimension" description="Fallback Value for Missing Data" type="String" group="Display Settings">
+            <attribute name="lookupAppend">false</attribute>
+            <attribute name="lookupFromValues">l("Member")<comma/>
+                <if>!editor.getMembersList(param("dimension")).isEmpty()
+                    <then>
+                        editor.getMembersList(param("dimension"));
+                    </then>
+                </if>
+            </attribute>
+            <if> param("measureType") != "DIMENSION_DRIVEN"
+                <then>
+                    <removed/>
+                </then>
+                <else>
+                    <enabled/>
+                    <if> param("useFallbackValueInViewer") == true
+                        <then>
+                            <enabled/>
+                            <default>
+                                "";
+                            </default>
+                        </then>
+                        <else>
+                            <disabled/>
+                        </else>
+                    </if>
+                </else>
+            </if>
+            <verifyForSave>
+                <if>
+                    <param name="measureType"/> == "DIMENSION_DRIVEN"
+                    <then>
+                        macro("verifyNonEmpty");
+                    </then>
+                    <else>
+                    </else>
+                </if>
+            </verifyForSave>
+        </parameter>
+        <parameter name="xbrlMeasureId" description="XBRL Measure ID" type="String" group="Parameters" length="20"/>
+        <parameter name="xbrlMeasureNamespace" description="XBRL Measure Namespace" type="String" group="Parameters" length="30"/>
+
+        <parameter name="format" description="Format" type="string" length="20" group="Display Settings">
+            <if>param("measureType") != "NATIVE"
+                <then>
+                    <disabled/>
+                </then>
+                <else>
+                    <if>param("valueType") == "Boolean" || param("valueType") == "Text"
+                        <then>
+                            <disabled/>
+                        </then>
+                        <else>
+                            <enabled/>
+                            <editable/>
+
+                            choices(
+                                <asDescription>
+                                    editor.getAvailableFormats(param("valueType"));
+                                </asDescription>
+                            )
+                            <default>
+                                editor.getDefaultFormat(param("valueType"));
+                            </default>
+
+                            <!-- init: -->
+                            <!--equals>
+                                editor.getDefaultFormat(param("valueType"));
+                            </equals-->
+                        </else>
+                    </if>
+                </else>
+            </if>
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="trueFormat" description="If true" type="string" length="20" group="Display Settings">
+            <if> param("measureType") == "NATIVE"
+                <then>
+                    <if>param("valueType") == "Boolean"
+                        <then>
+                            <enabled/>
+                            <default>
+                                "Yes";
+                            </default>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+
+        <parameter name="falseFormat" description="If false" type="string" length="20" group="Display Settings">
+            <if> param("measureType") == "NATIVE"
+                <then>
+                    <if>param("valueType") == "Boolean"
+                        <then>
+                            <enabled/>
+                            <default>
+                                "No";
+                            </default>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+
+    </parameters>
+
+    <loadCode>
+        var measureObj =<originalAxiom/>;
+        macro("fillGUI", measureObj);
+    </loadCode>
+
+    <saveCode>
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+
+        <axiomForSave/>.setProperty("longName", param("longName"));
+        <axiomForSave/>.setProperty("measureType", param("measureType"));
+        <axiomForSave/>.setProperty("periodType", param("periodType"));
+        <if>param("measureType") in ("NATIVE", "DIMENSION_DRIVEN")
+            <then>
+                <axiomForSave/>.setProperty("useFallbackValueInViewer", param("useFallbackValueInViewer"));
+            </then>
+            <else>
+                <axiomForSave/>.setProperty("useFallbackValueInViewer", false);
+            </else>
+        </if>
+
+        <if> param("measureType") == "DIMENSION_DRIVEN"
+            <then>
+                <axiomForSave/>.setProperty("valueType", 'Text');
+            </then>
+        </if>
+        <if> param("measureType") == "NATIVE"
+            <then>
+                <axiomForSave/>.setProperty("valueType", param("valueType"));
+            </then>
+        </if>
+        <if> param("measureType") == "CALCULATED"
+            <then>
+                <axiomForSave/>.setProperty("valueType", param("valueType"));
+            </then>
+        </if>
+        <if> param("measureType") == "ENUMERATOR"
+            <then>
+                <axiomForSave/>.setProperty("valueType", 'Integer');
+            </then>
+        </if>
+
+        <if>param("measureType") == "NATIVE"
+            <then>
+                <if>param("valueType") == "Boolean"
+                    <then>
+                        <axiomForSave/>.setProperty("displayFormat", param("trueFormat") + "," + param("falseFormat"));
+                    </then>
+                    <else>
+                        <if>param("valueType") != "Text"
+                            <then>
+                                <axiomForSave/>.setProperty("displayFormat", param("format"));
+                            </then>
+                        </if>
+                    </else>
+                </if>
+            </then>
+        </if>
+
+        <if> param("useFallbackValueInViewer") == true
+            <then>
+                var fallbackValue = <axiomForSave/>.createObjectPropertyValue("Measure:fallbackValue");
+                <if> param("measureType") == "NATIVE"
+                    <then>
+                        var type = function("axiomsl.xbrl.impl.MeasureImpl", "getDataType", param("valueType"));
+                        fallbackValue.setProperty("type", type);
+                        <if> type == "FLOAT"
+                            <then>
+                                fallbackValue.setProperty("floatValue", param("fallbackValueForFloat"));
+                            </then>
+                        </if>
+
+                        <if> type == "DATE"
+                            <then>
+                                fallbackValue.setProperty("dateValue", param("fallbackValueForDate"));
+                            </then>
+                        </if>
+
+                        <if> type == "VARCHAR"
+                            <then>
+                                fallbackValue.setProperty("stringValue", param("fallbackValueForVarchar"));
+                            </then>
+                        </if>
+
+                        <if> type == "INTEGER"
+                            <then>
+                                <if> param("valueType") != "Boolean"
+                                    <then>
+                                        fallbackValue.setProperty("intValue", param("fallbackValueForInteger"));
+                                    </then>
+                                </if>
+                            </then>
+                        </if>
+
+                        <if>param("valueType") == "Boolean"
+
+                            <then>
+                                fallbackValue.setProperty("type", "VARCHAR");
+                                fallbackValue.setProperty("stringValue", param("fallbackValueForVarchar"));
+                            </then>
+                        </if>
+                        <axiomForSave/>.setProperty("fallbackValue", fallbackValue);
+                    </then>
+                </if>
+                <if> param("measureType") == "DIMENSION_DRIVEN"
+                    <then>
+                        fallbackValue.setProperty("type", "VARCHAR")
+                        fallbackValue.setProperty("stringValue", param("fallbackValueForDimension"));
+                        <axiomForSave/>.setProperty("fallbackValue", fallbackValue);
+                    </then>
+                </if>
+            </then>
+        </if>
+
+        <if> param("calcFormula")!=null
+            <then>
+                var measureForSave = <axiomForSave/>;
+
+                <!--var accessor = new("axiomsl.xbrl.impl.MeasureAxiomObjectAccessor", measureForSave, editor.getRemoteProxy().getAxiomEnvironment(), editor.getBranchId(), editor.getRemoteProxy().getAxiomObjectManager());-->
+                var accessor = new("axiomsl.xbrl.impl.MeasureAxiomObjectAccessor", measureForSave, editor.getRemoteProxy().getAxiomEnvironment());
+                var parser = new("axiomsl.accessors.ExpressionParserImpl", measureForSave, accessor, function("axiomsl.server.object_framework.RouteToObject", "createEmptyRoute"));
+                parser.setContext(measureForSave);
+                parser.setContextPropertyName("calcFormula");
+
+                var formulaTable = parser.parseExpression(param("calcFormula"));
+                measureForSave.setProperty("calcFormula", formulaTable);
+            </then>
+        </if>
+
+        <if> param("dimension")!=null
+            <then>
+                var dimRef = null;
+
+                <try>
+                    dimRef = editor.locateObjectByNameIfExists("Dimension", param("dimension"));
+                    <catch>
+                    </catch>
+                </try>
+
+                <if> dimRef != null
+                    <then>
+                        <axiomForSave/>.setProperty("dimension", <axiomForSave/>.createReferencePropertyValue(param("dimension"), dimRef));
+                    </then>
+                </if>
+            </then>
+        </if>
+        <if>!"".equals(param("xbrlMeasureId"))
+            <then>
+                <axiomForSave/>.setProperty("xbrlMeasureId", param("xbrlMeasureId"));
+            </then>
+        </if>
+        <if>!"".equals(param("xbrlMeasureNamespace"))
+            <then>
+                <axiomForSave/>.setProperty("xbrlMeasureNamespace", param("xbrlMeasureNamespace"));
+            </then>
+        </if>
+
+    </saveCode>
+
+    <newCode>
+        var isOverridenMeasure = function("axiomsl.gui.xbrl.editor.measure.MeasureOverridenFreeStyleEditor", "isMeasureOverridenFreeStyleEditor", editor);
+
+        <if> isOverridenMeasure == true
+            <then>
+                var measureObj = editor.getOverriddenMeasure().getObject();
+                <!--var measureObj = editor.getInheritedObject();-->
+                macro("fillGUI", measureObj);
+            </then>
+        </if>
+
+    </newCode>
+
+    <macros>
+        <macro name="fillGUI" arguments="axiomObject">
+            param("longName") = measureObj.getString("longName");
+            param("measureType") = measureObj.getString("measureType");
+            param("periodType") = measureObj.getString("periodType");
+            param("valueType") = measureObj.getString("valueType");
+
+            param("dataType") = function("axiomsl.xbrl.impl.MeasureImpl", "getDataType", param("valueType"));
+
+            param("valueTypeNotes") = "";
+            <if> measureObj.getString("valueType") == "Boolean"
+                <then>
+                    param("valueTypeNotes") = "0/1";
+                </then>
+            </if>
+
+            <if> measureObj.getString("valueType") == "Percent"
+                <then>
+                    param("valueTypeNotes") = "in fractions of 1";
+                </then>
+            </if>
+
+            param("useFallbackValueInViewer") = measureObj.getBoolean("useFallbackValueInViewer");
+
+            <if>measureObj.propertyIsSet("displayFormat");
+                <then>
+                    <if>measureObj.getString("valueType") == "Boolean"
+                        <then>
+                            param("format") = "";
+                            var trueValue = editor.getTrueValue(measureObj.getString("displayFormat"));
+                            var falseValue = editor.getFalseValue(measureObj.getString("displayFormat"));
+                            param("trueFormat") = trueValue;
+                            param("falseFormat") = falseValue;
+                        </then>
+                        <else>
+                            param("format") = measureObj.getString("displayFormat");
+                        </else>
+                    </if>
+                </then>
+            </if>
+
+            <if> measureObj.propertyIsSet("fallbackValue")
+                <then>
+                    var fallback = measureObj.getObject("fallbackValue");
+
+                    <if> param("measureType") == "DIMENSION_DRIVEN"
+                        <then>
+                            <if> fallback.getString("type") == "VARCHAR"
+                                <then>
+                                    param("fallbackValueForDimension") = fallback.getOptionalString("stringValue");
+                                </then>
+                            </if>
+                        </then>
+                    </if>
+
+                    <if> param("measureType") == "NATIVE"
+                        <then>
+                                <if>param("valueType") in ("Monetary", "Percent", "Decimal")
+                                    <then>
+                                        param("fallbackValueForFloat") = fallback.getDouble("floatValue");
+                                    </then>
+                                </if>
+
+                                <if>param("valueType") == "Date"
+                                    <then>
+                                        param("fallbackValueForDate") = fallback.getDate("dateValue");
+                                    </then>
+                                </if>
+
+                                <if>param("valueType") == "Text"
+                                    <then>
+                                        param("fallbackValueForVarchar") = fallback.getOptionalString("stringValue");
+                                    </then>
+                                </if>
+
+                                <if>param("valueType") == "Integer"
+                                    <then>
+                                        param("fallbackValueForInteger") = fallback.getInteger("intValue");
+                                    </then>
+                                </if>
+
+                                <if>param("valueType") == "Boolean"
+                                    <then>
+                                        param("fallbackValueForVarchar") = fallback.getOptionalString("stringValue");
+                                    </then>
+                                </if>
+                            </then>
+                        </if>
+                </then>
+                <else>
+                    param("fallbackValueForDimension") = "";
+                    param("fallbackValueForDate") = 2000/01/01;
+                    param("fallbackValueForVarchar") = "";
+                    param("fallbackValueForInteger") = 0;
+                    param("fallbackValueForFloat") = 0.0;
+                </else>
+            </if>
+
+            <if> measureObj.propertyIsSet("calcFormula")
+                <then>
+                    <!--var accessor = new("axiomsl.xbrl.impl.MeasureAxiomObjectAccessor", measureObj, editor.getRemoteProxy().getAxiomEnvironment(), editor.getBranchId(), editor.getRemoteProxy().getAxiomObjectManager());-->
+                    var accessor = new("axiomsl.xbrl.impl.MeasureAxiomObjectAccessor", measureObj, editor.getRemoteProxy().getAxiomEnvironment());
+                    var parser = new("axiomsl.accessors.ExpressionParserImpl", measureObj, accessor, function("axiomsl.server.object_framework.RouteToObject", "createEmptyRoute"));
+                    parser.setContext(measureObj);
+                    parser.setContextPropertyName("calcFormula");
+                    param("calcFormula") = parser.getExpressionString(measureObj.getTable("calcFormula"));
+                </then>
+            </if>
+
+            <if> measureObj.propertyIsSet("dimension")
+                <then>
+                    var dimensionName = measureObj.getReference("dimension").getTargetObjectName();
+                    param("dimension") = dimensionName;
+                </then>
+            </if>
+
+            <if> measureObj.propertyIsSet("xbrlMeasureId")
+                <then>
+                    param("xbrlMeasureId") = measureObj.getOptionalString("xbrlMeasureId");
+                </then>
+                <else>
+                    param("xbrlMeasureId") = ""
+                </else>
+            </if>
+            <if> measureObj.propertyIsSet("xbrlMeasureNamespace")
+                <then>
+                    param("xbrlMeasureNamespace") = measureObj.getOptionalString("xbrlMeasureNamespace");
+                </then>
+                <else>
+                    param("xbrlMeasureNamespace") = ""
+                </else>
+            </if>
+
+        </macro>
+
+        <macro name="validateExpression">
+            <if>!macro("isEmpty", newValue);
+                <then>
+                    trace(newValue);
+                    <!--errorMessage(l("222"));-->
+                    var measureForSave = editor.getDataSet().getAxiomObject();
+                    var accessor = new("axiomsl.xbrl.impl.MeasureAxiomObjectAccessor", measureForSave, editor.getRemoteProxy().getAxiomEnvironment());
+                    accessor.validateExpression(newValue, editor.getAxiomObjectManager(), editor.getBranchId());
+                </then>
+            </if>
+        </macro>
+
+        <macro name="isBooleanInteger">
+            <if> param("valueType") == "Boolean"
+                <then>
+                    <if> param("fallbackValue") in (0, 1)
+                        <then>
+                            return true;
+                        </then>
+                        <else>
+                            return false;
+                        </else>
+                    </if>
+                </then>
+            </if>
+            return true;
+        </macro>
+
+        <macro name="verifyExpression">
+            <if>(macro("verifyNonEmpty"))
+                <then>
+                    var formula = param("calcFormula");
+                    <if>formula.indexOf("!!!") &lt; 0
+                        <then>
+                            <!--errorMessage(l("111"));-->
+                            var measureForSave = editor.getDataSet().getAxiomObject();
+                            var accessor = new("axiomsl.xbrl.impl.MeasureAxiomObjectAccessor", measureForSave, editor.getRemoteProxy().getAxiomEnvironment());
+                            var msg = accessor.getInvalidExpressionMessage(formula, editor.getAxiomObjectManager(), editor.getBranchId());
+                            <if>
+                                msg == null
+                                <then>
+                                    return true;
+                                </then>
+                                <else>
+                                    errorMessage(l("%1 is invalid. %2", currentParameter.getDescription(true), msg));
+                                    return false;
+                                </else>
+                            </if>
+                        </then>
+                        <else>
+                            errorMessage(l("Formula expression '%1' is invalid", formula));
+                            return false;
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    return false;
+                </else>
+            </if>
+        </macro>
+    </macros>
+
+</data_set_category>

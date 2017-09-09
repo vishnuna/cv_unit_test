@@ -1,0 +1,54 @@
+<data_set_category name="ENVIRONMENT"
+                   description="Environment"
+                   windowTitle="Environment Setup"
+                   entityName="Environment"
+                   icon="image.aggregation"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="Environment"
+                   extends="DOC_DATA">
+    <parameters>
+        <parameter name="host" description="Axiom Server host" type="String"/>
+        <parameter name="port" description="Axiom Server port" type="integer">
+            <validation>
+                <if> newValue &lt; 0 or newValue &gt; 65535
+                    <then>
+                        error(l("Port must be non-negative and less then 65536."));
+                    </then>
+                </if>
+            </validation>
+        </parameter>
+    </parameters>
+
+    <lookupCode>
+        var environments = editor.getRemoteProxy().lookupArray("Environment");
+
+        var result = list();
+
+        <if> editor.isEmbeddedExternal()
+            <then>
+                var name = function("axiomsl.proxy.SystemUtil", "getSystemEnvironmentName", editor.getRemoteProxy());
+                result.add(ndo(name, "Current Environment"));
+            </then>
+        </if>
+
+        <for> var i = 0 <comma/> i &lt; environments.size() <comma/> i++
+            <do>
+                result.add(environments.get(i));
+            </do>
+        </for>
+        
+        result
+    </lookupCode>
+
+    <loadCode>
+        var project = <originalAxiom/>;
+        param("host") = <originalAxiom/>.getProperty("host");
+        param("port") = <originalAxiom/>.getProperty("port");                
+    </loadCode>
+
+    <saveCode>
+        <axiomForSave/>.setProperty("host", param("host"));
+        <axiomForSave/>.setProperty("port", param("port"));
+    </saveCode>
+</data_set_category>

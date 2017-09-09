@@ -1,0 +1,1808 @@
+<data_set_category name="AGGREGATION" description="Aggregation Setup" windowTitle="Aggregation Setup" entityName="Aggregation" icon="aggregation" screenWidth="800" screenHeight="500" objectType="Aggregation" extends="ARCHIVAL_PROPERTIES, COMMON_UTILS, MAPPING, DOC_DATA, FREEZE_PROPERTIES">
+	<parameters>
+        <macro name="modelParameter"/>
+		<parameter name="details" description="Details" type="table" length="7" group="Details" keyParameter="name" tableTransposed="true" compareByID="true">
+			<parameter name="name" description="Detail Name" type="String" length="20">
+				<attribute name="lookupFromFieldList"> l("Select Detail") <comma/>
+                    macro("getUniqueFields", list(param("calcFields"), param("auxFields"), param("syntheticFields")));
+                </attribute>
+				<convertInputValue>                    
+                    inputValue.get(1);
+                </convertInputValue>
+				<validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("calcFields"), param("auxFields"), param("syntheticFields")));
+                </validation>
+				<verifyForSave>
+                    macro("verifyNonEmpty");
+                    var type1 = macro("getFieldType", currentParameters.getID(), "detailGroup", null);
+                    macro("verifyAggregationFormatType", currentParameters.param("name"), type1, currentParameters.param("displayFormat"), null, true, true);
+				</verifyForSave>
+				<onParameterChange>
+                    macro("onFieldNameChange", null, "detailGroup");
+                    macro("renameIndices", oldValue, newValue);
+                    macro("setFormatValue", "displayFormat", null);
+                </onParameterChange>
+			</parameter>
+			<parameter name="description" description="Detail Description" type="String" wrapOnReport="true"/>
+			<confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("calcFields"), param("auxFields"), param("syntheticFields")));
+            </confirmAddRow>
+            <onRowAdded>
+                macro("onFieldRowAdded", null, "detailGroup");
+            </onRowAdded>
+            <onRowDeleted>
+                macro("onFieldRowDeleted", "detailGroup");
+            </onRowDeleted>
+            <onRowMoved>
+                macro("onFieldRowMoved", null, "detailGroup");
+            </onRowMoved>
+            <verifyForSave>
+                <if>currentParameter.getParameterValue().size() == 0 and param("calcFields").size() == 0
+                    <then>
+                        errorMessage(l("At least one calculation or detail field should be defined."));
+                        return false;
+                    </then>
+                </if>
+            </verifyForSave>
+            <parameter name="title" description="Title" type="String" defaultValue=""/>
+            <parameter name="overrideLookupInformation" description="Override Lookup Source for DataSource" type="Boolean" defaultValue="false">
+             </parameter>
+
+            <parameter name="lookupSource" description="Lookup Source" type="String" isDataSet="DataSource" canClearDataSet="true" defaultValue="">
+                  <if>
+                      <param name="overrideLookupInformation"/>
+                      == false
+                      <then>
+                          <disabled/>
+                      </then>
+                      <else>
+                          <enabled/>
+                      </else>
+                  </if>
+            </parameter>
+
+              <parameter name="codeField" description="Value Field" type="String">
+                  <if>
+                      <param name="lookupSource"/>
+                             == '' ||
+                      <param name="lookupSource"/>
+                            == null
+                      <then>
+                          <disabled/>
+                      </then>
+                      <else>
+                          <enabled/>
+                          <if> !(param("lookupSource")==null||param("lookupSource").indexOf("!!!") &gt; -1)
+                              <then>
+                                  <choices>
+                                      editor.getRemoteProxy().lookupFieldsInDataSource(<param name="lookupSource"/>, editor.getBranchId());
+                                  </choices>
+                              </then>
+                          </if>
+                      </else>
+                  </if>
+              </parameter>
+
+              <parameter name="descriptionField" description="Description Field" type="String">
+                  <if>
+                      <param name="lookupSource"/>
+                             == '' ||
+                      <param name="lookupSource"/>
+                            == null
+                      <then>
+                          <disabled/>
+                      </then>
+                      <else>
+                          <enabled/>
+                          <if> !(param("lookupSource")==null||param("lookupSource").indexOf("!!!") &gt; -1)
+                              <then>
+                                  <choices>
+                                      editor.getRemoteProxy().lookupFieldsInDataSource(<param name="lookupSource"/>, editor.getBranchId());
+                                  </choices>
+                              </then>
+                          </if>
+                      </else>
+                  </if>
+              </parameter>
+
+              <parameter name="addLookupSourceToModel" description="Add Lookup Source to DataModel" type="Boolean">
+                  <if>
+                      <param name="lookupSource"/>
+                             == '' ||
+                      <param name="lookupSource"/>
+                            == null
+                      <then>
+                          <disabled/>
+                      </then>
+                      <else>
+                          <enabled/>
+                      </else>
+                  </if>
+              </parameter>
+
+
+            <parameter name="additionalConstraintForJoin" description="Optional Join Constraint" type="String">
+                <if>
+                    <param name="lookupSource"/>
+                    == '' ||
+                      <param name="lookupSource"/>
+                    == null || !
+                    <param name="addLookupSourceToModel"/>
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                    </else>
+                </if>
+
+                <attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues"> l("Field") <comma/>
+                    var details = param("details");
+                    var index = macro("getEntityIndex", <currentParameters/>.getID(), details);
+                    var result = list();
+
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; index
+                        <comma/>
+                        i ++
+                        <do>
+                            var detail = details.get(i);
+                            result.add(ndo("AGGREGATION."+detail.param("name"), detail.param("description")));
+                        </do>
+					</for>
+                
+                    result,
+                    editor.getRemoteProxy().lookupFieldsInDataSource(param("lookupSource"), editor.getBranchId())
+                </attribute>
+				<convertInputValue>
+                    "$" + inputValue.getName()
+                </convertInputValue>
+
+            </parameter>
+
+              <parameter name="relationshipToParent" description="Relationship to Parent" type="String">
+                  <!-- matching of values is done using constants in ModelPropertiesDialog -->
+                  <if>
+                    <param name="lookupSource"/>
+                    == '' ||
+                      <param name="lookupSource"/>
+                    == null || !
+                    <param name="addLookupSourceToModel"/>
+                      <then>
+                          <disabled/>
+                      </then>
+                      <else>
+                          <enabled/>
+                          macro("relationshipTypes");
+                      </else>
+                  </if>
+              </parameter>
+
+            <parameter name="instanceSelectionRule" description="Instance Date Selection Rule" type="String"  defaultValue="EQUAL">
+                <if>
+                     <param name="lookupSource"/>
+                    == '' ||
+                      <param name="lookupSource"/>
+                    == null || !
+                    <param name="addLookupSourceToModel"/>
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        choices(asDescription(list(ndo("EQUAL", l("EQUAL")), ndo("LATEST", l("LATEST")))))
+                    </else>
+                </if>
+			</parameter>
+
+            <parameter name="displayFormat" description="Display Format" type="String" defaultValue="">
+                <editable/>
+                <choices>
+                                list(
+                                "#0",
+                                "#0;(#0)",
+                                "#,##0",
+                                "#,##0;(#,##0)",
+                                "#,##0.00;(#,##0.00)",
+                                "#,##0.00",
+                                "#.##",
+                                "#.####",
+                                "#.######",
+                                "#.########",
+                                "#.##########",
+                                "0.###E-#",
+                                "0.#######E-#",
+                                "0.##########E-#",
+                                "dd-MMM-yyyy",
+                                "dd-MMM-yyyy HH:mm:ss",
+                                "MM/dd/yyyy",
+                                "MM/dd/yyyy HH:mm:ss",
+                                "yyyy-MM-dd HH:mm:ss")
+                </choices>
+            </parameter>
+            <parameter name="overrideNullable" description="Is Column Nullable" group="Parameters" type="String" optional="true" defaultValue="DEFAULT">
+                <default>
+                    'DEFAULT'
+                </default>
+
+                choices(asDescription(list(ndo("DEFAULT", l("Default")), ndo("NOT_NULLABLE", l("Not Nullable")), ndo("NULLABLE", l("Nullable")))))
+            </parameter>
+
+            
+		</parameter>
+		<parameter name="calcFields" description="Calculated Fields" type="table" length="7" group="Calculated Fields" keyParameter="name" tableTransposed="true" compareByID="true">
+			<parameter name="name" description="Calculated Field Name" type="string" length="20">
+				<attribute name="lookupFromFieldList"> l("Calculated Field") <comma/>
+                    macro("getUniqueFields", list(param("details"), param("auxFields"), param("syntheticFields")));
+                </attribute>
+				<convertInputValue>
+                    inputValue.get(1);
+                </convertInputValue>
+				<onParameterChange>
+                    macro("onFieldNameChange", "calcFormula", "calcGroup");
+                    macro("renameIndices", oldValue, newValue);
+                    macro("setFormatValue", "column_format", param("aggrMethod"));
+                </onParameterChange>
+				<validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("details"), param("auxFields"), param("syntheticFields")));
+                </validation>
+				<verifyForSave>
+                    macro("verifyNonEmpty");
+                    var type = currentParameters.param("valueType");
+                    var type1 = macro("getFieldType", currentParameters.getID(), "calcGroup", type);
+                    macro("verifyAggregationFormatType", currentParameters.param("name"), type1, currentParameters.param("column_format"), currentParameters.param("aggrMethod"), true, true);
+                    macro("verifyAggregationType", currentParameters.param("name"), type1, currentParameters.param("aggrMethod"), true);
+                </verifyForSave>
+                
+            </parameter>
+			<parameter name="description" description="Calculated Field Description" type="string" length="20"/>
+            <parameter name="title" description="Title" type="String" defaultValue=""/>
+			<parameter name="aggrMethod" description="Aggr. Method" type="string" length="20">
+				<choices>
+					<asDescription>
+                        ndo('SUM',l('SUM')), ndo('AVG',l('AVG')), ndo('MIN',l('MIN')), ndo('MAX',l('MAX')),
+                        ndo('COUNT',l('COUNT')), ndo('COUNT_DISTINCT',l('COUNT DISTINCT')), ndo('debit',l('debit')), ndo('credit',l('credit'))
+                    </asDescription>
+				</choices>
+				<default>'SUM'</default>
+                <onParameterChange>
+                    macro("setFormatValue", "column_format", param("aggrMethod"));
+                </onParameterChange>
+			</parameter>
+			<parameter name="calcTotal" description="Calc. Total?" type="boolean" defaultValue="true"/>
+			<parameter name="calcFormula" description="Calc. Formula" type="string">
+                <attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues"> l("Field") <comma/>
+                    var tables1 = list("details", "calcFields", "auxFields");
+                    macro("expressionAndFieldLookup", tables1, "calcFields", null, <currentParameters/>.getID())
+                </attribute>
+				<convertInputValue>
+                    macro("getConvertedInputValue", inputValue)
+                </convertInputValue>
+				<onParameterChange>
+                    macro("onFormulaChange", "calcGroup");
+				</onParameterChange>
+			</parameter>
+			<parameter name="valueType" description="Value Type" type="string">
+				<if>
+					<param name="calcFormula"/> == ""
+                    <then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+                        macro("valueType", "FLOAT");
+                    </else>
+				</if>
+			</parameter>
+			<parameter name="valueSize" description="Value Size" type="integer">
+                macro("valueSize");
+            </parameter>
+			<parameter name="valueNullable" description="Value Nullable?" type="boolean">
+				<if>
+					<param name="calcFormula"/> == ""
+                    <then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+					</else>
+				</if>
+			</parameter>
+
+            <parameter name="overrideLookupInformation" description="Override Lookup Source for DataSource" type="Boolean" defaultValue="false">
+            </parameter>
+
+            <parameter name="lookupSource" description="Lookup Source" type="String" isDataSet="DataSource" canClearDataSet="true" defaultValue="">
+                  <if>
+                      <param name="overrideLookupInformation"/>
+                      == false
+                      <then>
+                          <disabled/>
+                      </then>
+                      <else>
+                          <enabled/>
+                      </else>
+                  </if>
+            </parameter>
+
+              <parameter name="codeField" description="Value Field" type="String">
+                  <if>
+                      <param name="lookupSource"/>
+                             == '' ||
+                      <param name="lookupSource"/>
+                            == null
+                      <then>
+                          <disabled/>
+                      </then>
+                      <else>
+                          <enabled/>
+                          <if> !(param("lookupSource")==null||param("lookupSource").indexOf("!!!") &gt; -1)
+                              <then>
+                                  <choices>
+                                      editor.getRemoteProxy().lookupFieldsInDataSource(<param name="lookupSource"/>, editor.getBranchId());
+                                  </choices>
+                              </then>
+                          </if>
+                      </else>
+                  </if>
+              </parameter>
+
+              <parameter name="descriptionField" description="Description Field" type="String">
+                  <if>
+                      <param name="lookupSource"/>
+                             == '' ||
+                      <param name="lookupSource"/>
+                            == null
+                      <then>
+                          <disabled/>
+                      </then>
+                      <else>
+                          <enabled/>
+                          <if> !(param("lookupSource")==null||param("lookupSource").indexOf("!!!") &gt; -1)
+                              <then>
+                                  <choices>
+                                      editor.getRemoteProxy().lookupFieldsInDataSource(<param name="lookupSource"/>, editor.getBranchId());
+                                  </choices>
+                              </then>
+                          </if>
+                      </else>
+                  </if>
+              </parameter>
+
+              <parameter name="addLookupSourceToModel" description="Add Lookup Source to DataModel" type="Boolean">
+                  <if>
+                      <param name="lookupSource"/>
+                             == '' ||
+                      <param name="lookupSource"/>
+                            == null
+                      <then>
+                          <disabled/>
+                      </then>
+                      <else>
+                          <enabled/>
+                      </else>
+                  </if>
+              </parameter>
+
+
+            <parameter name="additionalConstraintForJoin" description="Optional Join Constraint" type="String">
+                <if>
+                    <param name="lookupSource"/>
+                    == '' ||
+                      <param name="lookupSource"/>
+                    == null || !
+                    <param name="addLookupSourceToModel"/>
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                    </else>
+                </if>
+
+                <attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues"> l("Field") <comma/>
+                    var details = param("details");
+                    var resultd = list();
+
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; details.size()
+                        <comma/>
+                        i ++
+                        <do>
+                            var detaild = details.get(i);
+                            resultd.add(ndo("AGGREGATION."+detaild.param("name"), detaild.param("description")));
+                        </do>
+					</for>
+
+                    var calcFields = param("calcFields");
+                    var index = macro("getEntityIndex", <currentParameters/>.getID(), calcFields);
+                    var result = list();
+
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; index
+                        <comma/>
+                        i ++
+                        <do>
+                            var calcField = calcFields.get(i);
+                            result.add(ndo("AGGREGATION."+calcField.param("name"), calcField.param("description")));
+                        </do>
+					</for>
+
+                    resultd,
+                    result,
+                    editor.getRemoteProxy().lookupFieldsInDataSource(param("lookupSource"), editor.getBranchId())
+                </attribute>
+				<convertInputValue>
+                    "$" + inputValue.getName()
+                </convertInputValue>
+
+            </parameter>
+
+              <parameter name="relationshipToParent" description="Relationship to Parent" type="String">
+                  <!-- matching of values is done using constants in ModelPropertiesDialog -->
+                  <if>
+                    <param name="lookupSource"/>
+                    == '' ||
+                      <param name="lookupSource"/>
+                    == null || !
+                    <param name="addLookupSourceToModel"/>
+                      <then>
+                          <disabled/>
+                      </then>
+                      <else>
+                          <enabled/>
+                          macro("relationshipTypes");
+                      </else>
+                  </if>
+              </parameter>
+
+            <parameter name="instanceSelectionRule" description="Instance Date Selection Rule" type="String">
+                <if>
+                    <param name="lookupSource"/>
+                    == '' ||
+                      <param name="lookupSource"/>
+                    == null || !
+                    <param name="addLookupSourceToModel"/>
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        choices(asDescription(list(ndo("EQUAL", l("EQUAL")), ndo("LATEST", l("LATEST")))))
+                    </else>
+                </if>
+			</parameter>
+
+			<confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("details"), param("auxFields"), param("syntheticFields")));
+            </confirmAddRow>
+
+            <onRowAdded>
+                macro("onFieldRowAdded", "calcFormula", "calcGroup");
+            </onRowAdded>
+            <onRowDeleted>
+                macro("onFieldRowDeleted", "calcGroup");
+            </onRowDeleted>
+            <onRowMoved>
+                macro("onFieldRowMoved", "calcFormula", "calcGroup");
+            </onRowMoved>
+            <verifyForSave>
+                <if>param("details").size() == 0 and currentParameter.getParameterValue().size() == 0
+                    <then>
+                        errorMessage(l("At least one calculation or detail field should be defined."));
+                        return false;
+                    </then>
+                </if>
+            </verifyForSave>
+            <parameter name="column_format" description="Display Format" type="String" defaultValue="">
+                <editable/>
+                <choices>
+
+                                list(
+                                "#0",
+                                "#0;(#0)",
+                                "#,##0",
+                                "#,##0;(#,##0)",
+                                "#,##0.00;(#,##0.00)",
+                                "#,##0.00",
+                                "#.##",
+                                "#.####",
+                                "#.######",
+                                "#.########",
+                                "#.##########",
+                                "0.###E-#",
+                                "0.#######E-#",
+                                "0.##########E-#",
+                                "dd-MMM-yyyy",
+                                "dd-MMM-yyyy HH:mm:ss",
+                                "MM/dd/yyyy",
+                                "MM/dd/yyyy HH:mm:ss",
+                                "yyyy-MM-dd HH:mm:ss")
+                </choices>
+            </parameter>
+            <parameter name="overrideNullable" description="Is Column Nullable" group="Parameters" type="String" optional="true" defaultValue="DEFAULT">
+                <default>
+                    'DEFAULT'
+                </default>
+
+                choices(asDescription(list(ndo("DEFAULT", l("Default")), ndo("NOT_NULLABLE", l("Not Nullable")), ndo("NULLABLE", l("Nullable")))))
+            </parameter>
+		</parameter>
+		<parameter name="help_info_calcField" description="" type="Component" group="Calculated Fields" noSerialization="yes">
+			<attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+			<attribute name="text">l("Calculated Fields' formulas are evaluated prior to aggregation. SQL syntax must be used.")</attribute>
+			<attribute name="color">macro("LIGHT_BLUE")</attribute>
+		</parameter>
+		<parameter name="auxFields" description="Auxiliary Fields" type="table" length="7" group="Auxiliary Fields" keyParameter="name">
+			<parameter name="name" description="Auxiliary Field Name" type="String" length="20">
+				<attribute name="lookupFromFieldList"> l("Select Auxiliary Field") <comma/>
+                    macro("getUniqueFields", list(param("details"), param("calcFields"), param("syntheticFields")));
+                </attribute>
+				<convertInputValue>
+                    inputValue.get(1);
+                </convertInputValue>
+				<validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("details"), param("calcFields"), param("syntheticFields")));
+                </validation>
+				<verifyForSave>
+                    macro("verifyNonEmpty");
+				</verifyForSave>
+				<onParameterChange>
+                    macro("onFieldNameChange", null, "auxGroup");
+				</onParameterChange>
+			</parameter>
+			<parameter name="description" description="Auxiliary Field Description" type="String" wrapOnReport="true"/>
+			<confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("details"), param("calcFields"), param("syntheticFields")));
+            </confirmAddRow>
+            <onRowAdded>
+                macro("onFieldRowAdded", null, "auxGroup");
+            </onRowAdded>
+            <onRowDeleted>
+                macro("onFieldRowDeleted", "auxGroup");
+            </onRowDeleted>
+            <onRowMoved>
+                macro("onFieldRowMoved", null, "auxGroup");
+            </onRowMoved>
+		</parameter>
+		<parameter name="mappings" description="Mapping" type="tree" group="Fields Mapping" rootNodeType="rootMappingNode" tableTransposed="true" compareByID="true">
+			<nodeType name="rootMappingNode" description="Mapping" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="detailGroup, auxGroup, calcGroup"/>
+			<nodeType name="detailGroup" description="Details Mapping" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="fieldMappingNode"/>
+			<nodeType name="auxGroup" description="Auxiliary Fields Mapping" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="fieldMappingNode"/>
+			<nodeType name="calcGroup" description="Calculated Fields Mapping" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="fieldMappingNode"/>
+			<!--hasID = true to facilitate comparison of mapping nodes by id -->
+			<nodeType name="fieldMappingNode" description="Field" renameAllowed="false" deleteAllowed="false" hasChildren="false" childrenAreFixed="false" hasID="true">
+				<parameter name="fieldMapping" description="Field Mapping" type="table" keyParameter="model" allowAddRemove="false" reorder="false" length="5" tableTransposed="true" mergeOnComparison="true">
+					<parameter name="model" description="Model" type="string" wrapOnReport="true">
+						<readonly/>
+					</parameter>
+					<parameter name="expression" description="Expression" type="string" wrapOnReport="true">
+						<attribute name="allowAppend"/>
+						<attribute name="lookupFromValues"> l("Expression") <comma/>
+                            ;macro("expressionAndMappingLookup")
+                        </attribute>
+						<convertInputValue>
+                            <if> inputValue instanceof "[Ljava.lang.String;"
+                                <then>
+                                    <!--field-->
+                                    ;"$" + inputValue.get(0) +  "." + inputValue.get(1)
+                                </then>
+                                <else>
+                                    <!--macro-->
+                                    ;inputValue.getName()
+                                </else>
+                            </if>
+                        </convertInputValue>
+						<if>
+                            param("model") == "UNRESOLVED"
+                            <then>
+								<disabled/>
+							</then>
+							<else>
+								<enabled/>
+							</else>
+						</if>
+						<validation>
+                            macro("validateMappingExpression");
+                        </validation>
+						<verifyForSave>
+                            macro("verifyMappingExpression");
+                        </verifyForSave>
+					</parameter>
+					<parameter name="valueType" description="Value Type" type="string">
+						<if>
+                            param("model") == "UNRESOLVED" || macro("isSingleFieldReference")
+                            <then>
+                                <equals>
+                                    param("expression"); <!-- so it always depends on it--> 
+                                    <if> param("model") != "UNRESOLVED"
+                                        <then>
+                                            var model = editor.locateObjectByName("DataModel", param("model"));
+                                            var accessor = new("axiomsl.accessors.DataModelAccessor", model);
+                                            var route = function("axiomsl.server.object_framework.RouteToObject", "createNameRouteFromObjectName", editor.getAxiomObjectManager(), editor.getBranchId(), param("model"));
+                                            var parser = new("axiomsl.accessors.ExpressionParserImpl", editor.createObject("DataModel"), accessor, route);
+                                            var table = parser.parseExpression(param("expression"));
+                                            var type = table.get(0).getProperty("value").getTargetObject().getString("type");
+                                            return case(type == "TEXT", "VARCHAR", type == "UNICODE_TEXT", "UNICODE", type);
+                                        </then>
+                                    </if>
+                                </equals>
+                                <readonly/>
+							</then>
+							<else>
+								<enabled/>
+                            </else>
+						</if>
+                        macro("valueType", "FLOAT");
+					</parameter>
+					<parameter name="valueSize" description="Value Size" type="integer">
+						<if>
+                            param("model") == "UNRESOLVED" || macro("isSingleFieldReference")
+                            <then>
+								<disabled/>
+							</then>
+							<else>
+								<enabled/>
+                                macro("valueSize");
+                            </else>
+						</if>
+					</parameter>
+					<parameter name="valueNullable" description="Value Nullable?" type="boolean">
+						<if>
+                            param("model") == "UNRESOLVED" || macro("isSingleFieldReference")
+                            <then>
+								<disabled/>
+							</then>
+							<else>
+								<enabled/>
+							</else>
+						</if>
+					</parameter>
+				</parameter>
+				<parameter name="help_info_mapping" description="" type="Component" noSerialization="yes">
+					<attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+					<attribute name="text">l("SQL syntax must be used in expressions")</attribute>
+					<attribute name="color">macro("LIGHT_GREEN")</attribute>
+				</parameter>
+			</nodeType>
+		</parameter>
+		<!--SyntheticFields-->
+		<parameter name="syntheticFields" description="Synthetic Fields" type="table" length="7" group="Synthetic Fields" keyParameter="name" tableTransposed="true" compareByID="true">
+			<parameter name="name" description="Synthetic Field Name" type="string" length="20">
+				<validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("details"), param("calcFields"), param("auxFields")));
+                </validation>
+				<verifyForSave>
+                    macro("verifyNonEmpty");
+				</verifyForSave>
+			</parameter>
+			<parameter name="description" description="Synthetic Field Description" type="string" length="20"/>
+            <parameter name="title" description="Title" type="String" defaultValue=""/>
+			<parameter name="formula" description="Value (formula)" type="string">
+                <attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues"> l("Field") <comma/>
+                    var tables = array("details", "calcFields", "syntheticFields");
+                    ;macro("expressionAndFieldLookupCustom", tables, "syntheticFields", null, <currentParameters/>.getID())
+                </attribute>
+				<convertInputValue>
+                    macro("getConvertedInputValue", inputValue)
+                </convertInputValue>
+			</parameter>
+			<parameter name="calcTotal" description="Calc. Total?" type="boolean" defaultValue="true"/>
+			<parameter name="valueType" description="Value Type" type="string">
+                macro("valueType", "FLOAT");
+            </parameter>
+			<parameter name="valueSize" description="Value Size" type="integer">
+                macro("valueSize");
+            </parameter>
+			<parameter name="valueNullable" description="Value Nullable?" type="boolean"/>
+			<confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("details"), param("calcFields"), param("auxFields")));
+            </confirmAddRow>
+		</parameter>
+		<parameter name="help_info_synt" description="" type="Component" group="Synthetic Fields" noSerialization="yes">
+			<attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+			<attribute name="text">l("Synthetic Fields' formulas are evaluated post-aggregation. SQL syntax must be used.")</attribute>
+			<attribute name="color">macro("LIGHT_YELLOW")</attribute>
+		</parameter>
+		<!--conditions properties-->
+		<parameter name="condition" description="Conditions" type="Condition" length="7" group="Conditions">
+			<attribute name="models">
+                var l = list();
+                var models = param("models");
+                <for>var i = 0
+                        <comma/>
+                        i &lt; models.size()
+                        <comma/>
+                        i ++
+                        <do>
+                            var model = models.get(i);
+                            l.add(model.param("name"));                            
+                        </do>
+				</for>
+                l
+            </attribute>
+		</parameter>
+
+        <parameter name="parameters" description="Variable Definitions" type="table" length="4" keyParameter="name" group="Variables">
+            <parameter name="name" description="Variable Name" type="String" freehand="no">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniqueness", list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="description" description="Description" type="String" freehand="no"/>
+            <parameter name="dataType" description="Type" type="String" freehand="no">
+                choices(<asDescription>
+                    ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE"))
+                </asDescription>)
+                <default>
+                'VARCHAR'
+                </default>
+            </parameter>
+            <!--<parameter name="lookupFormula" description="Lookup Expression" type="String" wrapOnReport="true" freehand="yes"/>-->
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirm", list());
+            </confirmAddRow>
+        </parameter>
+		<!--index properties-->
+		<parameter name="additionalIndices" description="Aggregation Indexes" type="table" keyParameter="fields" length="7" group="Indexing">
+			<parameter name="fields" description="Index" type="String" length="20">
+				<attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupMultipleSelect">true</attribute>
+				<attribute name="lookupAppendSeparator">", "</attribute>
+				<attribute name="lookupFromValues"> l("Field") <comma/>
+                    var details = param("details");
+                    var res = list();
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; details.size()
+                        <comma/>
+                        i ++
+                        <do>
+                            var detail = details.get(i);
+                            res.add(ndo(detail.param("name"), detail.param("description")));
+                        </do>
+					</for>
+
+                    var calcFields = param("calcFields");
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; calcFields.size()
+                        <comma/>
+                        i ++
+                        <do>
+                            var calcField = calcFields.get(i);
+                            res.add(ndo(calcField.param("name"), calcField.param("description")));
+                        </do>
+					</for>
+                    res
+                </attribute>
+			</parameter>
+			<parameter name="clustered" description="Clustered" type="boolean" length="7"/>
+			<parameter name="unique" description="Unique" type="boolean" length="7"/>
+		</parameter>
+        <parameter name="validations" description="Adjustment Validations" type="table" length="7" group="Adjustment Validations" keyParameter="field">
+            <parameter name="field" description="Field Name" type="String" length="20">
+                <attribute name="lookupFromValues"> l("Field") <comma/>
+                    var details = param("details");
+                    var res = list();
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; details.size()
+                        <comma/>
+                        i ++
+                        <do>
+                            var detail = details.get(i);
+                            res.add(ndo(detail.param("name"), detail.param("description")));
+                        </do>
+                    </for>
+
+                    var calcFields = param("calcFields");
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; calcFields.size()
+                        <comma/>
+                        i ++
+                        <do>
+                            var calcField = calcFields.get(i);
+                            res.add(ndo(calcField.param("name"), calcField.param("description")));
+                        </do>
+                    </for>
+                    res
+                </attribute>
+            </parameter>
+            <parameter name="type" description="Validation Type" type="String" group="Adjustment Validations" length="20" defaultValue="ON_EDIT_ONLY">
+                choices(<asDescription>
+                     ndo("ON_EDIT_ONLY", l("On edit only")), ndo("ON_SAVE_ONLY", l("On save only")), ndo("ON_EDIT_AND_SAVE", l("On edit and save")),ndo("ON_DELETE_ONLY", l("On delete only"))
+                </asDescription>)
+                <default>
+                'ON_EDIT_ONLY'
+                </default>
+            </parameter>
+            <parameter name="expression" description="Validation Expression" type="String" wrapOnReport="true">
+                <attribute name="lookupAppend">true</attribute>
+                <attribute name="lookupFromValues">  l("Expression") <comma/>
+                    var fields = l("Fields");
+                    macro("adjustmentValidationLookup", "details", "calcFields", "fields", fields)  
+                </attribute>
+            </parameter>
+        </parameter>
+		<!--additional properties-->
+		<macro name="storageTypeParameter"/>
+		<parameter name="dbSourceForResults" description="DB Source" group="Parameters" type="String" defaultValue="" length="20">
+			<choices>
+				<!--<asDescription>-->
+                    var sources = editor.getRemoteProxy().lookupObjects("DBSource");
+                <!--</asDescription>-->
+			</choices>
+			<default>
+                macro("getDefaultDBSource");
+            </default>
+		</parameter>
+		<parameter name="detailsAsKeys" description="Details As Keys" group="Parameters" type="boolean" defaultValue="false" length="20"/>
+        <parameter name="doNotAggregate" description="Do not aggregate calculated fields" group="Parameters" type="boolean" defaultValue="false"/>
+        <parameter name="requiresAllModels" description="Requires all models for execution" group="Models" type="Boolean" optional="true" defaultValue="true"/>
+
+        <parameter name="trackDrilldownInformation" description="Track drilldown information" group="Parameters" type="Boolean" optional="true" defaultValue="true"/>
+        <parameter name="trackAllInstancesMode" description="Track instance information for models taken with All Instances" group="Parameters" type="String" optional="true" defaultValue="true">
+            <default>
+                'NONE'
+            </default>
+
+            choices(asDescription(list(ndo("NONE", l("None")), ndo("EVALUATION", l("By evaluating conditions for instance keys")))))
+        </parameter>
+        <parameter name="computeStatistics" description="Compute Statistics On Results" type="String" group="Parameters" length="20">
+            choices(<asDescription>
+                 ndo("NONE", l("NONE")), ndo("FOR_ALL_COLUMNS", l("FOR_ALL_COLUMNS")), ndo("FOR_KEY_COLUMNS", l("FOR_KEY_COLUMNS"))
+            </asDescription>)
+            <default>
+                'FOR_ALL_COLUMNS'
+            </default>
+		</parameter>
+        <parameter name="fourEyesCheck" description="Four Eyes Check" group="Parameters" type="Boolean" defaultValue="false"/>
+        <parameter name="help_info_hint" description="" type="Component" group="Performance Options" noSerialization="yes">
+            <attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+            <attribute name="text">l("Performance options for database-intensive tasks")</attribute>
+            <attribute name="color">macro("LIGHT_GRAY")</attribute>
+            <attribute name="horizontalAlignment">"LEFT"</attribute>
+        </parameter>
+        <parameter name="overrideDBSourceParallelSettings" description="Override DBSource Parallel Settings" group="Performance Options" type="boolean" defaultValue="false"/>
+        <parameter name="executeEnableParallelismStatement" description="Execute Enable-Parallelism Statement" group="Performance Options" type="boolean" defaultValue="false">
+            <if>param("overrideDBSourceParallelSettings")
+                <then><enabled/></then><else><disabled/></else>
+            </if>
+        </parameter>
+        <parameter name="includeParallelHintsInsert" description="Include Parallel Hints for Insert" group="Performance Options" type="boolean" defaultValue="false">
+            <if>param("overrideDBSourceParallelSettings")
+                <then><enabled/></then><else><disabled/></else>
+            </if>
+        </parameter>
+        <parameter name="includeParallelHintsSelect" description="Include Parallel Hints for Select" group="Performance Options" type="boolean" defaultValue="false">
+            <if>param("overrideDBSourceParallelSettings")
+                <then><enabled/></then><else><disabled/></else>
+            </if>
+        </parameter>
+        <parameter name="overrideDBSourceParallelDegree" description="Override DBSource Parallel Degree" group="Performance Options" type="boolean" defaultValue="false">
+            <if>param("overrideDBSourceParallelSettings")
+                <then><enabled/></then><else><disabled/></else>
+            </if>
+        </parameter>
+        <parameter name="parallelDegree" description="PARALLEL Degree" group="Performance Options" type="Integer" defaultValue="0" length="10">
+            <if>param("overrideDBSourceParallelSettings")
+                <then><enabled/></then><else><disabled/></else>
+            </if>
+        </parameter>
+        <parameter name="postTableCreationStatements" description="Data Table Statements" type="tree" length="100" rootNodeType="rootStatementsNode" group="Post Table Creation Statements">
+            <nodeType name="rootStatementsNode" description="Data Table Statements" renameAllowed="true" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="DataSource:postTableCreationStatement"/>
+            <nodeType name="DataSource:postTableCreationStatement" description="Statement" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false">
+                <parameter name="statement" description="Statement" type="String" defaultValue="" length="20">
+                    <attribute name="multiLine"> 3 </attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+                    <attribute name="lookupAppend">true</attribute>
+                    <attribute name="lookupFromValues"> l("Macro") <comma/>
+                        var tables = array("details", "calcFields");
+                        ;macro("postTableCreationLookup", tables, "syntheticFields", null, <currentParameters/>.getID())
+                    </attribute>
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+                </parameter>
+                <parameter name="canBeReexecuted" description="This statement can be re-executed multiple times" type="Boolean" defaultValue="false" optional="true" row="1"/>
+                <parameter name="alwaysReexecute" description="Always re-execute" type="Boolean" defaultValue="false" optional="true" row="1">
+                    <if> <param name="canBeReexecuted"/> == false
+                        <then>
+                            <disabled/>
+                        </then> <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+            </nodeType>
+        </parameter>
+
+        <parameter name="postAdjustmentTableCreationStatements" description="Adjustment Table Statements" type="tree" length="100" rootNodeType="rootStatementsNode" group="Post Table Creation Statements">
+            <nodeType name="rootStatementsNode" description="Adjustment Table Statements" renameAllowed="true" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="DataSource:postTableCreationStatement"/>
+            <nodeType name="DataSource:postTableCreationStatement" description="Statement" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false">
+                <parameter name="statement" description="Statement" type="String" defaultValue="" length="20">
+                    <attribute name="multiLine"> 3 </attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+
+                    <!-- because we're saving via task parameters and that removes newlines -->
+                    <attribute name="lookupAppend">true</attribute>
+                    <attribute name="lookupFromValues"> l("Macro") <comma/>
+                        var tables = array("details", "calcFields");
+                        ;macro("postTableCreationLookup", tables, "syntheticFields", null, <currentParameters/>.getID())
+                    </attribute>
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+                </parameter>
+                <parameter name="canBeReexecuted" description="This statement can be re-executed multiple times" type="Boolean" defaultValue="false" optional="true" row="1"/>
+                <parameter name="alwaysReexecute" description="Always re-execute" type="Boolean" defaultValue="false" optional="true" row="1">
+                    <if> <param name="canBeReexecuted"/> == false
+                        <then>
+                            <disabled/>
+                        </then> <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+            </nodeType>
+        </parameter>
+        <parameter name="makeStreamColumnsKey" description="Mark stream columns as key" group="Parameters" type="Boolean" optional="true" defaultValue="true">
+            <if>
+                <param name="detailsAsKeys"/>
+                <then>
+                    <disabled/>
+                </then>
+                <else>
+                    <enabled/>
+                </else>
+            </if>
+        </parameter>
+
+        <parameter name="instanceRebuildRestriction" description="Resulting Data Source Instance Rebuild Restrictions" type="String"
+                   group="Parameters" defaultValue="AlterFullRebuild">
+            choices( <asDescription>
+                ndo('AlterFullRebuild', l('Alter, Full Rebuild')),
+                ndo('AlterOnly'       , l('Alter Only'         )),
+                ndo('FullRebuildOnly' , l('Full Rebuild Only'  ))
+            </asDescription>)
+        </parameter>
+        <parameter name="allowExternalDataPermissions" description="Allow External Data Permissions" group="Parameters" type="Boolean" optional="true" defaultValue="true"/>
+
+	</parameters>
+	<loadCode>
+        var aggregation = <originalAxiom/>;
+        var accessor = new("axiomsl.accessors.AggregationAccessor", aggregation);
+        var route = dataSet.getRouteFromCurrentBranch();
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor, route);
+
+        var templates = array(
+        "default(postTableCreationStatements)",
+        "default(parameters)",
+        "default(postAdjustmentTableCreationStatements)",
+        "table2tree(postTableCreationStatements)",
+        "table2tree(postAdjustmentTableCreationStatements)",
+        "default(fourEyesCheck)",
+        "default(trackAllInstancesMode)",
+        "default(postTableCreationStatements.canBeReexecuted)",
+        "default(postTableCreationStatements.alwaysReexecute)",
+        "default(postAdjustmentTableCreationStatements.canBeReexecuted)",
+        "default(postAdjustmentTableCreationStatements.alwaysReexecute)",
+        "default(instanceRebuildRestriction)",
+        "default(executeEnableParallelismStatement)",
+        "default(includeParallelHintsInsert)",
+        "default(includeParallelHintsSelect)",
+        "default(parallelDegree)",
+        "default(computeStatistics)"
+        );
+        var params1 = array("parameters",
+                            "postTableCreationStatements",
+                            "postAdjustmentTableCreationStatements",
+                            "fourEyesCheck",
+                            "trackAllInstancesMode",
+                            "instanceRebuildRestriction",
+                            "executeEnableParallelismStatement",
+                            "includeParallelHintsInsert",
+                            "includeParallelHintsSelect",
+                            "parallelDegree",
+                            "computeStatistics");
+
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(aggregation, currentParameters, params1, array("parameters.lookupFormula"), templates, parser, route);
+
+        <!-- parallel hints -->
+        param("overrideDBSourceParallelSettings") = aggregation.propertyIsSet("executeEnableParallelismStatement");
+        param("overrideDBSourceParallelDegree") = aggregation.propertyIsSet("parallelDegree");
+
+        <!--model setup -->
+        var models = aggregation.getTable("models");
+        <!--deserialization in empty case-->
+        param("models");
+        <for>var i = 0
+            <comma/>
+            i &lt; models.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("models").addLine();
+                var modelRef = models.get(i).getReference("dataModel");
+                row.param("name") = modelRef.getTargetObjectName(route);
+                <!--TODO use context-->
+                row.setID(modelRef.getTargetObjectID(route, editor.getBranchId()).getObjectId());
+            </do>
+		</for>
+		<!--details setup-->
+        templates = array("default(details.overrideLookupInformation)", "default(details.displayFormat)",
+                "dictionaryReference(details.codeField, lookupSource, layout)",
+                "dictionaryReference(details.descriptionField, lookupSource, layout)",
+                "table2expression(details.additionalConstraintForJoin)",
+                "default(details.instanceSelectionRule)",
+                "default(details.overrideNullable)",
+                "default(details.title)"
+        );
+
+        params1 = array("details");
+        var details = aggregation.getTable("details");
+        <if>  details.size()&gt; 0
+            <then>
+                parser.setContext(details.get(0));                
+            </then>
+        </if>
+        matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(aggregation, currentParameters, params1,array("details.instanceSelectionRule"),templates, parser, route);
+
+		<for>var i = 0
+            <comma/>
+            i &lt; details.size()
+            <comma/>
+            i ++
+            <do>
+                var detail = details.get(i);
+
+
+                <if> details.get(i).propertyIsSet("instanceSelectionRule")
+                    <then>
+                        param("details").get(i).param("instanceSelectionRule")=details.get(i).getProperty("instanceSelectionRule").getProperty("instanceDateRule").getString("type");
+                    </then>
+                    <else>
+                        param("details").get(i).param("instanceSelectionRule")="LATEST";
+                    </else>
+                </if>
+            </do>
+		</for>
+
+		<!--calc fields setup -->
+
+        templates = array("default(calcFields.overrideLookupInformation)", "default(calcFields.displayFormat)",
+                "dictionaryReference(calcFields.codeField, lookupSource, layout)",
+                "dictionaryReference(calcFields.descriptionField, lookupSource, layout)",
+                "table2expression(calcFields.additionalConstraintForJoin)",
+                "default(calcFields.instanceSelectionRule)",
+                "default(calcFields.overrideNullable)",
+                "default(calcFields.title)"
+        );
+
+        params1 = array("calcFields");
+        var calcFields = aggregation.getTable("calcFields");
+        <if>  calcFields.size()&gt; 0
+            <then>
+                parser.setContext(calcFields.get(0));
+            </then>
+        </if>
+        matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        var exclusion=array("calcFields.instanceSelectionRule","calcFields.calcFormula","calcFields.displayFormat");
+        matcher.match(aggregation, currentParameters, params1,exclusion,templates, parser, route);
+        calcFields = aggregation.getTable("calcFields");
+        param("calcFields");
+		<for>var i = 0
+            <comma/>
+            i &lt; calcFields.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("calcFields").get(i);
+                var calcField = calcFields.get(i);
+                macro("loadTypeParameters", calcField, row);
+                row.param("column_format") = calcField.getOptionalValue("displayFormat", "");                
+
+                parser.setContext(calcField);
+                parser.setContextPropertyName("calcFormula");
+                row.param("calcFormula") = parser.getExpressionString(calcField.getTable("calcFormula"));
+
+                row.setID(calcField.getString("id"));
+                <if> calcField.propertyIsSet("instanceSelectionRule")
+                    <then>
+                        row.param("instanceSelectionRule")=calcField.getProperty("instanceSelectionRule").getProperty("instanceDateRule").getString("type");
+                    </then>
+                </if>
+                row.param("addLookupSourceToModel") = calcField.getOptionalValue("addLookupSourceToModel", "false");
+                <if> !calcField.propertyIsSet("lookupSource")
+                    <then>
+                        row.param("lookupSource") = calcField.getOptionalValue("lookupSource", "");
+                    </then>
+                </if>
+            </do>
+		</for>
+
+		<!--aux Fields setup -->
+        var auxFields = aggregation.getTable("auxFields");
+        param("auxFields");<!--deserializing-->
+		<for>var i = 0
+            <comma/>
+            i &lt; auxFields.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("auxFields").addLine();
+                var auxField = auxFields.get(i);
+                row.param("name") = auxField.getString("name");
+                row.param("description") = auxField.getString("description");
+                row.setID(auxField.getString("id"));
+            </do>
+		</for>
+		<!--synthetic fields setup -->
+        var syntheticFields = aggregation.getTable("syntheticFields");
+        param("syntheticFields");<!--deserializing-->
+		<for>var i = 0
+            <comma/>
+            i &lt; syntheticFields.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("syntheticFields").addLine();
+                var syntheticField = syntheticFields.get(i);
+                row.param("name") = syntheticField.getString("name");
+                row.param("description") = syntheticField.getString("description");
+                row.param("title") = syntheticField.getOptionalValue("title","");
+                parser.setContext(syntheticField);
+                row.param("formula") = parser.getExpressionString(syntheticField.getTable("formula"));
+                row.param("calcTotal") = syntheticField.getBoolean("calcTotal");
+                macro("loadTypeParameters", syntheticField, row);
+                row.setID(syntheticField.getString("id"));
+            </do>
+		</for>
+        parser.setContext(aggregation);
+<!--		--><!--mapping setup --><!--
+        var mappings = aggregation.getTable("mappings");
+        --><!--deserialization in empty case--><!--
+        param("mappings");
+        <for>var i = 0
+            <comma/>
+            i &lt; mappings.size()
+            <comma/>
+            i ++
+            <do>
+                var mapping = mappings.get(i);
+                var object = mapping.getObject("field").getReference("value").getTargetObject();
+                var type = mapping.getObject("field").getObjectType();
+                var group = null;
+                <if> ! (type.indexOf("CalcField") &gt; 0 &amp;&amp; !object.getTable("calcFormula").isEmpty())
+                    <then>
+						<case>
+                            type.indexOf("Detail") &gt; 0
+                                <then>
+                                    group = macro("createGroup", "detailGroup");
+                                </then>
+
+                            type.indexOf("AuxField") &gt; 0
+                                <then>
+                                    group = macro("createGroup", "auxGroup");
+                                </then>
+
+                            type.indexOf("CalcField") &gt; 0
+                                <then>
+                                    group = macro("createGroup", "calcGroup");
+                                </then>
+						</case>
+                        var node = group.createChild("fieldMappingNode", object.getString("name"));
+                        node.setID(object.getString("id"));
+                        var fieldMapping = mapping.getTable("fieldMapping");
+                        <for> var k = 0 <comma/> k &lt; param("models").size() <comma/> k++
+                                <do>
+                                    var curModelID = param("models").get(k).getID();
+                                    --><!--trace("curModelID  " + curModelID);--><!--
+                                    var isMappingSet = false;
+                                    --><!--try to find mapping for each model in mapping table otherwise insert empty row--><!--
+								<for>var j = 0
+                                        <comma/>
+                                        j &lt; fieldMapping.size()
+                                        <comma/>
+                                        j ++
+                                        <do>
+                                            var model = fieldMapping.get(j).getObject("model").getReference("value");
+                                            --><!--curModelID == model.getTargetObjectID().getObjectId() - model matched--><!--
+										--><!--trace("ref  " + model.getTargetObjectID(route, editor.getBranchId()).getObjectId());--><!--
+										<if> curModelID == model.getTargetObjectID(route, editor.getBranchId()).getObjectId()
+                                                <then>
+                                                    var row = node.param("fieldMapping").addLine();
+                                                    row.param("model") = model.getTargetObjectName(route);
+                                                    var warnings = list();
+                                                    row.param("expression") = parser.getExpressionString(fieldMapping.get(j).getTable("expression"));
+                                                    row.setID(curModelID);
+                                                    macro("loadTypeParameters", fieldMapping.get(j), row);
+                                                    isMappingSet = true;
+                                                    break;
+                                                </then>
+										</if>
+									</do>
+								</for>
+								--><!--add empty row--><!--
+								<if> isMappingSet
+                                        <else>
+                                            var row = node.param("fieldMapping").addLine();
+                                            row.param("model") = param("models").get(k).param("name");
+                                            trace("Mapping for " + object.getString("name") + "/" +  row.param("model") + " is not set");
+                                            --><!--TODO mark dataSet cahnged--><!--
+                                            dataSet.dataChanged();
+                                        </else>
+								</if>
+							</do>
+						</for>
+                        node.addToParent();
+                    </then>
+				</if>
+			</do>
+		</for>-->
+        param("dbSourceForResults") = aggregation.getReference("dbSourceForResults").getTargetObjectNativeName();
+        param("storageType") = aggregation.getString("storageType");
+
+        param("detailsAsKeys") = aggregation.getBoolean("detailsAsKeys");
+        param("makeStreamColumnsKey") = aggregation.getOptionalValue("makeStreamColumnsKey",false);
+        param("allowExternalDataPermissions") = aggregation.getOptionalValue("allowExternalDataPermissions",false);
+        param("requiresAllModels") = aggregation.getOptionalValue("requiresAllModels",false);
+        param("trackDrilldownInformation") = aggregation.getOptionalValue("trackDrilldownInformation",false);
+        param("doNotAggregate") = aggregation.getOptionalValue("doNotAggregate",false);
+        <!--index setup-->
+        var indexTable = aggregation.getTable("additionalIndices");        
+        param("additionalIndices"); <!--deserializing-->
+		<for>var i = 0
+            <comma/>
+            i &lt; indexTable.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("additionalIndices").addLine();
+                var index = indexTable.get(i);                
+                row.param("unique") = index.getBoolean("unique");
+                row.param("clustered") = index.getBoolean("clustered");
+                var indexFields = index.getTable("fields");
+                var indexStr = "";
+
+                <for>var j = 0
+                    <comma/>
+                    j &lt; indexFields.size()
+                    <comma/>
+                    j ++
+                    <do>
+                        var field = indexFields.get(j);
+                        var fieldName = field.getReference("value").getTargetObject().getString("name");
+                        <if> j != 0
+                            <then>
+                                indexStr = indexStr + ", ";
+                            </then>
+						</if>
+                        indexStr = indexStr + fieldName;
+                    </do>
+				</for>
+                row.param("fields") = indexStr;
+            </do>
+		</for>
+		<if> aggregation.propertyIsSet("condition")
+            <then>                
+                param("condition") =  new("axiomsl.util.condition.ConditionSequence", aggregation.getTree("condition").getRootNode(), parser);
+            </then>
+			<else>
+                param("condition") =  new("axiomsl.util.condition.ConditionSequence");
+            </else>
+		</if>
+        param("validations"); <!--deserializing-->
+        <if> aggregation.propertyIsSet("validations")
+            <then>
+                var validationTable = aggregation.getTable("validations");
+                <for>var i = 0
+                    <comma/>
+                    i &lt; validationTable.size()
+                    <comma/>
+                    i ++
+                    <do>
+                        var row = param("validations").addLine();
+                        var validation = validationTable.get(i);
+                        row.param("expression") = validation.getString("expression");
+                        row.param("field") = validation.getObject("field").getReference("value").getTargetObject().getString("name");
+                        row.param("type") = validation.getOptionalValue("type","ON_EDIT_ONLY");
+                    </do>
+                </for>
+            </then>
+
+        </if>
+    </loadCode>
+
+	<saveCode>
+        macro("verifyFourEyesCheck");
+
+        var aggregationForSave = <axiomForSave/>;
+        var accessor = new("axiomsl.accessors.AggregationAccessor", aggregationForSave);
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", route, accessor);
+
+        var templates = array(      "table2tree(postTableCreationStatements)",
+                                    "table2tree(postAdjustmentTableCreationStatements)");
+        var params1 = array("parameters",
+                            "postTableCreationStatements",
+                            "postAdjustmentTableCreationStatements",
+                            "fourEyesCheck","trackAllInstancesMode",
+                            "instanceRebuildRestriction",
+                            "computeStatistics");
+
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(aggregationForSave, currentParameters, params1, array("parameters.lookupFormula"), templates, parser, route);
+
+        <!-- parallel hints -->
+        <if> param("overrideDBSourceParallelSettings")
+            <then>
+                aggregationForSave.setProperty("executeEnableParallelismStatement",param("executeEnableParallelismStatement"));
+                aggregationForSave.setProperty("includeParallelHintsInsert",param("includeParallelHintsInsert"));
+                aggregationForSave.setProperty("includeParallelHintsSelect",param("includeParallelHintsSelect"));
+                <if> param("overrideDBSourceParallelDegree")
+                    <then>
+                        aggregationForSave.setProperty("parallelDegree",param("parallelDegree"));
+                    </then>
+                </if>
+            </then>
+        </if>
+
+        <!--model save -->
+        var modelTable = aggregationForSave.getTable("models");
+        var models = param("models");
+        <for>var i = 0
+            <comma/>
+            i &lt; models.size()
+            <comma/>
+            i ++
+            <do>
+                var row = models.get(i);
+                var modelName = row.param("name");                
+                var modelRow = modelTable.addRow("ModelBasedTask:modelEntry");
+                modelRow.setProperty("dataModel", modelRow.createReferencePropertyValue("DataModel", modelName));
+            </do>
+		</for>
+		<!--details save -->
+        templates = array("table2expression(details.additionalConstraintForJoin)","dictionaryReference(details.codeField, lookupSource, layout)",
+        "dictionaryReference(details.descriptionField,lookupSource, layout)"
+        );
+
+        params1 = array("details");
+
+        matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(aggregationForSave, currentParameters, params1,null,templates, parser, route);
+
+        var detailsFieldsTable = aggregationForSave.getTable("details");
+        var detailsFields = param("details");
+        <for>var i = 0
+            <comma/>
+            i &lt; detailsFields.size()
+            <comma/>
+            i ++
+            <do>
+                var detailsField = detailsFields.get(i);
+                var detailsFieldRow = detailsFieldsTable.get(i);
+                <if> detailsField.param("lookupSource")==''|| detailsField.param("addLookupSourceToModel")==null || !detailsField.param("addLookupSourceToModel")
+                    <then>
+                        <if> detailsFieldRow.propertyIsSet("instanceSelectionRule")
+                            <then>
+                                detailsFieldRow.removeProperty("instanceSelectionRule");
+                            </then>
+                        </if>
+                    </then>
+                    <else>
+                        detailsFieldRow.getObject("instanceSelectionRule").getObject("instanceDateRule").setProperty("type",detailsField.param("instanceSelectionRule"));
+                        detailsFieldRow.getObject("instanceSelectionRule").setProperty("instanceKeyRules",detailsFieldRow.getProperty("instanceSelectionRule").createTablePropertyValue());
+                    </else>
+                </if>
+            </do>
+		</for>
+
+		<!--aux Fields save-->
+        var auxFieldsTable = aggregationForSave.getTable("auxFields");
+        var auxFields = param("auxFields");
+        <for>var i = 0
+            <comma/>
+            i &lt; auxFields.size()
+            <comma/>
+            i ++
+            <do>
+                var auxField = auxFields.get(i);
+                var auxFieldRow = auxFieldsTable.addRow("Aggregation:auxField");
+                macro("copyRefProperties", auxField, auxFieldRow);
+            </do>
+		</for>
+		<!--calc fields save -->
+        var calcFieldsTable = aggregationForSave.getTable("calcFields");
+        var calcFields = param("calcFields");
+        <for>var i = 0
+            <comma/>
+            i &lt; calcFields.size()
+            <comma/>
+            i ++
+            <do>
+                var calcField = calcFields.get(i);
+                var calcFieldRow = calcFieldsTable.addRow("Aggregation:calcField");
+                macro("copyRefProperties", calcField, calcFieldRow);
+
+                calcFieldRow.setProperty("title", calcField.param("title"));
+                calcFieldRow.setProperty("displayFormat", calcField.param("column_format"));
+                calcFieldRow.setProperty("aggrMethod", calcField.param("aggrMethod"));
+                calcFieldRow.setProperty("calcTotal", calcField.param("calcTotal"));
+                calcFieldRow.setProperty("overrideNullable", calcField.param("overrideNullable"));
+
+                <if> calcField.param("calcFormula") != ""
+                    <then>                        
+                        macro("copyTypeProperties", calcField, calcFieldRow);
+                    </then>
+				</if>
+
+                parser.setContext(calcFieldRow);
+                parser.setContextPropertyName("calcFormula");
+                var formulaTable = parser.parseExpression(calcField.param("calcFormula"));
+                calcFieldRow.setProperty("calcFormula", formulaTable);
+                calcFieldRow.setProperty("overrideLookupInformation", calcField.param("overrideLookupInformation"));
+                <if>calcField.param("overrideLookupInformation")
+                    <then>
+                        <if> calcField.param("lookupSource") != ""
+                            <then>
+                                var lookupDS=calcFieldRow.createReferencePropertyValue("DataSource",calcField.param("lookupSource"));                                
+                                calcFieldRow.setProperty("lookupSource", lookupDS);
+                                var layout = lookupDS.getTargetObject().getTable("layout");
+                                calcFieldRow.setProperty("codeField", calcFieldRow.createReferencePropertyValue(calcField.param("lookupSource"), array(lookupDS.getTargetObject(), "layout",  layout.locate(calcField.param("codeField")))));
+                                calcFieldRow.setProperty("descriptionField", calcFieldRow.createReferencePropertyValue(calcField.param("lookupSource"), array(lookupDS.getTargetObject(), "layout", layout.locate(calcField.param("descriptionField")))));
+                            </then>
+                        </if>
+                    </then>
+                </if>
+
+                <if> calcField.param("lookupSource")==''|| calcField.param("addLookupSourceToModel")==null || !calcField.param("addLookupSourceToModel") 
+                    <then>
+                        <if> calcFieldRow.propertyIsSet("instanceSelectionRule")
+                            <then>
+                                calcFieldRow.removeProperty("instanceSelectionRule");
+                            </then>
+                        </if>
+                    </then>
+                    <else>
+                        calcFieldRow.setProperty("addLookupSourceToModel", calcField.param("addLookupSourceToModel"));
+                        calcFieldRow.setProperty("relationshipToParent", calcField.param("relationshipToParent"));
+
+                        var lookups=calcFieldRow.createReferencePropertyValue("DataSource",calcField.param("lookupSource"));
+                        parser.setContext(calcFieldRow);
+                        parser.setContextPropertyName("additionalConstraintForJoin");
+                        var addConstraint = parser.parseExpression(calcField.param("additionalConstraintForJoin"));
+                        parser.setContextPropertyName(null);
+                        calcFieldRow.setProperty("additionalConstraintForJoin", addConstraint);
+
+                        <if> !calcFieldRow.propertyIsSet("instanceSelectionRule")
+                            <then>
+                                var instanceSelectionRule=calcFieldRow.createObjectPropertyValue("InstanceSelectionRule");
+                                calcFieldRow.setProperty("instanceSelectionRule",instanceSelectionRule);
+                            </then>
+                        </if>
+                                var instanceSelection = calcFieldRow.getProperty("instanceSelectionRule");
+                                var instanceDateRule=instanceSelection.getProperty("instanceDateRule");
+                                instanceDateRule.setProperty("type", calcField.param("instanceSelectionRule"));
+                                var instanceKeyRules=instanceSelection.createTablePropertyValue();
+                                instanceSelection.setProperty("instanceKeyRules",instanceKeyRules);
+                    </else>
+                </if>
+
+            </do>
+		</for>
+
+
+		<!--synthetic fields save -->
+        var syntheticFieldsTable = aggregationForSave.getTable("syntheticFields");
+        var syntheticFields = param("syntheticFields");
+        <for>var i = 0
+            <comma/>
+            i &lt; syntheticFields.size()
+            <comma/>
+            i ++
+            <do>
+                var syntheticField = syntheticFields.get(i);
+                var syntheticFieldRow = syntheticFieldsTable.addRow("Aggregation:syntheticField");
+
+                macro("copyRefProperties", syntheticField, syntheticFieldRow);
+                syntheticFieldRow.setProperty("calcTotal", syntheticField.param("calcTotal"));
+                macro("copyTypeProperties", syntheticField, syntheticFieldRow);
+
+                parser.setContext(syntheticFieldRow);
+                var formulaTable = parser.parseExpression(syntheticField.param("formula"));
+                syntheticFieldRow.setProperty("formula", formulaTable);
+                syntheticFieldRow.setProperty("title", syntheticField.param("title"));
+            </do>
+		</for>
+		<!--mapping save -->
+        var mappingsTable = aggregationForSave.getTable("mappings");
+        var mappingsTree = param("mappings");
+        parser.setContext(aggregationForSave);
+
+        <if> true;
+            <then>
+                macro("saveMappingForTable", "details", "Aggregation:localDetailReference", null);
+            </then>
+		</if>
+        <if> true;
+            <then>
+                macro("saveMappingForTable", "calcFields", "Aggregation:localCalcFieldReference", "calcFormula");
+            </then>
+        </if>
+		<if> true;
+            <then>
+                macro("saveMappingForTable", "auxFields", "Aggregation:localAuxFieldReference", null);
+            </then>
+		</if>
+		<!--index save-->
+        var indexSource = param("additionalIndices");
+        var indexDest = aggregationForSave.getTable("additionalIndices");
+        <for>var i = 0
+            <comma/>
+            i &lt; indexSource.size()
+            <comma/>
+            i ++
+            <do>
+                var sourceRow = indexSource.get(i);
+                var destRow = indexDest.addRow("Aggregation:index");
+                destRow.setProperty("unique",sourceRow.param("unique"));
+                destRow.setProperty("clustered", sourceRow.param("clustered"));
+                destRow.setProperty("fields", accessor.convertIndexExpressionToReference(sourceRow.param("fields")));
+            </do>
+		</for>
+        var validationSource = param("validations");
+        <if> validationSource.size() &gt; 0
+            <then>
+            var validationDest = aggregationForSave.createTablePropertyValue();
+            aggregationForSave.setProperty("validations",validationDest);
+            <for>var i = 0
+                <comma/>
+                i &lt; validationSource.size()
+                <comma/>
+                i ++
+                <do>
+                    var sourceRow = validationSource.get(i);
+                    var destRow = validationDest.addRow("Aggregation:validation");
+                    destRow.setProperty("field", accessor.convertValidationExpressionToReference(sourceRow.param("field")));
+                    destRow.setProperty("expression",sourceRow.param("expression"));
+                    destRow.setProperty("type",sourceRow.param("type"));
+                </do>
+            </for>
+            </then>
+        </if>
+        aggregationForSave.setProperty("dbSourceForResults",
+                                    aggregationForSave.createReferencePropertyValue("DBSource", param("dbSourceForResults")));
+        aggregationForSave.setProperty("storageType", param("storageType"));
+
+        aggregationForSave.setProperty("detailsAsKeys", param("detailsAsKeys"));
+        aggregationForSave.setProperty("requiresAllModels", param("requiresAllModels"));
+        aggregationForSave.setProperty("doNotAggregate", param("doNotAggregate"));
+        aggregationForSave.setProperty("trackDrilldownInformation", param("trackDrilldownInformation"));
+        <if>param("makeStreamColumnsKey")!=null<then>aggregationForSave.setProperty("makeStreamColumnsKey", param("makeStreamColumnsKey"))</then> </if>;
+        var condSeq = new("axiomsl.util.condition.ConditionSequence", param("condition"));
+        <if>
+            !condSeq.isEmpty();
+            <then>
+                var condTree = aggregationForSave.createTreePropertyValue("Condition");
+                aggregationForSave.setProperty("condition", condTree);
+                condSeq.assembleCondition(condTree.getRootNode(),  parser);
+            </then>
+		</if>
+        aggregationForSave.setProperty("allowExternalDataPermissions", param("allowExternalDataPermissions"));
+	</saveCode>
+	<macros>
+        <macro name="copyRefProperties" arguments="source_xxx, dest_xxx">
+            <dest_xxx/>.setProperty("name",<source_xxx/>.param("name"));
+            <dest_xxx/>.setProperty("description",<source_xxx/>.param("description"));
+            <dest_xxx/>.setProperty("id",<source_xxx/>.getID());
+        </macro>
+
+		<macro name="renameIndices" arguments="oldValue, newValue">
+			<if> !macro("isEmpty", <oldValue/>)
+            <then>
+                var indexTable = param("additionalIndices");
+                <for>var i = 0
+                    <comma/>
+                    i &lt; indexTable.size()
+                    <comma/>
+                    i ++
+                    <do>
+                        var row = indexTable.get(i);
+                        var fieldsStr = row.param("fields");
+                        var fields = fieldsStr.split(",");                        
+                        <!--var m = Pattern.compile("(\b|,)(" + oldValue + ")(\b|,)").matcher(fieldStr);-->
+                        var result = "";
+                        <for>var j = 0
+                            <comma/>
+                            j &lt; fields.size();
+                            <comma/>
+                            j ++
+                            <do>
+                                var field = fields.get(j);
+                                <if> field.trim() == <oldValue/>
+										<then>
+                                        field = field.replaceAll(<oldValue/>, <newValue/>);
+                                    </then>
+									</if>
+									<if> j != 0
+                                    <then>
+                                        result = result + ",";
+                                    </then>
+									</if>
+                                result = result + field;
+                            </do>
+							</for>
+                        row.param("fields") = result;
+                    </do>
+					</for>
+				</then>
+			</if>
+		</macro>
+        <macro name="getFieldType" arguments="fieldId, groupType, type">
+            var tempType = <type/>;
+            <if> tempType != null and "" != tempType
+                <else>
+                    var node = macro("getNodeInMapping", <fieldId/>, <groupType/>);
+                    <if> node.param("fieldMapping").size() != 0;
+                        <then>
+                            var row = node.param("fieldMapping").get(0);
+                            tempType = row.param("valueType");
+                            <if> tempType != null and "" != tempType
+                                <else>
+                                    tempType = macro("getFieldTypeFromModel", row.param("model"), row.param("expression"));
+                                </else>
+                            </if>
+                        </then>
+                    </if>
+                </else>
+            </if>
+            ;tempType
+        </macro>
+
+        <macro name="setFormatValue" arguments="name, aggrField">
+            <if> <aggrField/> == "COUNT"
+                <then>
+                    param(<name/>) = "";
+                </then>
+                <else>
+            <if> inputValue != null &amp;&amp; !(inputValue instanceof "java.lang.String")
+                <then>
+                    var models = param("models");
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; models.size()
+                        <comma/>
+                        i ++
+                        <do>
+                            var row = models.get(i);
+                            var modelName = row.param("name");
+                            var dataModel = editor.locateObjectByName("DataModel", modelName);
+                            var ds = dataModel.getTree("hierarchy").locateIfExists(inputValue.get(0));
+                            <if> ds != null
+                                <then>
+                                    var table = ds.getReference("dataSource").getTargetObject().getTable("layout");
+                                    <for>var j = 0
+                                        <comma/>
+                                        j &lt; table.size()
+                                        <comma/>
+                                        j ++
+                                        <do>
+                                            var fieldDS = table.get(j);
+                                            <if> fieldDS.getString("name") == inputValue.get(1)
+                                                <then>
+                                                    param(<name/>) = fieldDS.getString("displayFormat");
+                                                </then>
+                                            </if>
+                                        </do>
+                                    </for>
+                                </then>
+                            </if>
+
+                        </do>
+                    </for>
+                </then>
+            </if>
+                </else>
+            </if>
+
+        </macro>
+
+        <macro name="getUniqueFields" arguments="otherTables">
+            var fields = editor.getRemoteProxy().lookupFieldsInModels(macro("getResolvedModels"), editor.getBranchId());
+            var res = list();
+
+         <!--   <for>var i = fields.size() - 1 <comma/> i &gt; 0 or i == 0 <comma/> i-->
+            <for>var i = 0 <comma/> i &lt; fields.size() <comma/> i++
+                <do>
+                    var field = fields.get(i);
+                    var name = fields.get(i).getName();
+
+                    var j = 0;
+                    <for><comma/> j &lt;<otherTables/>.size() <comma/> j++
+                        <do>
+                            var table =<otherTables/>.get(j);
+                            var k = 0;
+                            <for><comma/> k &lt;table.size() <comma/> k++
+                                <do>
+                                    var row = table.get(k);
+                                    <if>row.param("name").equals(name)
+                                        <then>
+                                            break;
+                                        </then>
+                                    </if>
+                                </do>
+                            </for>
+                            <if>k &lt; table.size()
+                                 <then>
+                                     break;
+                                 </then>
+                            </if>
+                        </do>
+                    </for>
+
+                    <if>j == <otherTables/>.size()
+                        <then>
+                            <if>field.lookup_source_name != null and !field.lookup_source_name.equals("")
+                                <then>
+                                    name = "&lt;html&gt;&lt;b&gt;"+ name + "&lt;b&gt;&lt;html&gt;";
+                                </then>
+                            </if>
+
+                            res.add(array(field.alias, name, field.getDescription()));
+                        </then>
+                    </if>
+
+
+                </do>
+            </for>
+            ;res
+        </macro>
+
+        <macro name="expressionAndFieldLookup" arguments="fromTables, skipTable, skipId, skipAfterId">
+            ;macro("expressionAndFieldLookupCustom", <fromTables/>, <skipTable/>, <skipId/>, <skipAfterId/>)
+        </macro>
+
+        <macro name="expressionAndFieldLookupCustom" arguments="fromTables, skipTable, skipId, skipAfterId">
+            var fields = macro("parametricLookup", <fromTables/>, <skipTable/>, <skipId/>, <skipAfterId/>, "name", null, "$");
+            new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), fields),
+            macro("parameters", "taskTags"),
+            macro("instanceDateKeysUnionFromModelsVariables", false, true, true),
+            macro("sqlMacros"),
+            macro("axiomExpressionLanguage"),
+            macro("userDefinedFunctions")
+        </macro>
+
+        <macro name="postTableCreationLookup" arguments="fromTables, skipTable, skipId, skipAfterId">
+            var parameterList = list();
+            parameterList.add(ndo("@table_name", l("Table Name")));
+            var fields = macro("parametricLookup", <fromTables/>, <skipTable/>, <skipId/>, <skipAfterId/>, "name", null, null);
+            new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), fields),
+            new("axiomsl.util.ui.NamedList", "Parameters", l("Parameters"), parameterList.toArray()),
+            macro("sqlMacros")
+            macro("axiomExpressionLanguage"),
+            macro("userDefinedFunctions")
+        </macro>
+
+    </macros>
+</data_set_category>

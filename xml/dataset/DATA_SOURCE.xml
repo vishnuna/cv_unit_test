@@ -1,0 +1,2482 @@
+<data_set_category name="DATA_SOURCE" description="Data Source Setup" windowTitle="Data Source Setup" entityName="Data Source" icon="source" screenWidth="800" screenHeight="500" objectType="DataSource" extends="ARCHIVAL_PROPERTIES, COMMON_UTILS, DOC_DATA">
+	<parameters>
+        <parameter name="hosting" description="Source Hosting" type="String" group="General" length="20">
+        choices(<asDescription>
+           ndo("INTERNAL", l("INTERNAL")), ndo("EXTERNAL", l("EXTERNAL"))
+       </asDescription>)
+		<default>
+		'INTERNAL'
+		</default>
+		</parameter>
+		<parameter name="dataStructure" description="Data Structure" type="String" group="General" length="20">
+        choices(<asDescription>
+           ndo("FLAT", l("FLAT")), ndo("AGGREGATION", l("AGGREGATION")), ndo("AGGREGATION_WITH_SUBTOTALS", l("AGGREGATION_WITH_SUBTOTALS")), ndo("HIERARCHIAL", l("HIERARCHIAL"))
+       </asDescription>)
+		<default>
+		'FLAT'
+        </default>
+        </parameter>
+        <parameter name="dbSource" description="DB Source" type="String" group="General" length="20">
+			<choices>
+				<!--<asDescription>-->
+
+			var sources = editor.getRemoteProxy().lookupObjects("DBSource");
+			sources <!-- return sources -->
+				<!--</asDescription>-->
+			</choices>
+			<default>
+                macro("getDefaultDBSource");
+            </default>
+		</parameter>
+		<parameter name="loader" description="Loading Method" type="String" group="General" length="20">
+			<if>
+				<param name="hosting"/> != "INTERNAL"
+                <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+					<choices>
+						<asDescription>
+                    "" ,
+                        editor.getRemoteProxy().lookupObjects("DataSourceLoader")
+                        </asDescription>
+					</choices>
+					<default>
+                    ''
+                    </default>
+				</else>
+			</if>
+		</parameter>
+        <parameter name="freezeLevel" description="Freeze level" type="integer" group="General" length="20" defaultValue="1">
+            <validation>
+                <if>newValue &lt; 1
+                    <then>
+                        return l("Freeze Level must be more or equal 1");
+                    </then>
+                </if>
+            </validation>
+        </parameter>
+		<parameter name="loaderType" description="" type="String" noSerialization="yes" hidden="true">
+			<equals>
+				<if>
+                    macro("noLoader")
+                    <then>
+                        return "";
+                    </then>
+					<else>
+                        var loader = locateIfExists("DataSourceLoader", param("loader"));
+                        return if(loader == null, "", loader.getProperty("loadFrom"));
+                    </else>
+				</if>
+			</equals>
+		</parameter>
+		<parameter name="defaultVisibilityInModel" description="Default Visibility in Model" type="Boolean" group="General">
+			<default>
+        		'true'
+		    </default>
+		</parameter>
+		<parameter name="importTableLayout" description="" type="Component" group="Layout" noSerialization="yes" row="0">
+			<attribute name="componentClass">"axiomsl.toolkit.dataset_editor.dynamicparameters.ImportTableLayoutButton"</attribute>
+			<attribute name="targetParam">"layout"</attribute>
+			<attribute name="targetFields">
+			  "name"<comma/>
+			  "description"<comma/>
+			  "type"<comma/>
+			  "size"<comma/>
+			  "allowNulls"<comma/>
+			  "allowDefault"<comma/>
+			  "defaultValue"
+		</attribute>
+		</parameter>
+		<!--
+		<parameter name="importTableLayoutFromFile" description="" type="Component" group="Layout" noSerialization="yes" row="0">
+			<attribute name="componentClass">"axiomsl.toolkit.dataset_editor.dynamicparameters.ImportTableLayoutFromFileButton"</attribute>
+			<attribute name="targetParam">"layout"</attribute>
+			<attribute name="targetFields">
+			  "name"<comma/>
+			  "description"<comma/>
+			  "type"<comma/>
+			  "size"<comma/>
+			  "allowNulls"<comma/>
+			  "allowDefault"<comma/>
+			  "defaultValue"
+		</attribute>
+		</parameter>
+		-->
+		<parameter name="dependency" description="" type="Component" group="Layout" noSerialization="yes" row="0">
+			<attribute name="componentClass">"axiomsl.toolkit.dataset_editor.dynamicparameters.FieldDependenciesButton"</attribute>
+		</parameter>
+		<parameter name="layout" description="Data Source Layout" type="table" length="10" keyParameter="name" group="Layout" tableTransposed="true" compareByID="true">
+			<parameter name="name" description="Field Name" type="String">
+				<validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list());
+                </validation>
+				<verifyForSave>
+                    macro("verifyNonEmpty");
+				</verifyForSave>
+				<onParameterChange>
+					<!-- rename column in orig data configuration -->
+					<!-- this will get executed before parameter change notification, so the new name should be picked up by subsequent code -->
+				var configFields = param("loaderConfigFields");
+                <if> configFields != null <then>
+							<for> var i = 0 <comma/> i &lt; configFields.size() <comma/> i++
+                        <do>
+									<if> configFields.get(i).param("sourceField") == oldValue <then>
+                                configFields.get(i).param("sourceField") = newValue;
+                                break;
+                            </then>
+									</if>
+								</do>
+							</for>
+						</then>
+					</if>
+					<!-- update loader actions -->
+                var actions = param("loaderActions");
+                <if> actions != null and oldValue != "" <then>
+							<for> var i = 0 <comma/> i &lt; actions.childCount() <comma/> i++
+                        <do>
+                            var type = actions.child(i).type();
+                            <if> (type == "LoaderAction:actionCombine" or type == "LoaderAction:actionIntegrity") and  actions.child(i).param("column") == oldValue <then>
+                                actions.child(i).param("column") = newValue;
+                                break;
+                            </then>
+									</if>
+								</do>
+							</for>
+						</then>
+					</if>
+					<!-- update validations -->
+                var validations = param("validations");
+                <if> oldValue != "" <then>
+							<for> var i = 0 <comma/> i &lt; validations.size() <comma/> i++
+                        <do>
+									<if> validations.get(i).param("colName") == oldValue <then>
+                                validations.get(i).param("colName") = newValue;
+                                break;
+                            </then>
+									</if>
+								</do>
+							</for>
+						</then>
+					</if>
+					<!-- update additional indices -->
+                    <!--NB: for EXTERNAL hosting index is null-->
+                    <if> oldValue != "" and param("index") != null
+                        <then>
+                            var indices = param("index").children();
+                            <for> var i = 0 <comma/> i &lt; indices.size() <comma/> i++
+                                <do>
+                                    var columns = indices.get(i).param("fields");
+                                    <for> var j = 0 <comma/> j &lt; columns.size() <comma/> j++
+                                        <do>
+											<if> columns.get(j).param("colName") == oldValue <then>
+                                        columns.get(j).param("colName") = newValue;
+                                        break;
+                                    </then>
+											</if>
+										</do>
+									</for>
+								</do>
+							</for>
+						</then>
+					</if>
+					<!-- update source keys (key fields) -->
+                var keys = param("keyFields");
+                <if> oldValue != "" <then>
+							<for> var i = 0 <comma/> i &lt; keys.size() <comma/> i++
+                        <do>
+									<if> keys.get(i).param("colName") == oldValue <then>
+                                keys.get(i).param("colName") = newValue;
+                                break;
+                            </then>
+									</if>
+								</do>
+							</for>
+						</then>
+					</if>
+				</onParameterChange>
+			</parameter>
+			<parameter name="description" description="Description" type="String"/>
+			<parameter name="title" description="Title" type="String"/>
+			<parameter name="type" description="Data Type" type="String">
+            choices(<asDescription>
+                ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE")), ndo("TEXT", l("TEXT")), ndo("UNICODE", l("UNICODE")), ndo("UNICODE_TEXT", l("UNICODE_TEXT"))
+            </asDescription>)
+            <default>
+			'VARCHAR'
+			</default>
+			</parameter>
+			<parameter name="size" description="Size" type="Integer">
+				<if>
+					<param name="type"/> not in ("VARCHAR", "UNICODE")
+				<then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+						<default>10</default>
+					</else>
+				</if>
+				<!--<validation>-->
+				<!--<case>-->
+				<!--newValue &gt; 50-->
+				<!--<then>l("Size is too long")</then>-->
+				<!--</case>-->
+				<!--</validation>-->
+			</parameter>
+			<parameter name="allowNulls" description="Allow Nulls" type="Boolean"/>
+			<parameter name="allowDefault" description="Allow Defaults" type="Boolean"/>
+            <parameter name="defaultValue" description="Default Value" type="String">
+                <attribute name="lookupAppend">true</attribute>
+                <attribute name="lookupFromValues"> l("Macro") <comma/>
+                    <!--var parameterList = list();-->
+                    <!--parameterList.add(ndo("@table_name", l("Table Name")));-->
+                    <!--new("axiomsl.util.ui.NamedList", "Parameters", l("Parameters"), parameterList.toArray()),-->
+                    var namedList = new("axiomsl.util.ui.NamedList", "SQL Macros", l("SQL Macros"), macro("getSqlPatterns").toArray());
+                    var result = new("java.util.Vector");
+                    result.add(namedList);
+                    ;result
+                </attribute>
+
+                <if>
+				!<param name="allowDefault"/>
+					<then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+						<equals>
+							<!-- updates whenever the type is changed -->
+							<case>
+								<param name="type"/> in ('VARCHAR', 'TEXT', 'UNICODE', 'UNICODE_TEXT')
+							<then>
+									<string>''</string>
+								</then>
+								<param name="type"/> == 'INTEGER'
+							<then>
+								'0'
+							</then>
+								<param name="type"/> == 'FLOAT'
+							<then>
+								'0.0'
+							</then>
+								<param name="type"/> == 'DATE'
+							<then>
+									<string>{ts '1990-01-01 00:00:00'}</string>
+								</then>
+							</case>
+						</equals>
+					</else>
+				</if>
+			</parameter>
+			<parameter name="syntheticContent" description="Synthetic Content" type="String">
+				<attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues"> l("Field") <comma/>
+                    var synthConstants = list();
+                    synthConstants.add("@table_name");
+                    synthConstants.add("@SOURCE_DATE");
+                    var priorFields = macro("lookupPriorFields", "$");
+                    new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), priorFields.toArray()),
+                    new("axiomsl.util.ui.NamedList", "Parameters", l("Parameters"), synthConstants.toArray()),
+                    macro("instanceDateKeysVariables", true, true, false),
+                    macro("sqlMacros"),
+                    macro("axiomExpressionLanguage"),
+                    macro("userDefinedFunctions")
+                </attribute>
+			</parameter>
+			<parameter name="lookupSource" description="Lookup Source" type="String" isDataSet="DataSource" canClearDataSet="true">
+                <validation>
+                    <if>
+                        macro("isEmpty", newValue)
+                        <then>
+                            return null;
+                        </then>
+                    </if>
+                    var newDbId = editor.resolveObjectName(newValue);
+                    var currentDbId = editor.getOpenedObjectDbId();
+                    <if>
+                        macro("isEmpty", currentDbId)
+                        <then>
+                            return null;
+                        </then>
+                    </if>
+                    <if>currentDbId.equals(newDbId)
+                        <then>
+                            errorMessage(l('Cannot use self-reference as lookup source'));
+                            return false;
+                        </then>
+                    </if>
+                </validation>
+            </parameter>
+			<parameter name="codeField" description="Value Field" type="String">
+				<if>
+					<param name="lookupSource"/> == ""
+				<then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+						<if> param("lookupSource").indexOf("!!!") &lt; 0
+                            <then>
+								<choices>
+                                    editor.getRemoteProxy().lookupFieldsInDataSource(<param name="lookupSource"/>, editor.getBranchId());
+                                </choices>
+							</then>
+						</if>
+					</else>
+				</if>
+			</parameter>
+			<parameter name="descriptionField" description="Description Field" type="String">
+				<if>
+					<param name="lookupSource"/> == ""
+				<then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+						<if> param("lookupSource").indexOf("!!!") &lt; 0
+                            <then>
+								<choices>
+                                editor.getRemoteProxy().lookupFieldsInDataSource(<param name="lookupSource"/>, editor.getBranchId());
+                                </choices>
+							</then>
+						</if>
+					</else>
+				</if>
+			</parameter>
+			<parameter name="parentFields" description="Parent Fields" type="String">
+				<attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues"> l("Field") <comma/>
+                    macro("lookupPriorFields", "")
+                </attribute>
+				<attribute name="lookupAppendSeparator">", "</attribute>
+			</parameter>
+			<parameter name="column_format" description="Display Format" type="String">
+				<editable/>
+				<if>
+					<param name="type"/> in ('VARCHAR', 'TEXT', 'UNICODE', 'UNICODE_TEXT')
+				<then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+						<choices>
+							<case>
+								<param name="type"/> == 'INTEGER'
+							<then>
+								list(
+								"#0",
+								"#0;(#0)",
+								"#,##0",
+								"#,##0;(#,##0)")
+							</then>
+								<param name="type"/> == 'FLOAT'
+							<then>
+								list(
+								"#,##0.00;(#,##0.00)",
+								"#,##0.00",
+								"#.##",
+								"#.####",
+								"#.######",
+								"#.########",
+								"#.##########",
+								"0.###E-#",
+								"0.#######E-#",
+								"0.##########E-#")
+							</then>
+								<param name="type"/> == 'DATE'
+							<then>
+								list(
+								"dd-MMM-yyyy",
+								"dd-MMM-yyyy HH:mm:ss",
+								"MM/dd/yyyy",
+								"MM/dd/yyyy HH:mm:ss",
+								"yyyy-MM-dd HH:mm:ss")
+							</then>
+							</case>
+						</choices>
+					</else>
+				</if>
+			</parameter>
+			<parameter name="showSubtotal" description="Show Subtotal" type="boolean">
+				<if>
+                    param("type") in ("FLOAT", "INTEGER")
+                    <then>
+						<enabled/>
+					</then>
+					<else>
+						<disabled/>
+					</else>
+				</if>
+			</parameter>
+			<parameter name="aggregatedFunction" description="Aggregated Function" type="string" group="General">
+				<readonly/>
+			</parameter>
+			<parameter name="isCountFieldFor" description="Is Count Field For" type="string" group="General">
+				<readonly/>
+			</parameter>
+			<parameter name="isHidden" description="Is Hidden" type="boolean" group="General"/>
+			<parameter name="fieldType" description="Field Type" type="string" group="General">
+				<readonly/>
+			</parameter>
+			<parameter name="defaultInstanceKeyValueFormula" description="Default Instance Key Value Formula" type="String">
+                <attribute name="lookupAppend">true</attribute>
+                <attribute name="lookupFromValues"> l("Field/Variable") <comma/>
+                    macro("defaultInstanceKeyValueFormula", null, "instanceKeysContinuous", "colName", "layout")
+                </attribute>
+				<if>
+					<param name="storageType"/> != "CONTINUOUS" &amp;&amp; <param name="storageType"/> != "CONTINUOUS_PARTITION"
+            <then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+					</else>
+				</if>
+			</parameter>
+
+           <parameter name="isAutoUniqueId" description="Generate Auto Unique Id" type="Boolean">
+                <if>param("type") == "VARCHAR"
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <disabled/>
+                    </else>
+                </if>
+
+            </parameter>
+
+            <parameter name="dataPermissionEntity" description="Data Permission Entity" type="String">
+                <attribute name="lookupFromValues">l("Data Permission Entity")
+                    <comma/>
+                    var entityList = editor.getRemoteProxy().lookupObjects("DataPermissionEntity");
+                    var lookupList = list();
+
+                    <for>var i = 0<comma/>i &lt; entityList.size()<comma/>i ++
+                        <do>
+                            var entityName = entityList.get(i).getName();
+                            var dataPermissionEntity = editor.locateObjectByName("DataPermissionEntity", entityName);
+
+                            <if>param("type") == dataPermissionEntity.getString("type")
+                                <then>
+                                    lookupList.add(entityName);
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+
+                    lookupList
+
+                </attribute>
+                <attribute name="lookupMultipleSelect">false</attribute>
+                <verifyForSave>
+                    var entityName = param("dataPermissionEntity");
+
+                    <if> entityName.length() == 0 or entityName.indexOf("!!!") &gt; -1
+                        <then>
+                            true
+                        </then>
+                        <else>
+                            var dataPermissionEntity = editor.locateObjectByName("DataPermissionEntity",
+                            param("dataPermissionEntity"));
+
+                            <if>param("type") != dataPermissionEntity.getString("type")
+                                <then>
+                                    errorMessage(l("Data permission entity type should match with column type."));
+                                    false
+                                </then>
+                                <else>
+                                    true
+                                </else>
+                            </if>
+
+                        </else>
+                    </if>
+
+                </verifyForSave>
+            </parameter>
+
+            <parameter name="dataPermissionJoinSource" description="Join Source For Permissions" type="String" isDataSet="DataSource" canClearDataSet="true"/>
+			<parameter name="dataPermissionJoinField" description="Join Field For Permissions" type="String">
+				<if>
+					<param name="dataPermissionJoinSource"/> == ""
+				<then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+						<if> param("dataPermissionJoinSource").indexOf("!!!") &lt; 0
+                            <then>
+								<choices>
+                                    editor.getRemoteProxy().lookupFieldsInDataSource(<param name="dataPermissionJoinSource"/>, editor.getBranchId());
+                                </choices>
+							</then>
+						</if>
+					</else>
+				</if>
+			</parameter>
+
+			<confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list());
+            </confirmAddRow>
+			<onRowDeleted>
+				<!-- delete row from indices -->
+			var value = deletedRow.param("name");
+		 	<if> value != "" and param("index") != null <then>
+			 	var indices = param("index").children();
+				<for> var i = 0 <comma/> i &lt; indices.size() <comma/> i++
+					<do>
+						var columns = indices.get(i).param("fields");
+						<for> var j = 0 <comma/> j &lt; columns.size() <comma/> j++
+							<do>
+										<if> columns.get(j).param("colName") == value <then>
+									columns.remove(j);
+									break;
+								</then>
+										</if>
+									</do>
+								</for>
+							</do>
+						</for>
+					</then>
+				</if>
+				<!-- delete row from source keys (key fields) -->
+				<if> value != "" <then>
+			 	var keys = param("keyFields");
+				<for> var i = 0 <comma/> i &lt; keys.size() <comma/> i++
+					<do>
+								<if> keys.get(i).param("colName") == value <then>
+							keys.remove(i);
+							break;
+						</then>
+								</if>
+							</do>
+						</for>
+					</then>
+				</if>
+			</onRowDeleted>
+		</parameter>
+		<parameter name="keyFields" description="Key Fields" type="table" group="Key Fields" keyParameter="colName">
+		    <parameter name="colName" description="Field Name" type="String" length="10">
+				<readonly/>
+				<!-- only chosen from lookup -->
+				<attribute name="lookupFromValues"> l("Field Name") <comma/>
+					<forTable name="layout">
+						<if>
+                            param("syntheticContent") == ""
+                            <then>
+                            param("name");
+                            </then>
+						</if>
+					</forTable>
+				</attribute>
+			</parameter>
+		</parameter>
+		<parameter name="instanceKeysSegmented" description="Instance Keys [Segmented]" type="table" length="10" keyParameter="name" group="Instance Keys" rowType="InstanceKey">
+			<if>
+				<param name="storageType"/> != "SEGMENTED"
+            <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+			<parameter name="name" description="Key Name" type="String">
+				<validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list());
+                </validation>
+				<verifyForSave>
+                    macro("verifyNonEmpty");
+				</verifyForSave>
+			</parameter>
+			<parameter name="description" description="Key Description" type="String"/>
+			<parameter name="type" description="Key Type" type="String">
+            choices(<asDescription>
+                ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE"))
+            </asDescription>)
+            <default>
+			'VARCHAR'
+			</default>
+			</parameter>
+			<parameter name="size" description="Key Size" type="Integer">
+				<if>
+					<param name="type"/> != 'VARCHAR'
+				<then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+						<default>10</default>
+					</else>
+				</if>
+			</parameter>
+			<parameter name="defaultInstanceKeyValueFormula" description="Default Instance Key Value Formula" type="String">
+                <attribute name="lookupAppend">true</attribute>
+                <attribute name="lookupFromValues"> l("Field/Variable") <comma/>
+                    macro("defaultInstanceKeyValueFormula", null, "instanceKeysSegmented", "name", null)
+                </attribute>
+            </parameter>
+            <onRowDeleted/>
+		</parameter>
+		<parameter name="instanceKeysContinuous" description="Instance Keys [Continuous]" type="table" group="Instance Keys" keyParameter="colName" rowType="DataSource:localFieldReference">
+			<if>
+				<param name="storageType"/> != "CONTINUOUS" &amp;&amp; <param name="storageType"/> != "CONTINUOUS_PARTITION"
+            <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+			<parameter name="colName" description="Field Name" type="String" length="10">
+				<readonly/>
+				<!-- only chosen from lookup -->
+				<attribute name="lookupFromValues"> l("Field Name") <comma/>
+					<forTable name="layout">
+						<if>
+                            param("syntheticContent") == ""
+                            <then>
+                            param("name");
+                            </then>
+						</if>
+					</forTable>
+				</attribute>
+			</parameter>
+		</parameter>
+		<parameter name="createIndexOnKeyFields" description="Create Index On Key Fields" type="Boolean" group="Key Fields" defaultValue="true">
+            <if>
+				<param name="hosting"/> == "EXTERNAL"
+                <then>
+					<removed/>
+				</then>
+				<else>
+                    <enabled/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="indexOnKeyFieldsClustered" description="Index On Key Fields Clustered" type="Boolean" group="Key Fields" defaultValue="true">
+			<if> <param name="hosting"/> != "EXTERNAL" and param("createIndexOnKeyFields")
+                <then>
+					<enabled/>
+				</then>
+				<else>
+                    <if>
+                        <param name="hosting"/> == "EXTERNAL"
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <disabled/>
+                        </else>
+                    </if>
+
+				</else>
+			</if>
+		</parameter>
+		<parameter name="index" description="Indexes" type="tree" group="Indexes" rootNodeType="rootIndexNode">
+			 <if>
+				<param name="hosting"/> == "EXTERNAL"
+                <then>
+					<removed/>
+				</then>
+				<else>
+                    <enabled/>
+                </else>
+            </if>
+            <nodeType name="rootIndexNode" description="Indexes" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="false" childrenTypes="DataSource:index"/>
+			<nodeType name="DataSource:index" description="Index" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false">
+				<parameter name="clustered" description="Clustered" type="boolean" defaultValue="false"/>
+				<parameter name="unique" description="Unique" type="boolean" defaultValue="true"/>
+				<parameter name="fields" description="Index columns" type="table" keyParameter="colName">
+					<parameter name="colName" description="Field Name" type="String" length="10">
+						<readonly/>
+						<!-- only chosen from lookup -->
+						<attribute name="lookupFromValues"> l("Field Name") <comma/>
+							<forTable name="layout">
+								<if>
+                                    param("syntheticContent") == ""
+                                    <then>
+                                    param("name");
+                                    </then>
+								</if>
+							</forTable>
+						</attribute>
+					</parameter>
+				</parameter>
+			</nodeType>
+		</parameter>
+		<parameter name="createInstance" description="" type="Component" group="Data Storage" noSerialization="yes">
+			<attribute name="componentClass">"axiomsl.gui.source.setup.CreateInstanceButton"</attribute>
+		</parameter>
+		<!--<parameter name="createAdjustmentsTable" description="" type="Component" group="Data Storage" noSerialization="yes">-->
+		<!--<attribute name="componentClass">"axiomsl.gui.source.setup.CreateAdjustmentsTableButton"</attribute>-->
+		<!--</parameter>-->
+		<parameter name="storageType" description="Data Storage Type" type="String" group="Data Storage" length="20">
+        choices(<asDescription>
+				<if>
+					<param name="hosting"/> != "EXTERNAL"
+            <then>
+                ndo("PERMANENT", l("PERMANENT")), ndo("SEGMENTED", l("SEGMENTED")), ndo("CONTINUOUS", l("CONTINUOUS")), ndo("CONTINUOUS_PARTITION", l("CONTINUOUS_PARTITION"))
+            </then>
+					<else>
+                ndo("PERMANENT", l("PERMANENT")), ndo("SEGMENTED", l("SEGMENTED")), ndo("CONTINUOUS", l("CONTINUOUS"))
+            </else>
+				</if>
+			</asDescription>)
+		<default>
+		'PERMANENT'
+		</default>
+			<validation>
+            var instanceKeysSegmented = param("instanceKeysSegmented");
+            var instanceKeysContinuous = param("instanceKeysContinuous");
+            var isContinuous = newValue == "CONTINUOUS" || newValue == "CONTINUOUS_PARTITION";
+            var isSegmented = newValue == "SEGMENTED";
+            <if>
+                (!isSegmented and instanceKeysSegmented!=null and instanceKeysSegmented.size() != 0) or
+                (!isContinuous and instanceKeysContinuous!=null and instanceKeysContinuous.size() != 0)
+                <then>
+                    return confirm(l("Instance keys will be lost. Do you want to proceed with change storage type?"));
+                </then>
+					<else>
+                    return true;
+                </else>
+				</if>
+			</validation>
+		</parameter>
+		<!--<parameter name="continuousOperator" description="Comparison operator for continuous source" type="String" group="Data Storage" length="20" default="=">-->
+			<!--<if>-->
+				<!--<param name="storageType"/> != "CONTINUOUS" &amp;&amp; <param name="storageType"/> != "CONTINUOUS_PARTITION"-->
+			<!--<then>-->
+					<!--<removed/>-->
+				<!--</then>-->
+				<!--<else>-->
+					<!--<enabled/>-->
+                    <!--choices("=", "&lt;=", "&gt;=", "&lt;", "&gt;")-->
+                <!--</else>-->
+			<!--</if>-->
+		<!--</parameter>-->
+		<parameter name="externalSourceTableName" description="External Data Table" type="String" group="Data Storage" length="25">
+			<attribute name="lookup"> "axiomsl.gui.source.TableLookupWindow" <comma/> param("dbSource") <comma/> "getSelectedItem" </attribute>
+			<if>
+				<param name="hosting"/> != "EXTERNAL" or <param name="storageType"/> == "SEGMENTED"
+			<then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+			<validation>
+				<!-- todo: smart validation and lookup based on storage type -->
+				<!--<case>-->
+				<!--newValue == ""-->
+				<!--<then> null </then>-->
+				<!--toLowerCase(newValue) != newValue-->
+				<!--<then> l("Table name must be lower-case") </then>-->
+				<!--!isAnIdentifier(newValue)-->
+				<!--<then> l("Table name must be alphanumeric and start with a letter") </then>-->
+				<!--newValue.length() &gt; 30-->
+				<!--<then> l("Table name can be at most 30 characters long") </then>-->
+				<!--</case>-->
+			</validation>
+		</parameter>
+		<parameter name="externalSourceTableNameFormula" description="External Data Table Formula" type="String" group="Data Storage" length="25">
+			<if>
+				<param name="hosting"/> != "EXTERNAL" or <param name="storageType"/> != "SEGMENTED"
+            <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+					<default>'"xxx"+formatDate(instanceDate, "yyyyMMddHHmmss")'</default>
+				</else>
+			</if>
+			<validation>
+				<!-- todo: smart validation and lookup based on storage type -->
+				<!--<case>-->
+				<!--newValue == ""-->
+				<!--<then> null </then>-->
+				<!--toLowerCase(newValue) != newValue-->
+				<!--<then> l("Table name must be lower-case") </then>-->
+				<!--!isAnIdentifier(newValue)-->
+				<!--<then> l("Table name must be alphanumeric and start with a letter") </then>-->
+				<!--newValue.length() &gt; 30-->
+				<!--<then> l("Table name can be at most 30 characters long") </then>-->
+				<!--</case>-->
+			</validation>
+		</parameter>
+		<parameter name="internalSourceTablePrefix" description="Data Table Prefix" type="String" group="Data Storage" length="25">
+			<if>
+				<param name="hosting"/> != "INTERNAL"
+    			<then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+			<validation>
+				<case>
+				newValue == ""
+				<then> null </then>
+
+<!--
+				toLowerCase(newValue) != newValue
+				<then> l("Table prefix name must be lower-case") </then>
+-->
+
+				!isAnIdentifier(newValue)
+				<then> l("Table prefix must be alphanumeric and start with a letter") </then>
+
+				</case>
+			</validation>
+		</parameter>
+		<parameter name="asOfDateField" description="As Of Date Field" type="String" group="Data Storage" length="25">
+			<if>
+				<param name="storageType"/> != "CONTINUOUS" &amp;&amp; <param name="storageType"/> != "CONTINUOUS_PARTITION"
+			<then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+					<choices>
+					"" <comma/>
+						<!-- all date columns in layout -->
+						<forTable name="layout">
+							<if>
+								<param name="type"/> == "DATE" and param("syntheticContent") == ""
+							<then>
+									<param name="name"/>
+								</then>
+							</if>
+						</forTable>
+					</choices>
+					<default>
+				''
+				</default>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="fourEyesCheck" description="Four Eyes Check" group="Data Storage" type="Boolean" defaultValue="false"/>
+        <parameter name="readOnlyAdjustment" description="Read Only Adjustment" group="Data Storage" type="Boolean" defaultValue="false"/>
+        <parameter name="computeStatistics" description="Compute Statistics" type="String" group="Data Storage" length="20">
+        choices(<asDescription>
+             ndo("NONE", l("NONE")), ndo("FOR_ALL_COLUMNS", l("FOR_ALL_COLUMNS")), ndo("FOR_KEY_COLUMNS", l("FOR_KEY_COLUMNS"))
+        </asDescription>)
+        <default>
+        'NONE'
+        </default>
+		</parameter>
+        <parameter name="instanceRebuildRestriction" description="Instance Rebuild Restrictions" type="String"
+                   group="Data Storage" defaultValue="AlterFullRebuild">
+            choices(<asDescription>
+                ndo('AlterFullRebuild', l('Alter, Full Rebuild')),
+                ndo('AlterOnly'       , l('Alter Only'         )),
+                ndo('FullRebuildOnly' , l('Full Rebuild Only'  ))
+            </asDescription>)
+        </parameter>
+		<parameter name="reapplyAdjustmentsAfterDataLoad" description="Reapply adjustments after data load" group="Data Storage" type="Boolean" defaultValue="false"/>
+		<parameter name="validations" description="Validations for Manual Adjustments" type="table" length="10" group="Adjustment Validations">
+			<parameter name="colName" description="Field Name" type="String">
+				<attribute name="lookupFromValues"> l("Field") <comma/>
+					<!--			<choices> -->
+					<forTable name="layout">
+						<if>
+                            param("syntheticContent") == ""
+                            <then>
+                                ndo(<param name="name"/>,
+                                    <param name="description"/>)
+                            </then>
+						</if>
+					</forTable>
+				</attribute>
+				<!--			</choices> -->
+			</parameter>
+            <parameter name="type" description="Validation Type" type="String" group="Adjustment Validations" length="20" defaultValue="ON_EDIT_ONLY">
+                choices(<asDescription>
+                     ndo("ON_EDIT_ONLY", l("On edit only")), ndo("ON_SAVE_ONLY", l("On save only")), ndo("ON_EDIT_AND_SAVE", l("On edit and save")),ndo("ON_DELETE_ONLY", l("On delete only"))
+                </asDescription>)
+                <default>
+                'ON_EDIT_ONLY'
+                </default>
+            </parameter>
+            <parameter name="expression" description="Validation Expression" type="String" wrapOnReport="true">
+				<attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues">  l("Expression") <comma/>
+                macro("adjustmentSourceValidationLookup")
+			</attribute>
+			</parameter>
+		</parameter>
+		<parameter name="copyFields" description="" type="Component" group="Original Data Configuration" noSerialization="yes" row="0">
+			<attribute name="componentClass">"axiomsl.gui.source.setup.PopulateOrigFieldsButton"</attribute>
+			<if>
+				<macro name="noLoaderConfigFields"/>
+				<then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="clearFields" description="" type="Component" group="Original Data Configuration" noSerialization="yes" row="0">
+			<attribute name="componentClass">"axiomsl.gui.source.setup.ClearOrigFieldsButton"</attribute>
+			<if>
+				<macro name="noLoaderConfigFields"/>
+				<then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="loaderConfigFields" description="Original Data Configuration" type="table" length="10" group="Original Data Configuration" reorder="false" allowAddRemove="false" keyParameter="sourceField">
+			<parameter name="sourceField" description="Source Field" type="String">
+				<readonly/>
+			</parameter>
+			<parameter name="origColumn" description="Original Field" type="String">
+				<!--todo: couldn't figure out how to enable/disable lookup based on loader type (it wouldn't refresh the parameter if value has not changed - see ParameterList.equals)-->
+				<!--todo: need to reset original fields if type of loader changes-->
+				<!--<attribute name="lookupEnabled">-->
+				<!--var sLoaderType = editor.locateObjectByName("DataSourceLoader", param("loader")).getProperty("loadFrom");-->
+				<!--return sLoaderType != "FILE";-->
+				<!--</attribute>-->
+				<attribute name="lookupFromValues"> l("Field") <comma/>
+					<if> !macro("isTableLoader")
+                        <then>
+                            message(l("Use numbers 1,2,3 etc. according to the column numbers in a file.\nSkipped numbers mean skipped columns."));
+                            return null;
+                        </then>
+					</if>
+					<forTable name="layout">
+						<if>
+                            param("syntheticContent") == ""
+                            <then>
+                                ndo(<param name="name"/>,
+                                    <param name="description"/>)
+                            </then>
+						</if>
+					</forTable>
+				</attribute>
+				<!--	TODO:   must be able to check if parameter is enabled without breaking
+			    <if> param("loaderEnumerationField") = param("sourceField")
+					<then>
+						<disabled/>
+					</then>
+                    <else>
+                        <enabled/>
+                    </else>
+				</if>-->
+			</parameter>
+			<parameter name="format" description="Field Format" type="String">
+				<!--<if> macro("isFileLoader")-->
+				<!--<then>-->
+				<!--<enabled/>-->
+				<!--</then>-->
+				<!--<else>-->
+				<!--<disabled/>-->
+				<!--</else>-->
+				<!--</if>-->
+				<!--Will allow format for now, might want to be able to specify it when copying table to table through file-->
+			</parameter>
+			<if>
+				<macro name="noLoaderConfigFields"/>
+				<then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+					<equals>
+						<!-- the code to match new layout to old values -->
+					var prevConfig = param("loaderConfigFields");
+					var columns = list();
+					var fields = param("layout");
+					<for> var i = 0 <comma/> i &lt; fields.size() <comma/> i++
+						<do>
+							var column = tableRow();
+							column.param("sourceField") = fields.get(i).param("name");
+
+							var orig = null;
+							<if> prevConfig != null <then>
+										<for> var j = 0 <comma/> j &lt; prevConfig.size() <comma/> j++
+									<do>
+												<if> prevConfig.get(j).param("sourceField") == column.param("sourceField") <then>
+											orig = prevConfig.get(j);
+											break;
+										</then>
+												</if>
+											</do>
+										</for>
+									</then>
+								</if>
+								<if> orig != null
+								<then>
+									column.param("origColumn") = orig.param("origColumn");
+									column.param("format") = orig.param("format");
+								</then>
+									<else>
+									column.param("origColumn") = "";
+									column.param("format") = "";
+								</else>
+								</if>
+							columns.add(column);
+						</do>
+						</for>
+					return columns;
+				</equals>
+				</else>
+			</if>
+			<verifyForSave>
+			var configFields = param("loaderConfigFields");
+			var bConfigFieldsSet = configFields.size() == 0;
+			<for> var i = 0<comma/> i &lt; configFields.size()<comma/> i ++
+				<do>
+						<if> configFields.get(i).param("origColumn") != "" <then>
+						bConfigFieldsSet = true;
+						break;
+					</then>
+						</if>
+					</do>
+				</for>
+				<if> !bConfigFieldsSet <then>
+						<case>
+					macro("isFileLoader")
+					<then>
+								<if> isVisual() <then>
+							return confirm(l(<string>The Original Data Configuration is empty.
+You will not be able to load the Data Source.
+To set Original Data Configuration, put numbers (1, 2, 3) as 'Original Fields',
+corresponding to the column indices in the file to be loaded.
+Do you want to proceed with saving ?</string>))
+							</then>
+									<else>
+								trace(l("Data source original data configuration is empty."));
+							</else>
+								</if>
+							</then>
+					macro("isTableLoader")
+					<then>
+								<if> isVisual() <then>
+							return confirm(l(<string>The Original Data Configuration is empty.
+You will not be able to load the Data Source.
+To set Original Data Configuration, put column names from the table to be loaded as 'Original Fields'.
+Do you want to proceed with saving ?</string>))
+							</then>
+									<else>
+								trace(l("Data source original data configuration is empty."));
+							</else>
+								</if>
+							</then>
+						</case>
+					</then>
+				</if>
+			return true;
+		</verifyForSave>
+		</parameter>
+		<parameter name="help_info_original_data_configuration_oracle" description="" type="Component" group="Original Data Configuration" noSerialization="yes">
+			<attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+			<attribute name="text">l("Example formats: numeric 99.99, date DD-MON-YYYY, YYYY-MM-DD HH24:MI:SS (YYYYMMDD by default)")</attribute>
+			<attribute name="color">macro("LIGHT_BLUE")</attribute>
+
+            <if>param("dbSource").indexOf("!!!") &lt; 0
+                <then>
+                    var dbType= editor.locateObjectByName("DBSource", param("dbSource")).getProperty("dbType");
+                    <if>
+                        dbType != "ORACLE" or !macro("isFileLoader")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+		<parameter name="help_info_original_data_configuration_ms_and_sybase" description="" type="Component" group="Original Data Configuration" noSerialization="yes">
+			<attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+			<attribute name="text">l("Example formats: numeric #,###.##, date mm/dd/yyyy, YYYY-MM-DD HH24:MI:SS")</attribute>
+			<attribute name="color">macro("LIGHT_BLUE")</attribute>
+            <if>param("dbSource").indexOf("!!!") &lt; 0
+                <then>
+                    var dbType=editor.locateObjectByName("DBSource", param("dbSource")).getProperty("dbType");
+                    <if>
+                        (dbType != "MSSQL" and dbType != "SYBASE") or !macro("isFileLoader")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+		<parameter name="loaderActionsHelp" description="" type="Component" group="Loader Actions" noSerialization="yes" row="0">
+			<attribute name="componentClass">"axiomsl.util.ui.AxiomButton"<comma/> l("Help on using loader actions")<comma/> "icon.help" <comma/> true</attribute>
+			<attribute name="action">editor.getHelpManager().openHelp("LOADER_ACTIONS")</attribute>
+			<if>
+				<macro name="noLoader"/>
+				<then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="loaderActions" description="Loader Actions" type="tree" rootNodeType="rootActionsNode" group="Loader Actions">
+			<if>
+				<macro name="noLoader"/>
+				<then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+			<nodeType name="rootActionsNode" description="Loader Actions" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="false" childrenTypes="LoaderAction:actionValidate, LoaderAction:actionValidateStatement, LoaderAction:actionValidateStart,
+                  LoaderAction:actionValidateEnd, LoaderAction:actionCombine, LoaderAction:actionStatement,
+                  LoaderAction:actionIntegrity, LoaderAction:actionDateAdjust, LoaderAction:actionDeleteFrozen"/>
+			<nodeType name="LoaderAction:actionValidate" description="ActionValidate" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false">
+				<parameter name="validationCondition" description="Validation Condition" type="String">
+					<attribute name="multiLine"> 10 </attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+					<attribute name="lookupAppend">true</attribute>
+					<attribute name="lookupFromValues"> l("Macro") <comma/>
+						<macro name="lookupForStatement"/>
+					</attribute>
+				</parameter>
+				<parameter name="actionOnInvalid" description="Action On Invalid" type="String">
+                choices(<asDescription>
+                            ndo("ERROR", l("Error")), ndo("WARNING", l("Warning"))
+                        </asDescription>)
+                <default>
+                'ERROR'
+                </default>
+				</parameter>
+			</nodeType>
+			<nodeType name="LoaderAction:actionValidateStatement" description="ActionValidateStatement" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false">
+				<parameter name="validationStatement" description="Validation Statement" type="String">
+					<attribute name="multiLine"> 10 </attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+					<attribute name="lookupAppend">true</attribute>
+					<attribute name="lookupFromValues"> l("Macro") <comma/>
+						<macro name="lookupForStatement"/>
+					</attribute>
+				</parameter>
+				<parameter name="actionOnInvalid" description="Action On Invalid" type="String">
+                choices(<asDescription>
+                            ndo("ERROR", l("Error")), ndo("WARNING", l("Warning"))
+                        </asDescription>)
+                <default>
+                'ERROR'
+                </default>
+				</parameter>
+			</nodeType>
+			<!--hasParameters="true" to allow setting id to all actions-->
+			<nodeType name="LoaderAction:actionValidateStart" description="ActionValidateStart" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false" hasParameters="true"/>
+			<nodeType name="LoaderAction:actionValidateEnd" description="ActionValidateEnd" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false" hasParameters="true"/>
+            <nodeType name="LoaderAction:actionDeleteFrozen" description="ActionDeleteFrozen" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false" hasParameters="true"/>
+            <nodeType name="LoaderAction:actionCombine" description="ActionCombine" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false">
+				<parameter name="column" description="Field" type="String">
+					<attribute name="lookupFromValues"> l("Field Name") <comma/>
+						<forTable name="layout">
+							<if>
+                                param("syntheticContent") == ""
+                                <then>
+                                param("name");
+                                </then>
+							</if>
+						</forTable>
+					</attribute>
+				</parameter>
+				<parameter name="expression" description="Expression" type="String">
+					<attribute name="multiLine"> 10 </attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+					<attribute name="lookupAppend">true</attribute>
+					<attribute name="lookupFromValues"> l("Macro") <comma/>
+						<macro name="lookupForStatement"/>
+					</attribute>
+				</parameter>
+			</nodeType>
+			<nodeType name="LoaderAction:actionStatement" description="ActionStatement" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false">
+				<parameter name="statement" description="Statement" type="String">
+					<attribute name="multiLine"> 10 </attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+					<attribute name="lookupAppend">true</attribute>
+					<attribute name="lookupFromValues"> l("Macro") <comma/>
+						<macro name="lookupForStatement"/>
+					</attribute>
+				</parameter>
+			</nodeType>
+			<nodeType name="LoaderAction:actionIntegrity" description="ActionIntegrity" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false">
+				<parameter name="column" description="Field" type="String">
+					<attribute name="lookupFromValues"> l("Field Name") <comma/>
+						<forTable name="layout">
+							<if>
+                                param("syntheticContent") == ""
+                                <then>
+                                param("name");
+                                </then>
+							</if>
+						</forTable>
+					</attribute>
+				</parameter>
+				<parameter name="action" description="Action" type="String">
+                choices(<asDescription>
+                                ndo("FAIL", l("FAIL")), ndo("REPORT", l("REPORT")), ndo("REMOVE", l("REMOVE")), ndo("UPDATE", l("UPDATE"))
+                        </asDescription>)
+                <default>
+                'FAIL'
+                </default>
+				</parameter>
+			</nodeType>
+			<nodeType name="LoaderAction:actionDateAdjust" description="ActionDateAdjust" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false">
+				<parameter name="column" description="Field" type="String">
+					<attribute name="lookupFromValues"> l("Field Name") <comma/>
+						<forTable name="layout">
+							<if>
+                                param("syntheticContent") == ""
+                                <then>
+                                param("name");
+                                </then>
+							</if>
+						</forTable>
+					</attribute>
+				</parameter>
+				<parameter name="calendar" description="Calendar" type="String" isDataSet="Calendar"/>
+				<parameter name="dateOffset" description="Date Offset" type="integer" defaultValue="0"/>
+			</nodeType>
+		</parameter>
+		<parameter name="postTableCreationStatements" description="Data Table Statements" type="tree" length="100" rootNodeType="rootStatementsNode" group="Post Table Creation Statements">
+			<if>
+				<param name="hosting"/> != "INTERNAL"
+            <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+			<nodeType name="rootStatementsNode" description="Data Table Statements" renameAllowed="true" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="DataSource:postTableCreationStatement"/>
+			<nodeType name="DataSource:postTableCreationStatement" description="Statement" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false">
+				<parameter name="statement" description="Statement" type="String" defaultValue="" length="20">
+					<attribute name="multiLine"> 3 </attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+					<attribute name="lookupAppend">true</attribute>
+					<attribute name="lookupFromValues"> l("Macro") <comma/>
+                        macro("lookup")
+					</attribute>
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+				</parameter>
+                <parameter name="canBeReexecuted" description="This statement can be re-executed multiple times" type="Boolean" defaultValue="false" optional="true" row="1"/>
+                <parameter name="alwaysReexecute" description="Always re-execute" type="Boolean" defaultValue="false" optional="true" row="1">
+                    <if> <param name="canBeReexecuted"/> == false
+                        <then>
+                            <disabled/>
+                        </then> <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+			</nodeType>
+		</parameter>
+		<parameter name="postAdjustmentTableCreationStatements" description="Adjustment Table Statements" type="tree" length="100" rootNodeType="rootStatementsNode" group="Post Table Creation Statements">
+			<nodeType name="rootStatementsNode" description="Adjustment Table Statements" renameAllowed="true" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="DataSource:postTableCreationStatement"/>
+			<nodeType name="DataSource:postTableCreationStatement" description="Statement" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false">
+				<parameter name="statement" description="Statement" type="String" defaultValue="" length="20">
+					<attribute name="multiLine"> 3 </attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+					<!-- because we're saving via task parameters and that removes newlines -->
+					<attribute name="lookupAppend">true</attribute>
+					<attribute name="lookupFromValues"> l("Macro") <comma/>
+                        macro("lookup")
+					</attribute>
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+				</parameter>
+                <parameter name="canBeReexecuted" description="This statement can be re-executed multiple times" type="Boolean" defaultValue="false" optional="true" row="1"/>
+                <parameter name="alwaysReexecute" description="Always re-execute" type="Boolean" defaultValue="false" optional="true" row="1">
+                    <if> <param name="canBeReexecuted"/> == false
+                        <then>
+                            <disabled/>
+                        </then> <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+			</nodeType>
+		</parameter>
+        <parameter name="dataLoadVariables" description="Variable Definitions" type="table" length="4" keyParameter="name" group="Variables">
+            <parameter name="name" description="Variable Name" type="String" freehand="no">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniqueness", list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="description" description="Description" type="String" freehand="no"/>
+            <parameter name="dataType" description="Type" type="String" freehand="no">
+                choices(<asDescription>
+                    ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE"))
+                </asDescription>)
+                <default>
+                'VARCHAR'
+                </default>
+            </parameter>
+            <!--<parameter name="lookupFormula" description="Lookup Expression" type="String" wrapOnReport="true" freehand="yes"/>-->
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirm", list());
+            </confirmAddRow>
+        </parameter>
+
+		<!--<parameter name="loaderActions" description="Loader Actions" type="table" length="10" group="Loader Actions">-->
+		<!--<parameter name="action" description="Action" type="String">-->
+		<!--<choices>-->
+		<!--<asDescription>-->
+		<!--ndo("LoaderAction:actionValidate", "ActionValidate"),-->
+		<!--ndo("LoaderAction:actionValidateStatement", "ActionValidateStatement"),-->
+		<!--ndo("LoaderAction:actionValidateStart", "ActionValidateStart"),-->
+		<!--ndo("LoaderAction:actionValidateEnd", "ActionValidateEnd"),-->
+		<!--ndo("LoaderAction:actionCombine", "ActionCombine"),-->
+		<!--ndo("LoaderAction:actionStatement", "ActionStatement"),-->
+		<!--ndo("LoaderAction:actionIntegrity", "ActionIntegrity"),-->
+		<!--ndo("LoaderAction:actionDateAdjust", "ActionDateAdjust")-->
+		<!--</asDescription>-->
+		<!--</choices>-->
+		<!--</parameter>-->
+		<!--<parameter name="column" description="Source column" type="String">-->
+		<!--<attribute name="lookupFromValues">-->
+		<!--<case>-->
+		<!--param("action") == "ActionIndex"-->
+		<!--<then>-->
+		<!--l("Index (suffix)")-->
+		<!--</then>-->
+		<!--param("action") == "ActionValidate"-->
+		<!--<then>-->
+		<!--l("Action")-->
+		<!--</then>-->
+		<!--<else>-->
+		<!--l("Column")-->
+		<!--</else>-->
+		<!--</case>-->
+		<!--<comma/>-->
+		<!--<case>-->
+		<!--param("action") == "ActionIndex"-->
+		<!--<then>-->
+		<!--list(ndo("_i0", "{table_name}_i0"),-->
+		<!--ndo("_i1", "{table_name}_i1"),-->
+		<!--ndo("_i2", "{table_name}_i2"),-->
+		<!--ndo("_i3", "{table_name}_i3"),-->
+		<!--ndo("_i4", "{table_name}_i4"),-->
+		<!--ndo("_i5", "{table_name}_i5"),-->
+		<!--ndo("_i6", "{table_name}_i6"),-->
+		<!--ndo("_i7", "{table_name}_i7"),-->
+		<!--ndo("_i8", "{table_name}_i8"),-->
+		<!--ndo("_i9", "{table_name}_i9"),-->
+		<!--ndo("_i10", "{table_name}_i10"))-->
+		<!--</then>-->
+		<!--param("action") == "ActionValidate"-->
+		<!--<then>-->
+		<!--list(ndo("FAIL", l("Fail the loader when condition is not met")),-->
+		<!--ndo("WARNING", l("Issue warning but don't fail")))-->
+		<!--</then>-->
+		<!--param("action") == "ActionValidateStatement"-->
+		<!--<then>-->
+		<!--list(ndo("FAIL", l("Fail the loader when statement brings any records")),-->
+		<!--ndo("WARNING", l("Issue warning but don't fail")))-->
+		<!--</then>-->
+		<!--<else>-->
+		<!--<forTable name="layout">-->
+		<!--<ndo>-->
+		<!--<param name="name"/>-->
+		<!--<comma/>-->
+		<!--<param name="description"/>-->
+		<!--</ndo>-->
+		<!--</forTable>-->
+		<!--</else>-->
+		<!--</case>-->
+		<!--</attribute>-->
+		<!--<if> param("action") in ("ActionDupclr", "ActionStatement", "ActionValidateStart", "ActionValidateEnd")-->
+		<!--<then>-->
+		<!--<disabled/>-->
+		<!--</then>-->
+		<!--<else> equals(param("action"); "") </else>-->
+		<!--!!!have param("action") to make this parameter reset to "" upon change in action -->
+		<!--</if>-->
+		<!--</parameter>-->
+		<!--<parameter name="arguments" description="Arguments" type="String">-->
+		<!--<attribute name="lookupAppend">param("action") not in ("ActionDecode", "ActionIntegrity")</attribute>-->
+		<!--<attribute name="lookupAppendSeparator">-->
+		<!--<if> param("action") in ("ActionDupclr", "ActionIndex")-->
+		<!--<then> ", " </then>-->
+		<!--<else> " " </else>-->
+		<!--</if>-->
+		<!--</attribute>-->
+		<!--<attribute name="lookupFromValues"> l("Column") <comma/>-->
+		<!--<case>-->
+		<!--param("action") == "ActionDateAdj"-->
+		<!--<then>-->
+		<!--msg(l("Please type in the number of business days to be added to Source Column"));-->
+		<!--null-->
+		<!--</then>-->
+		<!--param("action") == "ActionDecode"-->
+		<!--<then>-->
+		<!--<forTable name="layout">-->
+		<!--ndo(param("name") + ":{conversion_type}:{conversion_name}", if(param("description") == "", "", l("XREF from: %1", param("description"))))-->
+		<!--</forTable>-->
+		<!--</then>-->
+		<!--param("action") == "ActionDefault"-->
+		<!--<then>-->
+		<!--msg(l(<string>Please type in the constant value to be inserted into Source Column-->
+		<!--(if a string, DON'T enclose in quotes, if a date - in ODBC format (yyyy-MM-dd HH:MM:SS))</string>));-->
+		<!--null-->
+		<!--</then>-->
+		<!--param("action") == "ActionIntegrity"-->
+		<!--<then>-->
+		<!--list(ndo("fail", l("Fail if column has an invalid value (not in lookup table)")),-->
+		<!--ndo("report", l("Report all values missing from lookup table, as WARNINGs in error log")),-->
+		<!--ndo("remove", l("Remove all unmatched records (where values are invalid)")),-->
+		<!--ndo("update", l("Insert new values into lookup table, if necessary")))-->
+		<!--</then>-->
+		<!--param("action") == "ActionStatement"-->
+		<!--<then>-->
+		<!--ndo("@table_name", l("Name of the destination table for data loading")),-->
+		<!--ndo("@EXEC_DATE", l("As-of date for data source, in DB-native format")),-->
+		<!--<forTable name="layout">-->
+		<!--<ndo>-->
+		<!--<param name="name"/>-->
+		<!--<comma/>-->
+		<!--<param name="description"/>-->
+		<!--</ndo>-->
+		<!--</forTable>-->
+		<!--</then>-->
+		<!--param("action") == "ActionValidate"-->
+		<!--<then>-->
+		<!--ndo("@table_name", l("Name of the destination table for data loading")),-->
+		<!--ndo("@EXEC_DATE", l("As-of date for data source, in DB-native format")),-->
+		<!--<forTable name="layout">-->
+		<!--<ndo>-->
+		<!--<param name="name"/>-->
+		<!--<comma/>-->
+		<!--<param name="description"/>-->
+		<!--</ndo>-->
+		<!--</forTable>-->
+		<!--</then>-->
+		<!--<else>-->
+		<!--<forTable name="layout">-->
+		<!--<ndo>-->
+		<!--<param name="name"/>-->
+		<!--<comma/>-->
+		<!--<param name="description"/>-->
+		<!--</ndo>-->
+		<!--</forTable>-->
+		<!--</else>-->
+		<!--</case>-->
+		<!--</attribute>-->
+		<!--<if> param("action") in ("ActionValidateStart", "ActionValidateEnd")-->
+		<!--<then>-->
+		<!--<disabled/>-->
+		<!--</then>-->
+		<!--<else>-->
+		<!--<equals>-->
+		<!--<case>-->
+		<!--param("action") == "ActionDateAdj"-->
+		<!--<then>-->
+		<!--"0"-->
+		<!--</then>-->
+		<!--param("action") == "ActionIntegrity"-->
+		<!--<then>-->
+		<!--"report"-->
+		<!--</then>-->
+		<!--<else>-->
+		<!--""-->
+		<!--</else>-->
+		<!--</case>-->
+		<!--</equals>-->
+		<!--</else>-->
+		<!--</if>-->
+		<!--</parameter>-->
+		<!--</parameter>-->
+		<parameter name="delimiter" description="Delimiter" group="Loader Parameters" type="String" defaultValue="\t" length="20">
+			<if> !macro("isFileLoader") <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+					choices(<asDescription>
+						ndo('\t', l('TAB')), ndo(',', l('COMMA')),ndo(';', l('SEMICOLON')),ndo('|', l('PIPE')),ndo(':', l('COLON'))						</asDescription>)
+					<editable/>
+				</else>
+			</if>
+			<verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+		</parameter>
+        <parameter name="optionallyEnclosedBy" description="Optionally Enclosed By" group="Loader Parameters" type="String"  length="20">
+            <if>param("dbSource").indexOf("!!!") &lt; 0
+                <then>
+                    var dbType= editor.locateObjectByName("DBSource", param("dbSource")).getProperty("dbType");
+                    <if>
+                        dbType != "ORACLE" or !macro("isFileLoader")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                            choices(<asDescription>
+                            ndo('''', l('Single Quote')), ndo('"', l('Double Quote')),ndo('', l('None')) </asDescription>)
+                            <editable/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="skipRows" description="Number of rows to skip" group="Loader Parameters" type="Integer" defaultValue="0" length="20">
+			<if> !macro("isFileLoader") <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="newlineConversion" description="DOS/Unix Conversion" group="Loader Parameters" type="String" defaultValue="none" length="20">
+			<if> !macro("isFileLoader") <then>
+					<removed/>
+				</then>
+				<else>
+					choices(<asDescription>
+							ndo('none', l('none')),
+							ndo('dos', l('Dos')),
+							ndo('unix', l('Unix')),
+							ndo('unix2dos', l('Unix To Dos')),
+							ndo('dos2unix', l('Dos To Unix'))
+						</asDescription>)
+					<enabled/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="targetEncoding" description="Target File Encoding (DB-specific)" group="Loader Parameters" type="String" length="20">
+			<if> !macro("isFileLoader") <then>
+					<removed/>
+				</then>
+				<else>
+					<editable/>
+                    macro("encodingChoices")
+                    <enabled/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="convertEncoding" description="Convert Encoding" group="Loader Parameters" type="Boolean" defaultValue="false" length="20">
+			<if> !macro("isFileLoader") <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="encodingFrom" description="Source Encoding" group="Loader Parameters" type="String" defaultValue="" length="20">
+			<if> param("convertEncoding")<then>
+                macro("encodingChoices")
+                <enabled/>
+                <editable/>
+				</then>
+				<else>
+					<removed/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="encodingTo" description="Target Encoding" group="Loader Parameters" type="String" defaultValue="" length="20">
+			<if> param("convertEncoding")<then>
+                macro("encodingChoices")
+                <enabled/>
+                <editable/>
+				</then>
+				<else>
+					<removed/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="loaderEnumerationField" description="Loader Enumeration Field" type="String" group="Loader Parameters" length="25">
+			<if> !macro("isFileLoader") and !macro("isTableLoader")<then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+					<choices>
+					"" <comma/>
+						<!-- all date columns in layout -->
+						<forTable name="layout">
+							<if>
+                                param("syntheticContent") == ""
+                                <then>
+                                param("name");
+                                </then>
+							</if>
+						</forTable>
+					</choices>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="trailingNullCols" description="Trailing null columns in file" group="Loader Parameters" type="Boolean" defaultValue="true" length="20">
+			<if> !macro("isFileLoader") <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+		</parameter>
+        <parameter name="loaderSelectDistinct" description="SELECT DISTINCT from source table" group="Loader Parameters" type="Boolean" defaultValue="false">
+            <if> !macro("isTableLoader") <then>
+                    <removed/>
+                </then>
+                <else>
+                    <enabled/>
+                </else>
+            </if>
+        </parameter>
+		<parameter name="loaderCondition" description="Additional condition on a source table" group="Loader Parameters" type="String" defaultValue="" length="40">
+            <attribute name="multiLine"> 2 </attribute>
+            <attribute name="lineWrap"> true </attribute>
+			<attribute name="lookupAppend">true</attribute>
+			<attribute name="lookupFromValues"> l("Macro") <comma/>
+                macro("parameters", "supportedTags"),
+                macro("instanceDateKeysVariables", true, false, true),
+                macro("sqlMacros"),
+                macro("axiomExpressionLanguage"),
+                macro("userDefinedFunctions")
+            </attribute>
+			<if> !macro("isTableLoader") <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="generate_control_file" type="Component" description="" group="Loader Control/Format File" noSerialization="yes" row="0">
+			<attribute name="componentClass">"axiomsl.gui.source.setup.GenerateControlFileButton"</attribute>
+
+            <if>param("dbSource").indexOf("!!!") &lt; 0
+                <then>
+                    var dbType=editor.locateObjectByName("DBSource", param("dbSource")).getProperty("dbType");
+                    <if>(dbType != "MSSQL" and dbType != "SYBASE" and dbType != "ORACLE") or !macro("isFileLoader")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>
+                                <param name="columnHeadersFromFile"/>
+                                <then>
+                                    <disabled/>
+                                </then>
+                                <else>
+                                    <enabled/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+
+        </parameter>
+		<parameter name="loaderControlFile" description="Loader Control/Format File" group="Loader Control/Format File" type="String" defaultValue="" length="20">
+            <if>param("dbSource").indexOf("!!!") &lt; 0
+                <then>
+                    var dbType=editor.locateObjectByName("DBSource", param("dbSource")).getProperty("dbType");
+                    <if>(dbType != "MSSQL" and dbType != "SYBASE" and dbType != "ORACLE") or !macro("isFileLoader")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>
+                                <param name="columnHeadersFromFile"/>
+                                <then>
+                                    <disabled/>
+                                </then>
+                                <else>
+                                    <enabled/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+            <attribute name="multiLine"> 10 </attribute>
+            <attribute name="unlimitedSize"> true </attribute>
+			<!-- because we're saving via task parameters and that removes newlines -->
+			<attribute name="lookupAppend">true</attribute>
+			<attribute name="lookupFromValues"> l("Macro") <comma/>
+				"@table_name",
+
+                <forTable name="layout">
+					<if>
+                        param("syntheticContent") == ""
+                        <then>
+                            ndo(<param name="name"/>,
+                                <param name="description"/>)
+                        </then>
+					</if>
+				</forTable>
+			</attribute>
+			<!--<verifyForSave>-->
+			<!--<if> operationType != editor.getManager().GENERATE and param("loaderControlFile") == ""-->
+			<!--<then>-->
+			<!--<if> isVisual() <then>-->
+			<!--confirm(l(<string>The Control File for data source loading was not specified.-->
+			<!--You will not be able to load the source.-->
+			<!--Do you want to proceed with saving ?</string>))-->
+			<!--</then>-->
+			<!--<else>-->
+			<!--trace(l("Control File for data source loading was not specified."));-->
+			<!--true-->
+			<!--</else>-->
+			<!--</if>-->
+			<!--</then>-->
+			<!--<else> true </else>-->
+			<!--</if>-->
+			<!--</verifyForSave>-->
+		</parameter>
+		<parameter name="parameterIsNotAFile" description="Loader parameter is not a file name" group="File Preprocess Code" type="Boolean" defaultValue="false">
+			<if> !macro("isFileLoader") <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="codeWillCreateFile" description="Output file will be CREATED by the code below" group="File Preprocess Code" type="Boolean" defaultValue="false">
+			<if> !macro("isFileLoader") <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="loaderPreprocessCode" description="File Preprocess Code" group="File Preprocess Code" type="String" defaultValue="" length="20">
+			<if> !macro("isFileLoader") <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+			<attribute name="multiLine"> 10 </attribute>
+            <attribute name="unlimitedSize"> true </attribute>
+			<!-- because we're saving via task parameters and that removes newlines -->
+			<attribute name="lookupAppend">true</attribute>
+			<attribute name="lookupFromValues"> l("Macro") <comma/>
+                var preprocessConstants = list();
+                <if>
+                    !param("parameterIsNotAFile")
+                    <then>
+                        preprocessConstants.add(ndo("jbook", l("Excel spreadsheet object (JBook) - if loading from Excel file")));
+                        preprocessConstants.add(ndo("inFileName", l("Input file name")));
+                    </then>
+					<else>
+                        preprocessConstants.add(ndo("loaderParameters", l("Loader parameter string")));
+                    </else>
+				</if>
+				<if>
+                    !param("codeWillCreateFile")
+                    <then>
+                        preprocessConstants.add(ndo("out", l("Output file stream (PrintStream)")));
+                    </then>
+				</if>
+                preprocessConstants.add(ndo("outFileName", l("Output file name")));
+                preprocessConstants.add(ndo("task", l("Task object")));
+                preprocessConstants.addAll(macro("supportedTags"));
+                new("axiomsl.util.ui.NamedList", "Parameters", l("Parameters"), preprocessConstants.toArray()),
+
+                var utilityFunctions = list();
+                utilityFunctions.add(ndo("createFile('symbolic file name', 'file data')", l("Creates a temporary file (deleted on exit) and populates with given content, returns full file path")));
+                utilityFunctions.add(ndo("deleteFile('file path')", l("Deletes a file")));
+                utilityFunctions.add(ndo("runProcess([hashtable of environment variables], 'os command', 'argument1', 'argument2', ...)", l("Executes an os command and returns exit code")));
+                utilityFunctions.add(ndo("runProcessCaptureOutput([hashtable of environment variables], 'os command', 'argument1', 'argument2', ...)", l("Executes an os command, returns ProcessResult object")));
+                utilityFunctions.add(ndo("error('error message')", l("Terminates with an error")));
+                utilityFunctions.add(ndo("warningMessage('message')", l("Adds a warning")));
+                utilityFunctions.add(ndo("trace(expression)", l("Writes value of expression to log file")));
+                new("axiomsl.util.ui.NamedList", "Utility Functions", l("Utility Functions"), utilityFunctions.toArray()),
+
+                macro("instanceDateKeysVariables", false, true, true),
+                <!-- macro("sqlMacros"), -->
+                macro("axiomExpressionLanguage"),
+                macro("userDefinedFunctions")
+            </attribute>
+            <validation>
+                macro("validateXML")
+            </validation>
+		</parameter>
+        <parameter name="help_info_calcField" description="" type="Component" group="File Preprocess Code" noSerialization="yes">
+            <attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+            <attribute name="text">macro("xmlSyntaxHelpNoSingleEquality")</attribute>
+            <attribute name="color">macro("LIGHT_BLUE")</attribute>
+            <if> !macro("isFileLoader") <then>
+                    <removed/>
+                </then>
+                <else>
+                    <enabled/>
+                </else>
+            </if>
+        </parameter>
+		<parameter name="keepTableContent" description="Keep current table content on load" group="Loader Parameters" type="Boolean" defaultValue="false">
+			<if>
+                macro("noLoader")
+    			<then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="loadSheetName" description="Sheet name used when loading from Excel file" group="Loader Parameters" type="String" defaultValue="" length="20">
+			<if>
+                macro("isFileLoader")
+                <then>
+					<enabled/>
+				</then>
+				<else>
+					<removed/>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="columnHeadersFromFile" description="Match columns from source file by name (use headers)" group="Loader Parameters" type="Boolean" defaultValue="false">
+			<if>
+                macro("isFileLoader")
+    			<then>
+					<enabled/>
+				</then>
+				<else>
+					<removed/>
+				</else>
+			</if>
+		</parameter>
+        <parameter name="loadEmptyStringsAsDefaultValues" description="Load empty strings as default values, not nulls" group="Loader Parameters" type="Boolean" defaultValue="false">
+            <if>param("dbSource").indexOf("!!!") &lt; 0
+                <then>
+                    var dbType=editor.locateObjectByName("DBSource", param("dbSource")).getProperty("dbType");
+                    <if>
+                        macro("isFileLoader") and (dbType == "MSSQL" or dbType == "SYBASE" or dbType == "DB2")
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="maxErrors" description="Max number of errors" group="Loader Parameters" type="Integer" defaultValue="2147483647" length="20">
+            <if>param("dbSource").indexOf("!!!") &lt; 0
+                <then>
+                    var dbType=editor.locateObjectByName("DBSource", param("dbSource")).getProperty("dbType");
+                    <if>
+                        macro("isFileLoader")
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="doNotFailIfRejected" description="Allow rejected records (set WARNING)" group="Loader Parameters" type="Boolean" defaultValue="false">
+            <if>
+                macro("isFileLoader")
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="doNotFailIfTruncated" description="Allow data truncation (set WARNING)" group="Loader Parameters" type="Boolean" defaultValue="false">
+            <if>param("dbSource").indexOf("!!!") &lt; 0
+                <then>
+                    var dbType=editor.locateObjectByName("DBSource", param("dbSource")).getProperty("dbType");
+                    <if>
+                        dbType == "SYBASE" and macro("isFileLoader") and !param("doNotFailIfRejected")
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="dbSourceToLoadFrom" description="DB Source to load from" type="String" group="Loader Parameters" length="20">
+			<if>
+                !macro("isTableLoader")
+            <then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+					<choices>
+                        editor.getRemoteProxy().lookupObjects("DBSource");
+                    </choices>
+					<default>
+                        macro("getDefaultDBSource");
+                    </default>
+				</else>
+			</if>
+		</parameter>
+		<parameter name="tableLoadingMethod" description="Data loading method" type="String" group="Loader Parameters" defaultValue="direct">
+			<if>
+                !macro("isTableLoader")
+            <then>
+					<removed/>
+				</then>
+				<else>
+                choices(<asDescription>
+			ndo('direct', l('Direct')),
+			ndo('memoryBased', l('Memory-based')),
+			ndo('fileBased', l('File-based'))
+			</asDescription>)
+                    <enabled/>
+				</else>
+			</if>
+		</parameter>
+	</parameters>
+	<loadCode>
+        var dataSource = <originalAxiom/>;
+
+        var accessor = new("axiomsl.accessors.DataSourceAccessor", dataSource);
+        var route = dataSet.getRouteFromCurrentBranch();
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor, route);
+
+        var templates = array("forward(*.value, colName)", "forward(layout.displayFormat, column_format)",
+                                    "forward(index.fields.value, colName)",
+                                    "table2string(layout.parentFields)",
+                                    "table2expression(layout.syntheticContent)",
+                                    "table2tree(index, Index_)",
+                                    "table2tree(loaderActions)",
+                                    "table2expression(loaderActions.validationCondition)",
+                                    "table2expression(loaderActions.validationStatement)",
+                                    "table2expression(loaderActions.expression)",
+                                    "table2expression(loaderActions.statement)",
+                                    "table2tree(postTableCreationStatements)",
+                                    "table2tree(postAdjustmentTableCreationStatements)",
+                                    "forward(loaderActions.*.value, column)",
+                                    "forward(validations.field, colName)",
+                                    "default(dataLoadVariables)",
+                                    "default(layout.isHidden)",
+                                    "default(layout.fieldType)",
+                                    "default(layout.defaultInstanceKeyValueFormula)",
+                                    "default(loaderSelectDistinct)",
+                                    "default(loaderCondition)",
+                                    "default(loaderEnumerationField)",
+                                    "default(codeWillCreateFile)",
+                                    "default(parameterIsNotAFile)",
+                                    "default(loadSheetName)",
+                                    "default(maxErrors)",
+                                    "default(readOnlyAdjustment)",
+                                    "default(doNotFailIfRejected)",
+                                    "default(doNotFailIfTruncated)",
+                                    "default(loadEmptyStringsAsDefaultValues)",
+                                    "default(loaderPreprocessCode)",
+                                    "default(newlineConversion)",
+                                    "default(targetEncoding)",
+                                    "default(freezeLevel)",
+                                    "default(columnHeadersFromFile)",
+                                    "default(layout.dataPermissionEntity)",
+                                    "default(layout.dataPermissionJoinSource)",
+                                    "default(layout.dataPermissionJoinField)",
+                                    "default(layout.isAutoUniqueId)",
+                                    "default(postTableCreationStatements.canBeReexecuted)",
+                                    "default(postTableCreationStatements.alwaysReexecute)",
+                                    "default(postAdjustmentTableCreationStatements.canBeReexecuted)",
+                                    "default(postAdjustmentTableCreationStatements.alwaysReexecute)",
+                                    "default(validations.type)",
+                                    "default(instanceRebuildRestriction)"
+
+        );
+
+        var params1 = array("hosting", <!--"dbSource",--> "loader", "freezeLevel",
+                            "dataLoadVariables", "defaultVisibilityInModel", "dataStructure",
+                            "createIndexOnKeyFields", "storageType",
+                            "fourEyesCheck",
+                            "readOnlyAdjustment",
+                            "computeStatistics",
+                            "reapplyAdjustmentsAfterDataLoad",
+                            <!--"loaderConfigFields",-->
+                            "layout",
+                            "validations",
+                            "keyFields",
+                            "index",
+                            "loaderActions",
+                            "postTableCreationStatements",
+                            "postAdjustmentTableCreationStatements",
+                            <!---optional parameters-->
+                            "indexOnKeyFieldsClustered",
+                            "internalSourceTablePrefix",
+                            "delimiter",
+                            "skipRows",
+			                "newlineConversion",
+                            "targetEncoding",
+                            "convertEncoding",
+                            "encodingFrom",
+                            "encodingTo",
+                            "loaderEnumerationField",
+                            "trailingNullCols",
+			                "columnHeadersFromFile",
+                            "loadEmptyStringsAsDefaultValues",
+                            "maxErrors",
+                            "doNotFailIfRejected",
+                            "doNotFailIfTruncated",
+                            "loaderSelectDistinct",
+                            "loaderCondition",
+                            "loaderControlFile",
+                            "codeWillCreateFile",
+                            "parameterIsNotAFile",
+                            "loaderPreprocessCode",
+                            "keepTableContent",
+                            "loadSheetName",
+                            "dbSourceToLoadFrom",
+                            "tableLoadingMethod",
+                            "instanceRebuildRestriction",
+                            "asOfDateField"
+        );
+
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(dataSource, currentParameters, params1,
+            array("layout.producingMap", "layout.isArtificialKey", "layout.isLogicalKey", "layout.streamCombination","layout.removeNonNullValuesOnColumnDelete", "dataLoadVariables.lookupFormula"), templates, parser, route);
+        <!-- AXIOM-2714-->
+        var dbSource = dataSource.getOptionalValue("dbSource", null);
+        <if> dbSource != null
+            <then>
+                param("dbSource") = dbSource.getTargetObjectName();
+            </then>
+        </if>
+        <if>
+			<param name="storageType"/> == "SEGMENTED"
+            <then>
+				<!-- load to instanceKeysSegmented -->
+                var templatesSegmented = array("forward(*.value, colName)", "forward(instanceKeys, instanceKeysSegmented)");
+                var paramsSegmented = array("instanceKeys");
+                var excludeSegmented = array("instanceKeys.permissions");
+                var matcherSegmented = new("axiomsl.gui.util.MatchingCopyUtil");
+                matcherSegmented.match(dataSource, currentParameters, paramsSegmented, excludeSegmented, templatesSegmented, parser, route);
+                <!-- load to externalSourceTableNameFormula -->
+			</then>
+			<else>
+				<!-- load to externalSourceTableName -->
+				<if>
+					<param name="storageType"/> != "PERMANENT"
+                    <then>
+						<!-- load to instanceKeysContinuous -->
+                        var templatesContinuous = array("forward(*.value, colName)", "forward(instanceKeys, instanceKeysContinuous)");
+                        var paramsContinuous = array("instanceKeys");
+                        var matcherContinuous = new("axiomsl.gui.util.MatchingCopyUtil");
+                        matcherContinuous.match(dataSource, currentParameters, paramsContinuous, null, templatesContinuous, parser, route);
+                    </then>
+				</if>
+			</else>
+		</if>
+		<if>
+			<param name="hosting"/> == "EXTERNAL"
+            <then>
+				<if>
+					<param name="storageType"/> == "SEGMENTED"
+                    <then>
+						<!-- load to externalSourceTableNameFormula -->
+                        var templatesSegmented = array("forward(externalSourceTableName, externalSourceTableNameFormula)");
+                        var paramsSegmented = array("externalSourceTableName");
+                        var matcherSegmented = new("axiomsl.gui.util.MatchingCopyUtil");
+                        matcherSegmented.match(dataSource, currentParameters, paramsSegmented, null, templatesSegmented, parser, route);
+                    </then>
+					<else>
+						<!-- load to externalSourceTableName -->
+                        var templatesSegmented = array("forward(externalSourceTableName, externalSourceTableName)");
+                        var paramsSegmented = array("externalSourceTableName");
+                        var matcherSegmented = new("axiomsl.gui.util.MatchingCopyUtil");
+                        matcherSegmented.match(dataSource, currentParameters, paramsSegmented, null, templatesSegmented, parser, route);
+                    </else>
+				</if>
+			</then>
+		</if>
+		<!--loading loaderConfigFields-->
+		<if>
+			<macro name="noLoader"/>
+			<!-- this may be redundant but this way we don't have to check loader type here -->
+			<else>
+                var layout = param("layout");
+                <for> var i = 0
+                        <comma/>
+                        i &lt; layout.size()
+                        <comma/> i++
+                   <do>
+                       var row = param("loaderConfigFields").addLine();
+                       var origin = layout.get(i);
+                       row.setID(origin.getID());
+                       row.param("sourceField") = origin.param("name");
+                       row.param("format") = "";
+                       row.param("origColumn") = "";
+                    </do>
+				</for>
+
+                var loaderConfigs = dataSource.getOptionalValue("loaderConfigFields", null);
+                <for> var i = 0
+                        <comma/>
+                        loaderConfigs != null and i &lt; loaderConfigs.size()
+                        <comma/> i++
+                   <do>
+                       var fieldConfig = loaderConfigs.get(i);
+                       var result = null;
+
+                       <for> var j = 0
+                        <comma/>
+                        j &lt; param("loaderConfigFields").size()
+                        <comma/> j++
+                           <do>
+                               var id = loaderConfigs.get(i).getReference("sourceField").getTargetObjectNativeId();
+                               <if> id == param("loaderConfigFields").get(j).getID();
+                                   <then>
+                                       result = param("loaderConfigFields").get(j);
+                                       break;
+                                   </then>
+								</if>
+							</do>
+						</for>
+
+                       result.param("format") = loaderConfigs.get(i).getString("format");
+                       result.param("origColumn") = loaderConfigs.get(i).getString("origColumn");
+                    </do>
+				</for>
+			</else>
+		</if>
+        <if><originalAxiom/>.propertyIsSet("optionallyEnclosedBy")
+            <then>
+                param("optionallyEnclosedBy") = <originalAxiom/>.getString("optionallyEnclosedBy");
+            </then>
+            <else>
+                param("optionallyEnclosedBy") = "";
+            </else>
+        </if>
+	</loadCode>
+	<saveCode>
+        macro("verifyFourEyesCheck");
+
+        var dataSourceForSave = <axiomForSave/>;
+        var accessor = new("axiomsl.accessors.DataSourceAccessor", dataSourceForSave);
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", route, accessor);
+
+        var templates = array("forward(*.value, colName)", "forward(index.fields.value, colName)",
+                                "reference(*.value, layout)", "reference(index.fields.value, layout)",
+                                "reference(loaderEnumerationField, layout)",
+                                "reference(loaderActions.column.value, layout)",
+                                    "forward(layout.displayFormat, column_format)",
+                                    "table2string(layout.parentFields)",
+                                    "table2expression(layout.syntheticContent)",
+                                    "table2tree(index)",
+                                    "table2tree(loaderActions)",
+                                    "table2expression(loaderActions.validationCondition)",
+                                    "table2expression(loaderActions.validationStatement)",
+                                    "table2expression(loaderActions.expression)",
+                                    "table2expression(loaderActions.statement)",
+                                    "table2tree(postTableCreationStatements)",
+                                    "table2tree(postAdjustmentTableCreationStatements)",
+                                    "forward(loaderActions.*.value, column)",
+                                    "dictionaryReference(layout.codeField, lookupSource, layout)",
+                                    "dictionaryReference(layout.descriptionField, lookupSource, layout)",
+                                    <!--"reference(layout.dataPermissionJoinSource,layout)",-->
+                                    "dictionaryReference(layout.dataPermissionJoinField, dataPermissionJoinSource,layout)",
+                                    "forward(validations.field, colName)",
+                                    "object2expression(layout.parentFields.*)",
+                                    "reference(validations.field, layout)",
+                                    "reference(asOfDateField, layout)"
+        );
+
+        var params1 = array("hosting", "dbSource", "loader", "freezeLevel",
+                            "defaultVisibilityInModel", "dataStructure",
+                            "createIndexOnKeyFields", "storageType",
+                            "dataLoadVariables", "fourEyesCheck", "readOnlyAdjustment",
+                            "computeStatistics",
+                            "reapplyAdjustmentsAfterDataLoad",
+                            <!--"loaderConfigFields",-->
+                            "layout",
+                            "validations",
+                            "keyFields",
+                            "index",
+                            "loaderActions",
+                            "postTableCreationStatements",
+                            "postAdjustmentTableCreationStatements",
+                            <!---optional parameters-->
+                            "indexOnKeyFieldsClustered",
+                            "internalSourceTablePrefix",
+                            "delimiter",
+                            "skipRows",
+			                "newlineConversion",
+                            "targetEncoding",
+                            "convertEncoding",
+                            "encodingFrom",
+                            "encodingTo",
+                            "loaderEnumerationField",
+                            "trailingNullCols",
+			                "columnHeadersFromFile",
+                            "loadEmptyStringsAsDefaultValues",
+                            "maxErrors",
+                            "doNotFailIfRejected",
+                            "doNotFailIfTruncated",
+                            "loaderSelectDistinct",
+                            "loaderCondition",
+                            "loaderControlFile",
+                            "codeWillCreateFile",
+                            "parameterIsNotAFile",
+                            "loaderPreprocessCode",
+                            "keepTableContent",
+                            "loadSheetName",
+                            "dbSourceToLoadFrom",
+                            "tableLoadingMethod",
+                            "instanceRebuildRestriction",
+                            "asOfDateField"
+        );
+
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(dataSourceForSave, currentParameters, params1,
+            <!--exclude:-->
+            array("layout.producingMap",
+                  "layout.isArtificialKey",
+                  "layout.isLogicalKey",
+                  "layout.aggregatedFunction",
+                  "layout.isCountFieldFor",
+                  "layout.fieldType",
+                  "layout.streamCombination",
+                  "dataLoadVariables.lookupFormula"
+                  <!--"layout.dataPermissionJoinSource"-->
+                  ),
+            templates, parser, route);
+
+        <if>
+			<param name="storageType"/> == "SEGMENTED"
+            <then>
+				<!-- save from instanceKeysSegmented -->
+                var templatesSegmented = array("forward(*.value, colName)",
+                "reference(*.value, layout)",
+                "forward(instanceKeys, instanceKeysSegmented)",
+                "reference(instanceKeys.value, layout)"
+                );
+                var paramsSegmented = array("instanceKeys");
+                var matcherSegmented = new("axiomsl.gui.util.MatchingSaveUtil");
+                matcherSegmented.match(dataSourceForSave, currentParameters, paramsSegmented, null, templatesSegmented, parser, route);
+            </then>
+			<else>
+				<if>
+					<param name="storageType"/> != "PERMANENT"
+                    <then>
+						<!-- save from instanceKeysContinuous -->
+                        var templatesContinuous = array("forward(*.value, colName)",
+                        "reference(*.value, layout)",
+                        "forward(instanceKeys, instanceKeysContinuous)",
+                        "reference(instanceKeys.value, layout)"
+                        );
+                        var paramsContinuous = array("instanceKeys");
+                        var matcherContinuous = new("axiomsl.gui.util.MatchingSaveUtil");
+                        matcherContinuous.match(dataSourceForSave, currentParameters, paramsContinuous, null, templatesContinuous, parser, route);
+                    </then>
+				</if>
+			</else>
+		</if>
+		<if>
+			<param name="hosting"/> == "EXTERNAL"
+            <then>
+				<if>
+					<param name="storageType"/> == "SEGMENTED"
+                    <then>
+						<!-- save from externalSourceTableNameFormula -->
+                        var templatesSegmented = array(
+                        "forward(externalSourceTableName, externalSourceTableNameFormula)"
+                        );
+                        var paramsSegmented = array("externalSourceTableName");
+                        var matcherSegmented = new("axiomsl.gui.util.MatchingSaveUtil");
+                        matcherSegmented.match(dataSourceForSave, currentParameters, paramsSegmented, null, templatesSegmented, parser, route);
+                    </then>
+					<else>
+						<!-- save from externalSourceTableName -->
+                        var templatesSegmented = array(
+                        "forward(externalSourceTableName, externalSourceTableName)"
+                        );
+                        var paramsSegmented = array("externalSourceTableName");
+                        var matcherSegmented = new("axiomsl.gui.util.MatchingSaveUtil");
+                        matcherSegmented.match(dataSourceForSave, currentParameters, paramsSegmented, null, templatesSegmented, parser, route);
+                    </else>
+				</if>
+			</then>
+		</if>
+
+        var layout = dataSourceForSave.getTable("layout");
+        <if>   param("loaderConfigFields") != null
+            <then>
+                var loaderConfigsTable = dataSourceForSave.createTablePropertyValue();
+                dataSourceForSave.setProperty("loaderConfigFields", loaderConfigsTable);
+                <for> var i = 0
+                    <comma/>
+                    i &lt; param("loaderConfigFields").size()
+                    <comma/> i++
+                   <do>
+                       var fieldConfig = param("loaderConfigFields").get(i);
+                       <if>fieldConfig.param("origColumn") != null and fieldConfig.param("origColumn") != ""
+                           <then>
+                               var fieldConfigRow = loaderConfigsTable.addRow("DataSource:loaderConfigField");
+
+                               var ref = fieldConfigRow.createReferencePropertyValue("", array(dataSourceForSave, "layout", layout.locate(fieldConfig.param("sourceField"))));
+                               fieldConfigRow.setProperty("sourceField", ref);
+                               fieldConfigRow.setProperty("origColumn", fieldConfig.param("origColumn"));
+                               <if> fieldConfig.param("format") != null and !fieldConfig.param("format") != ""
+                                   <then>
+                                       fieldConfigRow.setProperty("format", fieldConfig.param("format"));
+                                   </then>
+								</if>
+							</then>
+						</if>
+					</do>
+				</for>
+			</then>
+		</if>
+        <if>param("optionallyEnclosedBy") == null or param("optionallyEnclosedBy").trim().equals("")
+            <then>
+                dataSourceForSave.removeProperty("optionallyEnclosedBy");
+            </then>
+            <else>
+                dataSourceForSave.setProperty("optionallyEnclosedBy", param("optionallyEnclosedBy"));
+            </else>
+        </if>
+	</saveCode>
+	<macros>
+		<macro name="noLoader">
+            param("loader") == null or param("loader") == ""
+    	</macro>
+		<macro name="noLoaderConfigFields">
+            param("loaderType") != "FILE" and param("loaderType") != "TABLE"
+        </macro>
+		<macro name="isFileLoader">
+            param("loaderType") == "FILE"
+        </macro>
+		<macro name="isTableLoader">
+            param("loaderType") == "TABLE"
+        </macro>
+		<macro name="lookupForStatement">
+            var sourceConstants = list();
+            sourceConstants.add(ndo("@table_name", l("Table Name")));
+            sourceConstants.addAll(macro("supportedTags"));
+            var fields = list();
+            <forTable name="layout">
+                <if>
+                    param("syntheticContent") == ""
+                    <then>
+                        fields.add(ndo(<param name="name"/>, <param name="description"/>));
+                    </then>
+                </if>
+            </forTable>;
+            new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), fields.toArray()),
+            new("axiomsl.util.ui.NamedList", "Parameters", l("Parameters"), sourceConstants.toArray()),
+            macro("instanceDateKeysVariables", true, true, true),
+            macro("sqlMacros"),
+            macro("axiomExpressionLanguage"),
+            macro("userDefinedFunctions")
+		</macro>
+		<macro name="lookupPriorFields" arguments="prefix">
+            var lookup = list();
+            <for>
+                var i = 0
+                    <comma/>
+                    i &lt; param("layout").indexOf(currentParameters)
+                    <comma/> i++
+                   <do>
+                       lookup.add(ndo(<prefix/> + param("layout").get(i).param("name"),
+                           param("layout").get(i).param("description")))
+                   </do>
+			</for>
+            ;lookup
+        </macro>
+        <macro name="lookup">
+            var sourceConstants = list();
+            sourceConstants.add(ndo("@table_name", l("Table Name")));
+            <!--sourceConstants.addAll(macro("supportedTags"));-->
+            var fields = list();
+            <forTable name="layout">
+                <if>
+                    param("syntheticContent") == ""
+                    <then>
+                        fields.add(ndo(<param name="name"/>, <param name="description"/>));
+                    </then>
+                </if>
+            </forTable>;
+            new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), fields.toArray()),
+            new("axiomsl.util.ui.NamedList", "Parameters", l("Parameters"), sourceConstants.toArray()),
+            macro("sqlMacros"),
+            macro("axiomExpressionLanguage"),
+            macro("userDefinedFunctions")
+        </macro>
+        <macro name="adjustmentSourceValidationLookup">
+            <!--var sourceConstants = list();-->
+            <!--sourceConstants.add(ndo("@table_name", l("Table Name")));-->
+            <!--sourceConstants.addAll(macro("supportedTags"));-->
+            var fields = list();
+            <forTable name="layout">
+                <if>
+                    param("syntheticContent") == ""
+                    <then>
+                        fields.add("$"+ndo(<param name="name"/>, <param name="description"/>));
+                    </then>
+                </if>
+            </forTable>;
+            macro("lookupFromValuesList"),
+            new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), fields.toArray()),
+            <!--new("axiomsl.util.ui.NamedList", "Parameters", l("Parameters"), sourceConstants.toArray()),-->
+            macro("instanceDateKeysVariables", false, true, false),
+            <!-- macro("sqlMacros"), -->
+            macro("axiomExpressionLanguage"),
+            macro("userDefinedFunctions")
+        </macro>
+	</macros>
+</data_set_category>

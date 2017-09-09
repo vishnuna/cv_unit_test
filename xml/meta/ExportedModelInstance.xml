@@ -1,0 +1,24 @@
+<metadata>
+	<object type="ExportedModelInstance" extends="ObjectInBranch" version="2">
+		<property name="dataModel" valueType="url" targetObjectType="DataModel"/>
+		<property name="instanceId" valueType="string" canBeEmpty="false"/>
+		<property name="instanceDate" optional="true" valueType="date"/>
+		<property name="instanceKeyValues" optional="true" valueType="table" rowTypes="InstanceObject:instanceKeyValue"/>
+		<property name="sourceInstanceSpecs" optional="true" valueType="table" rowTypes="ExportedModelInstance:sourceInstanceSpec"/>
+		<property name="producingModelInstances" optional="true" valueType="table" rowTypes="ExportedModelInstance:producingModelInstance"/>
+        <property name="producingSourceInstances" optional="true" valueType="table" rowTypes="ExportedModelInstance:producingSourceInstance"/>
+	</object>
+	<object type="ExportedModelInstance:sourceInstanceSpec" version="1">
+		<property name="node" valueType="url" urlStructure="DataModel[*].hierarchy[*]" targetObjectType="DataModel:node"/>
+		<property name="sourceInstanceSpec" valueType="object" objectType="DataSourceInstanceSpecLite"/>
+	</object>
+	<object type="ExportedModelInstance:producingModelInstance" version="2">
+		<property name="model" valueType="url" targetObjectType="DataModel"/>
+		<property name="isAllInstances" optional="true" valueType="boolean"/>
+		<property name="modelInstanceSpec" valueType="object" objectType="DataModelInstanceSpecLite" optional="true"/>
+		<property name="streamKeyValues" valueType="table" rowTypes="Task:streamKeyValues"/>
+	</object>
+    <object type="ExportedModelInstance:producingSourceInstance" version="1">
+        <property name="sourceInstanceSpec" valueType="url" targetObjectType="DataSourceInstanceSpecLite"/>
+    </object>
+</metadata>

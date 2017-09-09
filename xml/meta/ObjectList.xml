@@ -1,0 +1,57 @@
+
+<!-- this is a persistent list of native objects for the branch (only those objects which belong to the branch).
+  List contains objects of the same type -->
+<metadata>
+	<object type="ObjectList" version="2">
+		<!-- name of a list is a combination of object type and branch name -->
+		<property name="name" valueType="string" canBeEmpty="false"/>
+		<!-- description can be "List of objects of type xxx in branch yyyy" -->
+		<property name="description" valueType="string"/>
+		
+		<!-- id of a list is used to locate the list in AxiomObjectLocator, just like any other object.
+		It will be a combination of object type (for objects inside the list) and branch id -->
+		<property name="objectId" valueType="string" canBeEmpty="false"/>
+		<!-- dbId is the same as object id (cos' it's short enough) -->
+		<property name="dbId" valueType="string" canBeEmpty="false" optional="true"/>
+
+		<!-- deprecated -->
+		<property name="projectId" valueType="string" optional="true" canBeEmpty="false"/>
+		<property name="branchId" valueType="string" optional="true" canBeEmpty="false"/>
+
+		<!-- type of objects contained in the list -->
+		<property name="elementType" valueType="string" canBeEmpty="false"/>
+
+		<property name="list" valueType="table" rowTypes="ObjectList:entry"/>
+
+	</object>
+	<object type="ObjectList:entry" version="2">
+
+		<!-- to simplify dependency structure we won't keep any direct references (urls) to objects in the list-->
+
+		<property name="name" valueType="string" canBeEmpty="false"/>
+		<property name="description" valueType="string"/>
+		<property name="isGenerated" valueType="boolean"/>
+
+		<!-- objectId: for primary object, this is the root id, for generated - the composite id -->
+		<property name="objectId" valueType="string" canBeEmpty="false"/>
+		<!-- dbId: only used for generated object - the key for storing the object in db -->
+		<property name="dbId" valueType="string" canBeEmpty="false" optional="true"/>
+
+        <property name="isInvalid" valueType="boolean" optional="true"/>
+
+        <!--TODO make not optional-->
+        <property name="stamp" valueType="string" optional="true"/>
+
+        <!--id of the Groups:node to which the object belongs, if any. This is also stored in the underlying object-->
+        <property name="groupNodeId" valueType="string" optional="true"/>
+    </object>
+	
+	<!-- when objectlist is serialized in a db table, the fields in the table are:
+		project id (maybe)			|
+		branch id					|
+		elementType					| key fields
+		dbId of the list element	|
+		
+		body of the ObjectList:entry
+	-->
+</metadata>

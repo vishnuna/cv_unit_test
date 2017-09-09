@@ -1,0 +1,295 @@
+<data_set_category name="MODEL_DRILLDOWN_MAPPING"
+                   description="Model drill-down Mapping"
+                   windowTitle="Model drill-down Mapping Setup"
+                   entityName="Model drill-down Mapping"
+                   icon="image.drilldown_mapping"
+                   windowIcon="image.drilldown_mapping"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="ModelDrillDownMapping"
+                   extends="DOC_DATA, COMMON_UTILS">
+
+    <parameters>
+        <parameter name="isExternal" description="External Mapping" defaultValue="true" type="boolean"/>
+
+        <parameter name="internalModelReference" description="Internal Data Model" type="String" length="15" isDataSet="DataModel" canClearDataSet="true">
+            <if>param("isExternal")
+                <then><removed/></then>
+                <else><enabled/></else>
+            </if>
+            <verifyForSave>
+                macro("verifyNonEmpty");
+			</verifyForSave>
+            <validation>
+                macro("checkModelExists");
+            </validation>
+            <onParameterChange>
+                <if> !param("isExternal")
+                    <then>
+                        macro("cleanTable", param("internalAliasMapping"));
+                    </then>
+                </if>
+            </onParameterChange>
+        </parameter>
+
+        <parameter name="env" description="External Environment" type="String" length="15">
+            <if>param("isExternal")
+                <then>
+                    <enabled/>
+                    <choices>
+                        editor.getRemoteProxy().lookupObjects("Environment");
+                    </choices>
+                </then>
+                <else><removed/></else>
+            </if>
+            <verifyForSave>
+                macro("verifyNonEmpty");
+			</verifyForSave>
+        </parameter>
+        <parameter name="externalProject" description="External Project" type="String" length="15">
+            <if>param("isExternal")
+                <then>
+                    <enabled/>
+                </then>
+                <else><removed/></else>
+            </if>
+            <verifyForSave>
+                macro("verifyNonEmpty");
+			</verifyForSave>
+        </parameter>
+        <parameter name="externalBranch" description="External Branch" type="String" length="15">
+            <if>param("isExternal")
+                <then><enabled/></then>
+                <else><removed/></else>
+            </if>
+            <verifyForSave>
+                macro("verifyNonEmpty");
+			</verifyForSave>
+        </parameter>
+        <parameter name="externalModelName" description="External DataModel" type="String" length="15">
+            <if>param("isExternal")
+                <then><enabled/></then>
+                <else><removed/></else>
+            </if>
+            <verifyForSave>
+                macro("verifyNonEmpty");
+			</verifyForSave>
+        </parameter>
+        <parameter name="instanceSelectionRule" description="Instance Selection Rule" type="String" length="15">
+            <choices>
+              	list(asDescription(list(
+                ndo("EQUAL", l("EQUAL")),
+                ndo("PERMANENT", l("PERMANENT")),
+                ndo("ALL_INSTANCES", l("ALL_INSTANCES"))
+                )));
+            </choices>
+        </parameter>
+        <parameter name="externalAliasMapping" description="Alias Mapping" type="table" reorder="false" allowCopyPaste="false"   keyParameter="alias">
+            <if>param("isExternal")
+                <then><enabled/></then>
+                <else><removed/></else>
+            </if>
+            <parameter name="alias" description="Alias" type="String" length="20">
+                <attribute name="lookupFromValues"> l("Alias") <comma/>
+					macro("lookupAliasesInModel", dataSet.getName());
+				</attribute>
+                <readonly/>
+            </parameter>
+            <parameter name="externalAlias" description="External Alias" type="String" length="20">
+                <if> param("ignoreAlias")
+                    <then><disabled/></then>
+                    <else><enabled/></else>
+                </if>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+			    </verifyForSave>
+            </parameter>
+            <parameter name="ignoreAlias" description="Ignore Alias" type="Boolean"/>
+        </parameter>
+        <parameter name="internalAliasMapping" description="Alias Mapping" type="table" reorder="false" allowCopyPaste="false"   keyParameter="alias">
+            <if>!param("isExternal")
+                <then><enabled/></then>
+                <else><removed/></else>
+            </if>
+            <parameter name="alias" description="Alias" type="String" length="20">
+                <attribute name="lookupFromValues"> l("Alias") <comma/>
+					macro("lookupAliasesInModel", dataSet.getName());
+				</attribute>
+                <readonly/>
+            </parameter>
+            <parameter name="externalAlias" description="External Alias" type="String" length="20">
+                <if> param("ignoreAlias") or param("internalModelReference").equals("")
+                    <then><disabled/></then>
+                    <else><enabled/></else>
+                </if>
+                <attribute name="lookupFromValues">l("Alias")
+                     <comma/>
+                     macro("lookupAliasesInModel", param("internalModelReference"));
+                </attribute>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+			    </verifyForSave>
+                <validation>
+                    var resultAliases = macro("lookupAliasesInModel", param("internalModelReference"));
+                    <for> var i = 0  <comma/> i &lt; resultAliases.size() <comma/> i++
+                        <do>
+                            <if> resultAliases.get(i).getName().equals(newValue)
+                                <then>
+                                    return true;
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+                    errorMessage(l("There is no '%1' node in DataModel['%2']", newValue, param("internalModelReference")));
+                    return false;
+                </validation>
+            </parameter>
+            <parameter name="ignoreAlias" description="Ignore Alias" type="Boolean"/>
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        var aliasMapping = null;
+        <if> <originalAxiom/>.propertyIsSet("externalEnvironment")
+            <then>
+                param("isExternal") = true;
+                param("env") = <originalAxiom/>.getReference("externalEnvironment").getTargetObjectName();
+                param("externalProject") = <originalAxiom/>.getString("externalProject");
+                param("externalBranch") = <originalAxiom/>.getString("externalBranch");
+                param("externalModelName") = <originalAxiom/>.getString("externalModelName");
+                aliasMapping = param("externalAliasMapping");
+            </then>
+            <else>
+                var currentBranchObj = manager.locate(class("axiomsl.server.object_framework.ObjectID").createId("Branch", null, editor.getBranchId()));
+                var branchId = <originalAxiom/>.getReference("internalModelReference").getTargetObjectDbID().getBranchId();
+
+                var branch = manager.locate(class("axiomsl.server.object_framework.ObjectID").createId("Branch", null, branchId));
+                var project = manager.locate(class("axiomsl.server.object_framework.ObjectID").createId("Project", null, branch.getString("projectId")));
+                param("isExternal") = false;
+                var modelName = <originalAxiom/>.getReference("internalModelReference").getTargetObjectName();
+                param("internalModelReference") = modelName;
+
+                aliasMapping = param("internalAliasMapping");
+            </else>
+        </if>
+        param("instanceSelectionRule") = <originalAxiom/>.getString("instanceSelectionRule");
+        var aliasTable = <originalAxiom/>.getTable("aliasMapping");
+        <for> var i = 0 <comma/> i &lt; aliasTable.size() <comma/> i++
+            <do>
+                var row = aliasTable.get(i);
+                var alias = row.getReference("alias").getTargetObjectNativeName();
+                var externalAlias = null;
+                var ignoreAlias = row.getBoolean("ignoreAlias");
+                <if> !ignoreAlias
+                    <then>
+                        <if> row.propertyIsSet("externalAlias")
+                            <then>
+                                externalAlias = row.getString("externalAlias");
+                            </then>
+                            <else>
+                                <if> row.propertyIsSet("internalAlias")
+                                    <then>
+                                        externalAlias = row.getReference("internalAlias").getTargetObjectNativeName();
+                                    </then>
+                                </if>
+                            </else>
+                        </if>
+                    </then>
+                </if>
+                var newRow = aliasMapping.addLine();
+                newRow.param("alias") = alias;
+                <if> !ignoreAlias
+                    <then>
+                        newRow.param("externalAlias") = externalAlias;
+                    </then>
+                    <else>
+                        newRow.param("externalAlias");
+                    </else>
+                </if>
+                newRow.param("ignoreAlias") = ignoreAlias;
+            </do>
+        </for>
+    </loadCode>
+
+    <saveCode>
+        var aliasMapping = null;
+        var externalModel = null;
+        var reference;
+        <axiomForSave/>.setProperty("instanceSelectionRule", param("instanceSelectionRule"));
+        <if>param("isExternal")
+            <then>
+                var env = editor.locateObjectByName("Environment", param("env"));
+                <axiomForSave/>.setProperty("externalEnvironment", new("axiomsl.server.object_framework.ObjectReferenceImpl", <axiomForSave/>, function("axiomsl.server.object_framework.RouteToObject", "createDirectRoute", env), env));
+                <axiomForSave/>.setProperty("externalProject", param("externalProject"));
+                <axiomForSave/>.setProperty("externalBranch", param("externalBranch"));
+                <axiomForSave/>.setProperty("externalModelName", param("externalModelName"));
+                <axiomForSave/>.removeProperty("internalModelReference");
+                aliasMapping = param("externalAliasMapping");
+            </then>
+            <else>
+                reference = new("axiomsl.server.object_framework.ObjectReferenceImpl", <axiomForSave/>, "DataModel", param("internalModelReference"));
+                <axiomForSave/>.setProperty("internalModelReference", reference);
+
+                externalModel = manager.locate(class("axiomsl.server.object_framework.ObjectID").createNameId("DataModel", editor.getBranchId(), param("internalModelReference")));
+                <axiomForSave/>.removeProperty("externalEnvironment");
+                <axiomForSave/>.removeProperty("externalProject");
+                <axiomForSave/>.removeProperty("externalBranch");
+                <axiomForSave/>.removeProperty("externalModelName");
+                aliasMapping = param("internalAliasMapping");
+            </else>
+        </if>
+
+        var currentModel = manager.locate(class("axiomsl.server.object_framework.ObjectID").createNameId("DataModel", editor.getBranchId(), dataSet.getName()));
+        <axiomForSave/>.setProperty("referenceToOwnerModel", new("axiomsl.server.object_framework.ObjectReferenceImpl", <axiomForSave/>, class("axiomsl.server.object_framework.RouteToObject").createEmptyRoute(), currentModel));
+
+        var aliasTable = <axiomForSave/>.getTable("aliasMapping");
+        <for> var i = 0 <comma/> i &lt; aliasMapping.size() <comma/> i++
+            <do>
+                var aliasRow = aliasMapping.get(i);
+                var alias = aliasRow.param("alias");
+                var externalAlias = aliasRow.param("externalAlias");
+                var ignoreAlias = aliasRow.param("ignoreAlias");
+                <if> alias != null and !"".equals(alias) and (externalAlias != null or ignoreAlias)
+                    <then>
+                        var row = aliasTable.addRow("ModelDrillDownMapping:alias");
+                        var objects = list();
+                        objects.add(currentModel);
+                        var node = currentModel.getTree("hierarchy").locateIfExists(alias);
+                        objects.add("hierarchy");
+                        objects.add(node);
+                        row.setProperty("alias", new("axiomsl.server.object_framework.ObjectReferenceImpl", <axiomForSave/>, class("axiomsl.server.object_framework.RouteToObject").createEmptyRoute(), toArray(objects)));
+                        <if> !ignoreAlias
+                            <then>
+                                <if> externalModel != null
+                                    <then>
+                                        objects = list();
+                                        objects.add(externalModel);
+                                        node = externalModel.getTree("hierarchy").locateIfExists(externalAlias);
+                                        objects.add("hierarchy");
+                                        objects.add(node);
+                                        row.setProperty("internalAlias", new("axiomsl.server.object_framework.ObjectReferenceImpl", <axiomForSave/>, reference.getNameRouteToTarget(), toArray(objects)));
+                                    </then>
+                                    <else>
+                                        row.setProperty("externalAlias", externalAlias);
+                                    </else>
+                                </if>
+                            </then>
+                        </if>
+                        row.setProperty("ignoreAlias", ignoreAlias);
+                    </then>
+                </if>
+            </do>
+        </for>
+    </saveCode>
+
+    <macros>
+        <macro name="cleanTable" arguments="table">
+            var size = <table/>.size();
+            <for> var i = 0 <comma/> i&lt;size <comma/> i++
+                <do>
+                    <table/>.remove(0);
+                </do>
+            </for>
+        </macro>
+    </macros>
+</data_set_category>

@@ -1,0 +1,153 @@
+<metadata>
+    <object type="Aggregation" extends="ModelBasedTask" version="12">
+        <property name="details" valueType="table" rowTypes="Aggregation:detail"/>
+        <property name="calcFields" valueType="table" rowTypes="Aggregation:calcField"/>
+        <property name="auxFields" valueType="table" rowTypes="Aggregation:auxField"/>
+        <property name="syntheticFields" valueType="table" rowTypes="Aggregation:syntheticField"/>
+        <property name="additionalIndices" valueType="table" rowTypes="Aggregation:index"/>
+        <property name="mappings" valueType="table" rowTypes="Aggregation:mapping"/>
+        <property name="storageType" valueType="string" canBeEmpty="false" choices="CONTINUOUS, CONTINUOUS_PARTITION, SEGMENTED, PERMANENT"/>
+        <property name="postTableCreationStatements" valueType="table" optional="true" rowTypes="DataSource:postTableCreationStatement"/>
+        <property name="postAdjustmentTableCreationStatements" valueType="table" optional="true" rowTypes="DataSource:postTableCreationStatement"/>
+        <property name="detailsAsKeys" valueType="boolean" defaultValue="false"/>
+        <property name="dbSourceForResults" valueType="url" targetObjectType="DBSource"/>
+        <property name="archivalProperties" valueType="object" objectType="ArchivalProperties"/>
+        <property name="condition" valueType="tree" rootNodeType="Condition"/>
+        <property name="doNotAggregate" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="fourEyesCheck" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="validations" valueType="table" optional="true" rowTypes="Aggregation:validation"/>
+        <property name="trackDrilldownInformation" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="trackAllInstancesMode" valueType="string" optional="true" defaultValue="NONE" choices="NONE, EVALUATION"/>
+        <property name="computeStatistics" valueType="string" canBeEmpty="false" optional="true" choices="NONE, FOR_ALL_COLUMNS, FOR_KEY_COLUMNS" defaultValue="FOR_ALL_COLUMNS"/>
+        <property name="makeStreamColumnsKey" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="instanceRebuildRestriction" valueType="string" choices="AlterFullRebuild, AlterOnly, FullRebuildOnly" defaultValue="AlterFullRebuild" optional="true"/>
+        <property name="allowExternalDataPermissions" valueType="boolean" optional="true" defaultValue="false"/>
+        <!--parallel hints-->
+        <property name="executeEnableParallelismStatement" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="includeParallelHintsInsert" valueType="boolean" optional="true"/>
+        <property name="includeParallelHintsSelect" valueType="boolean" optional="true"/>
+        <property name="parallelDegree" valueType="integer" optional="true" defaultValue="0"/>
+    </object>
+    <object type="Aggregation:detail" extends="ReferencibleSubobject" version="6">
+        <property name="overrideLookupInformation" valueType="boolean" defaultValue ="false" optional="true"/>
+        <!--if set to true, lookup information for the column is taken from settings below as opposed to generated automatically. -->
+        <!--it's possible for this to be set to true but for lookup source to be empty, in this case detail will be forced to not have a lookup-->
+        <property name="lookupSource" valueType="url" canBeEmpty="true" targetObjectType="DataSource" optional="true"/>
+        <!-- if lookupSource is not set, these 2 below must be fields from lookup source
+           (according to the same rules as used for data source validation) -->
+        <property name="codeField" valueType="url" optional="true" targetObjectType="DataSource:field"/>
+        <property name="descriptionField" valueType="url" optional="true" targetObjectType="DataSource:field"/>
+        <!-- this indicates whether the lookup source for additional field must be added to resulting
+            portfolio model -->
+        <property name="addLookupSourceToModel" optional="true" valueType="boolean"/>
+        <!-- if addLookupSourceToModel == true, this specifies the value to be put into additionalConstraint
+              property for the data model node being added.
+              This is an expression, containing references to root source keys from input model (as multimaps),
+              and references to portfolio levels/additional fields -->
+        <property name="relationshipToParent" optional="true" valueType="string" choices="ONE_TO_ONE,ONE_OR_ZERO_TO_ONE,MANY_OR_ZERO_TO_ONE,MANY_TO_ONE,FULL_OUTER_JOIN" defaultValue="ONE_TO_ONE"/>
+        <property name="additionalConstraintForJoin" optional="true" valueType="table" rowTypes="SQLExpressionPart, SQLConstant, SQLFormula, Aggregation:localDetailReference, Aggregation:localCalcFieldReference, DataSource:fieldReference"/>
+        <property name="instanceSelectionRule" optional="true" valueType="object" objectType="InstanceSelectionRule" />
+        <property name="displayFormat" valueType="string" optional="true"/>
+        <property name="title" valueType="string" optional="true"/>
+        <property name="overrideNullable" valueType="string" choices="DEFAULT,NOT_NULLABLE,NULLABLE" optional="true" defaultValue="DEFAULT"/>
+    </object>
+    <object type="Aggregation:calcField" extends="ReferencibleSubobject" version="7">
+        <property name="aggrMethod" valueType="string" canBeEmpty="false"
+                  choices="SUM, AVG, MIN, MAX, COUNT, COUNT_DISTINCT, debit, credit" defaultValue="SUM"/>
+        <property name="calcTotal" valueType="boolean" defaultValue="true"/>
+        <!-- formula can only refer to calc fields defined above the current calc field, and to all details and all aux fields-->
+        <property name="calcFormula" valueType="table"
+                  rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, Aggregation:localDetailReference, Aggregation:localCalcFieldReference, Aggregation:localAuxFieldReference"/>
+        <!-- valueType,valueNullable and valueSize will be there only when formula is nonempty
+              valueSize only for VARCHAR
+          -->
+        <property name="valueType" canBeEmpty="false" valueType="string" optional="true"
+                  choices="VARCHAR, INTEGER, FLOAT, DATE, UNICODE" defaultValue="FLOAT"/>
+        <property name="valueSize" valueType="integer" optional="true"/>
+        <property name="valueNullable" valueType="boolean" optional="true"/>
+        <property name="displayFormat" valueType="string" optional="true"/>
+        <property name="overrideLookupInformation" valueType="boolean" defaultValue ="false" optional="true"/>
+        <!--if set to true, lookup information for the column is taken from settings below as opposed to generated automatically. -->
+        <!--it's possible for this to be set to true but for lookup source to be empty, in this case detail will be forced to not have a lookup-->
+        <property name="lookupSource" valueType="url" canBeEmpty="true" targetObjectType="DataSource" optional="true"/>
+        <!-- if lookupSource is not set, these 2 below must be fields from lookup source
+           (according to the same rules as used for data source validation) -->
+        <property name="codeField" valueType="url" optional="true" targetObjectType="DataSource:field"/>
+        <property name="descriptionField" valueType="url" optional="true" targetObjectType="DataSource:field"/>
+        <!-- this indicates whether the lookup source for additional field must be added to resulting
+            portfolio model -->
+        <property name="addLookupSourceToModel" optional="true" valueType="boolean"/>
+        <!-- if addLookupSourceToModel == true, this specifies the value to be put into additionalConstraint
+              property for the data model node being added.
+              This is an expression, containing references to root source keys from input model (as multimaps),
+              and references to portfolio levels/additional fields -->
+        <property name="relationshipToParent" optional="true" valueType="string" choices="ONE_TO_ONE,ONE_OR_ZERO_TO_ONE,MANY_OR_ZERO_TO_ONE,MANY_TO_ONE,FULL_OUTER_JOIN" defaultValue="ONE_TO_ONE"/>
+        <property name="additionalConstraintForJoin" optional="true" valueType="table" rowTypes="SQLExpressionPart, SQLConstant, SQLFormula, Aggregation:localDetailReference, Aggregation:localCalcFieldReference, DataSource:fieldReference"/>
+        <property name="instanceSelectionRule" optional="true" valueType="object" objectType="InstanceSelectionRule" />
+        <property name="title" valueType="string" optional="true"/>
+        <property name="overrideNullable" valueType="string" choices="DEFAULT,NOT_NULLABLE,NULLABLE" optional="true" defaultValue="DEFAULT"/>
+    </object>
+    <object type="Aggregation:auxField" extends="ReferencibleSubobject" version="6">
+    </object>
+    <object type="Aggregation:syntheticField" extends="ReferencibleSubobject" version="7">
+        <property name="formula" valueType="table"
+                  rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, Aggregation:localDetailReference, Aggregation:localCalcFieldReference, Aggregation:localSyntheticFieldReference" canBeEmpty="false"/>
+        <property name="calcTotal" valueType="boolean" defaultValue="true"/>
+        <property name="valueType" canBeEmpty="false" valueType="string" choices="VARCHAR, INTEGER, FLOAT, DATE, UNICODE" defaultValue="FLOAT"/>
+        <property name="valueSize" valueType="integer" optional="true"/>
+        <property name="valueNullable" valueType="boolean"/>
+        <property name="title" valueType="string" optional="true"/>
+    </object>
+    <object type="Aggregation:mapping" version="7">
+        <!-- validation: mapping must be set for all fields and all models
+            mapping for calc fields with formulas should not be set
+            datatype of mapped expressions must be consistent across models
+            -->
+        <property name="field" valueType="object"
+                  objectType="Aggregation:localDetailReference,Aggregation:localCalcFieldReference,Aggregation:localAuxFieldReference"/>
+        <property name="fieldMapping" valueType="table" rowType="Aggregation:fieldMapping" canBeEmpty="false"/>
+    </object>
+    <object type="Aggregation:fieldMapping" version="7">
+        <property name="model" valueType="object" objectType="DataModel:reference" canBeEmpty="false"/>
+        <property name="expression" valueType="table" rowType="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, DataModel:fieldReference"
+                  canBeEmpty="false"/>
+        <!-- valueType, valueSize, valueNullable will be there only when expression does not contain a single filed reference (else type/size is taken from the field)
+			valueSize only for VARCHAR
+		    For aux fields type information is not used.
+		-->
+        <property name="valueSize" valueType="integer" optional="true"/>
+        <property name="valueNullable" valueType="boolean" optional="true"/>
+        <property name="valueType" canBeEmpty="false" valueType="string" optional="true"
+                  choices="VARCHAR, INTEGER, FLOAT, DATE, UNICODE" defaultValue="FLOAT"/>
+    </object>
+    <object type="Aggregation:localDetailReference" version="7">
+        <property name="value" valueType="url" urlStructure="Aggregation[this].details[*]"
+                  targetObjectType="Aggregation:detail"/>
+    </object>
+    <object type="Aggregation:localCalcFieldReference" version="7">
+        <property name="value" valueType="url" urlStructure="Aggregation[this].calcFields[*]"
+                  targetObjectType="Aggregation:calcField"/>
+    </object>
+    <object type="Aggregation:localAuxFieldReference" version="7">
+        <property name="value" valueType="url" urlStructure="Aggregation[this].auxFields[*]"
+                  targetObjectType="Aggregation:auxField"/>
+    </object>
+    <object type="Aggregation:localSyntheticFieldReference" version="7">
+        <property name="value" valueType="url" urlStructure="Aggregation[this].syntheticFields[*]"
+                  targetObjectType="Aggregation:syntheticField"/>
+    </object>
+    <object type="Aggregation:validation" version="7">
+        <property name="field" valueType="object"
+                  objectType="Aggregation:localDetailReference,Aggregation:localCalcFieldReference"/>
+        <property name="type" valueType="string" canBeEmpty="false" choices="ON_EDIT_ONLY, ON_SAVE_ONLY, ON_EDIT_AND_SAVE, ON_DELETE_ONLY" defaultValue="ON_EDIT_ONLY" optional="true"/>
+        <property name="expression" valueType="string"/>
+    </object>
+    <object type="Aggregation:index" version="7">
+        <property name="clustered" valueType="boolean"/>
+        <property name="unique" valueType="boolean"/>
+        <!-- indexes can be based on details and calc fields -->
+        <property name="fields" valueType="table" canBeEmpty="false"
+                  rowTypes="Aggregation:localDetailReference, Aggregation:localCalcFieldReference"/>
+    </object>
+
+</metadata>

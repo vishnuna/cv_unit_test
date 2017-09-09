@@ -1,0 +1,3914 @@
+<data_set_category name="DASHBOARD_EDITOR"
+                   description="Dashboard Editor"
+                   windowTitle="Dashboard Editor Setup"
+                   entityName="Dashboard"
+                   icon="dashboard"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="Dashboard"
+                   extends="COMMON_UTILS">
+    <parameters>
+
+        <!-- DATA DICTIONARY -->
+        <parameter name="dataDictionary" description="Data Dictionary" type="tree" group="Data Dictionary" rootNodeType="dataDictionaryRoot" namesAreGloballyUnique="true">
+
+            <nodeType name="dataDictionaryRoot" description="Data Dictionary" renameAllowed="false"
+                      deleteAllowed="false" hasChildren="true" childrenAreFixed="false"
+                      childrenTypes="Dashboard:dictionary_DATASOURCE,
+                                     Dashboard:dictionary_DATAMODEL,
+                                     Dashboard:dictionary_TABULAR,
+                                     Dashboard:dictionary_EXPRESSION,
+                                     Dashboard:dictionary_UDF,
+                                     Dashboard:dictionary_DYNAMIC_TABULAR,
+                                     Dashboard:dictionary_DYNAMIC_MODEL">
+
+                <parameter name="name" description="Name" type="string" freehand="no">
+                    <default>
+                        "Data Dictionary"
+                    </default>
+
+                    <verifyForSave>
+                        <if>macro("isEmpty", currentParameter.getParameterValue())
+                            <then>
+                                errorMessage(l("Data Dictionary name cannot be empty."));
+                                ;false
+                            </then>
+                            <else>
+                                ;true
+                            </else>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+
+                <parameter name="description" description="Description" type="string" freehand="no"/>
+            </nodeType>
+
+            <nodeType name="Dashboard:dictionary_DATASOURCE" description="Data Source Entry" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="Dashboard:dictionary_DATASOURCE_FIELD">
+
+                <macro name="entryParameters"/>
+
+                <parameter name="object" description="Data Source" type="String" isDataSet="DataSource" freehand="no">
+                    <onParameterChange>
+                        <if>newValue != oldValue
+                            <then>
+                                var childFields = macro("flatten", currentNode, "isFieldEntry");
+                                <for>var childFieldIndex = 0<comma/>childFieldIndex &lt; childFields.size()<comma/>childFieldIndex++
+                                    <do>
+                                        childFields.get(childFieldIndex).param("fieldUpdateFlag") = true;
+                                    </do>
+                                </for>
+                            </then>
+                        </if>
+                    </onParameterChange>
+
+                    <verifyForSave>
+                        var paramValue = currentParameter.getParameterValue();
+                        <if>macro("isEmpty", paramValue)
+                            <then>
+                                errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("DataSource is not specified in '%1'.", currentNode.getName())));
+                                ;false
+                            </then>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="Dashboard:dictionary_DATASOURCE_FIELD" description="Data Source Field Entry" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="entryParameters"/>
+
+                <!-- Parameter is used to explicitly "notify" field parameter about changes -->
+                <parameter name="fieldUpdateFlag" description="Field Updater" type="Boolean" hidden="true" freehand="no">
+                    <default>
+                        ;true
+                    </default>
+
+                    <onParameterChange>
+                        <if>!macro("isEmpty", param("field"))
+                            <then>
+                                param("field") = "";
+                            </then>
+                        </if>
+                        currentParameter.setValueInternal(false);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="field" description="Data Source Field" type="string" freehand="no">
+                    <if>!macro("isEmpty", param("fieldUpdateFlag")) and param("fieldUpdateFlag") and macro("checkObjectExists", editor.getBranchId(), currentNode.parent().param("object"), "DataSource")
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <disabled/>
+                        </else>
+                    </if>
+
+                    <attribute name="lookupFromValues">
+                        l("Data Source Field")<comma/>
+                        ;<macro name="map">editor.getRemoteProxy().lookupFieldsInDataSource(currentNode.parent().param("object"), editor.getBranchId())<comma/>"getSourceFieldName"</macro>
+                    </attribute>
+
+                    <verifyForSave>
+                        var paramValue = currentParameter.getParameterValue();
+                        <if>macro("isEmpty", paramValue)
+                            <then>
+                                errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Field is not specified in '%1'.", currentNode.getName())));
+                                ;false
+                            </then>
+                            <else>
+                                <!-- @NotNull -->
+                                var dataSource = editor.locateObjectByNameIfExists("DataSource", currentNode.parent().param("object"));
+                                <if>dataSource.getProperty("layout").locateIfExists(paramValue) != null
+                                    <then>
+                                        ;true
+                                    </then>
+                                    <else>
+                                        errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Field '%1' is not specified in DataSource '%2'.", paramValue, currentNode.parent().param("object"))));
+                                        ;false
+                                    </else>
+                                </if>
+                            </else>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="Dashboard:dictionary_DATAMODEL" description="Data Model Entry" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="Dashboard:dictionary_DATAMODEL_FIELD">
+
+                <macro name="entryParameters"/>
+
+                <parameter name="object" description="Data Model" type="String" isDataSet="DataModel" freehand="no">
+                    <onParameterChange>
+                        <if>newValue != oldValue
+                            <then>
+                                var childFields = macro("flatten", currentNode, "isFieldEntry");
+                                <for>var childFieldIndex = 0<comma/>childFieldIndex &lt; childFields.size()<comma/>childFieldIndex++
+                                    <do>
+                                        childFields.get(childFieldIndex).param("fieldUpdateFlag") = true;
+                                    </do>
+                                </for>
+                            </then>
+                        </if>
+                    </onParameterChange>
+
+                    <verifyForSave>
+                        var paramValue = currentParameter.getParameterValue();
+                        <if>macro("isEmpty", paramValue)
+                            <then>
+                                errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("DataModel is not specified in '%1'.", currentNode.getName())));
+                                ;false
+                            </then>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="Dashboard:dictionary_DATAMODEL_FIELD" description="Data Model Field Entry" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="entryParameters"/>
+
+                <!-- Parameter is used to explicitly "notify" field parameter about changes -->
+                <parameter name="fieldUpdateFlag" description="Field Updater" type="Boolean" hidden="true" freehand="no">
+                    <default>
+                        ;true
+                    </default>
+
+                    <onParameterChange>
+                        <if>!macro("isEmpty", param("field"))
+                            <then>
+                                param("field") = "";
+                            </then>
+                        </if>
+                        currentParameter.setValueInternal(false);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="field" description="Data Model Field" type="string" freehand="no">
+                    <if>!macro("isEmpty", param("fieldUpdateFlag")) and param("fieldUpdateFlag") and macro("checkObjectExists", editor.getBranchId(), currentNode.parent().param("object"), "DataModel")
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <disabled/>
+                        </else>
+                    </if>
+
+                    <attribute name="lookupFromValues">
+                        l("Data Model Field")<comma/>
+                        ;<macro name="map">editor.getRemoteProxy().lookupFieldsInModel(currentNode.parent().param("object"), editor.getBranchId())<comma/>"getModelFieldName"</macro>
+                    </attribute>
+
+                    <verifyForSave>
+                        var paramValue = currentParameter.getParameterValue();
+                        <if>macro("isEmpty", paramValue)
+                            <then>
+                                errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Field is not specified in '%1'.", currentNode.getName())));
+                                ;false
+                            </then>
+                            <else>
+                                <!-- @NotNull -->
+                                var modelFields = <macro name="map">editor.getRemoteProxy().lookupFieldsInModel(currentNode.parent().param("object"), editor.getBranchId())<comma/>"getModelFieldName"</macro>;
+                                <if>modelFields.contains(paramValue)
+                                    <then>
+                                        ;true
+                                    </then>
+                                    <else>
+                                        errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Field '%1' is not specified in DataModel '%2'.", paramValue, currentNode.parent().param("object"))));
+                                        ;false
+                                    </else>
+                                </if>
+                            </else>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="Dashboard:dictionary_TABULAR" description="Tabular Report Entry" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="Dashboard:dictionary_TABULAR_FIELD">
+
+                <macro name="entryParameters"/>
+
+                <parameter name="object" description="Tabular Report" type="String" isDataSet="TabularReport" freehand="no">
+                    <onParameterChange>
+                        <if>newValue != oldValue
+                            <then>
+                                var childFields = macro("flatten", currentNode, "isFieldEntry");
+                                <for>var childFieldIndex = 0<comma/>childFieldIndex &lt; childFields.size()<comma/>childFieldIndex++
+                                    <do>
+                                        childFields.get(childFieldIndex).param("fieldUpdateFlag") = true;
+                                    </do>
+                                </for>
+                            </then>
+                        </if>
+                    </onParameterChange>
+
+                    <verifyForSave>
+                        var paramValue = currentParameter.getParameterValue();
+                        <if>macro("isEmpty", paramValue)
+                            <then>
+                                errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("TabularReport is not specified in '%1'.", currentNode.getName())));
+                                ;false
+                            </then>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="Dashboard:dictionary_TABULAR_FIELD" description="Tabular Report Field Entry" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="entryParameters"/>
+
+                <!-- Parameter is used to explicitly "notify" field parameter about changes -->
+                <parameter name="fieldUpdateFlag" description="Field Updater" type="Boolean" hidden="true" freehand="no">
+                    <default>
+                        ;true
+                    </default>
+
+                    <onParameterChange>
+                        <if>!macro("isEmpty", param("field"))
+                            <then>
+                                param("field") = "";
+                            </then>
+                        </if>
+                        currentParameter.setValueInternal(false);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="field" description="Tabular Report Field" type="string" freehand="no">
+                    <if>!macro("isEmpty", param("fieldUpdateFlag")) and param("fieldUpdateFlag") and macro("checkObjectExists", editor.getBranchId(), currentNode.parent().param("object"), "TabularReport")
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <disabled/>
+                        </else>
+                    </if>
+
+                    <attribute name="lookupFromValues">
+                        l("Tabular Report Field")<comma/>
+                        var tabularReport = editor.locateObjectByName("TabularReport", currentNode.parent().param("object"));
+                        var fieldList = macro("filter", tabularReport.getAllObjects(), "isValidTabularReportField");
+                        ;macro("map", fieldList, "getNameProperty")
+                    </attribute>
+
+                    <verifyForSave>
+                        var paramValue = currentParameter.getParameterValue();
+                        <if>macro("isEmpty", paramValue)
+                            <then>
+                                errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Field is not specified in '%1'.", currentNode.getName())));
+                                ;false
+                            </then>
+                            <else>
+                                var tabularReport = editor.locateObjectByName("TabularReport", currentNode.parent().param("object"));
+
+                                var fieldList = macro("filter", tabularReport.getAllObjects(), "isValidTabularReportField");
+                                var fieldNameList = macro("map", fieldList, "getNameProperty");
+                                <if>fieldNameList.contains(paramValue)
+                                    <then>
+                                        ;true
+                                    </then>
+                                    <else>
+                                        errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Field '%1' is not specified in TabularReport '%2'.", paramValue, currentNode.parent().param("object"))));
+                                        ;false
+                                    </else>
+                                </if>
+                            </else>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="Dashboard:dictionary_EXPRESSION" description="Expression Entry" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="entryParameters"/>
+                <parameter name="expression" description="Expression" type="string" length="40" freehand="yes"/>
+            </nodeType>
+
+            <nodeType name="Dashboard:dictionary_UDF" description="User Defined Function Entry" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="entryParameters"/>
+
+                <parameter name="object" description="User Defined Function" type="string" isDataSet="UserDefinedFunction" freehand="no">
+                    <verifyForSave>
+                        var paramValue = currentParameter.getParameterValue();
+                        <if>macro("isEmpty", paramValue)
+                            <then>
+                                errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Function is not specified in '%1'.", currentNode.getName())));
+                                ;false
+                            </then>
+                            <else>
+                                ;true
+                            </else>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="Dashboard:dictionary_DYNAMIC_TABULAR" description="Dynamic Tabular Report Entry" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="Dashboard:dictionary_DYNAMIC_FIELD">
+
+                <macro name="entryParameters"/>
+
+                <parameter name="expression" description="Dynamic Tabular Report Reference" type="String" freehand="no">
+                    <verifyForSave>
+                        var paramValue = currentParameter.getParameterValue();
+                        <if>function("java.util.regex.Pattern", "matches", "[@\.\w]+![@\.\w]+:[@\.\w]+", paramValue)
+                            <then>
+                                ;true
+                            </then>
+                            <else>
+                                errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Wrong format of dynamic reference in '%1'. Use 'project!branch:tabular' pattern.", currentNode.getName())));
+                                ;false
+                            </else>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+
+             <nodeType name="Dashboard:dictionary_DYNAMIC_MODEL" description="Dynamic Model Report Entry" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="Dashboard:dictionary_DYNAMIC_FIELD">
+
+                <macro name="entryParameters"/>
+
+                <parameter name="expression" description="Dynamic Model Report Reference" type="String" freehand="no">
+                    <verifyForSave>
+                        var paramValue = currentParameter.getParameterValue();
+                        <if>function("java.util.regex.Pattern", "matches", "[@\.\w]+![@\.\w]+:[@\.\w\]\[]+", paramValue)
+                            <then>
+                                ;true
+                            </then>
+                            <else>
+                                errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Wrong format of dynamic reference in '%1'. Use 'project!branch:model' pattern.",currentNode.getName())));
+                                ;false
+                            </else>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="Dashboard:dictionary_DYNAMIC_FIELD" description="Dynamic Field Entry" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="entryParameters"/>
+
+                <parameter name="fieldName" description="Dynamic Field" type="string" freehand="no">
+                    <verifyForSave>
+                        var paramValue = currentParameter.getParameterValue();
+                        <if>macro("isEmpty", paramValue)
+                            <then>
+                                errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Field is not specified in '%1'.", currentNode.getName())));
+                                ;false
+                            </then>
+                            <else>
+                                ;true
+                            </else>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+
+            <onNodeAdded>
+                addedNode.param("name") = addedNode.getName();
+            </onNodeAdded>
+
+            <onNodeRenamed>
+                renamedNode.param("name") = renamedNode.getName();
+            </onNodeRenamed>
+        </parameter>
+
+        <!-- DASHBOARD VIEW -->
+        <parameter name="view" description="Dashboard View" type="tree" group="View" rootNodeType="viewRoot" namesAreGloballyUnique="true">
+
+            <nodeType name="viewRoot" description="Dashboard View" renameAllowed="false"
+                      deleteAllowed="false" hasChildren="true"
+                      childrenAreFixed="true" childrenTypes="Dashboard:panel">
+
+            </nodeType>
+
+            <default>
+                var viewNode = treeNode("view", "viewRoot", l("Dashboard View").toString());
+                var rootPanelNode = treeNode("view", "Dashboard:panel", "New_Panel_001");
+                viewNode.add(rootPanelNode);
+                rootPanelNode.getParam("title").setValueInternal("New_Panel_001");
+                return viewNode;
+            </default>
+
+            <macro name="dashboardTree"/>
+
+            <onNodeAdded>
+                <if>macro("isEmpty", addedNode.param("title"))
+                    <then>
+                        addedNode.param("title") = addedNode.getName();
+                    </then>
+                </if>
+                <if>macro("isComponent", addedNode)
+                    <then>
+                        addedNode.param("type") = addedNode.getNode().m_Type.m_sDescription.getEnglish().toString();
+                    </then>
+                </if>
+
+                <!-- PARENT LAYOUT -->
+                <macro name="updateParentLayoutParameter">addedNode</macro>
+            </onNodeAdded>
+
+            <validateNode>
+                <if>!macro("isPanel", newNode) and macro("isPanel", parentNode)
+                    <then>
+                        <if>parentNode.param("Layout:layoutChooser") == "TAB LAYOUT"
+                            <then>
+                                return l("Cannot add anything but panel into panel with TAB layout");
+                            </then>
+                        </if>
+                    </then>
+                </if>
+            </validateNode>
+
+            <onNodeRenamed>
+                <macro name="updateDependencies">oldNodeName<comma/>renamedNode<comma/>"renameDependency"</macro>
+                <macro name="updateDependencies">oldNodeName<comma/>renamedNode<comma/>"renameDependency"</macro>
+                <macro name="updateStates">oldNodeName<comma/>"componentId"<comma/>renamedNode.getName()</macro>
+                <macro name="updateActions">oldNodeName<comma/>"formId"<comma/>renamedNode.getName()</macro>;
+            </onNodeRenamed>
+
+            <onNodeDeleted>
+                var deletedComponents = <macro name="flatten">deletedNode<comma/>"isComponent"</macro>;
+                <for>var componentIndex = 0<comma/>componentIndex &lt; deletedComponents.size()<comma/>componentIndex++
+                    <do>
+                        var deletedComponent = deletedComponents.get(componentIndex);
+                        <macro name="updateDependencies">deletedComponent.getName()<comma/>deletedComponent<comma/>"removeDependency"</macro>;
+                        <macro name="updateStates">deletedComponent.getName()<comma/>"componentId"<comma/>""</macro>;
+                    </do>
+                </for>
+                var deletedForms = <macro name="flatten">deletedNode<comma/>"isWindowOrForm"</macro>;
+                <for>var formIndex = 0<comma/>formIndex &lt; deletedForms.size()<comma/>formIndex++
+                    <do>
+                        var deletedForm = deletedForms.get(formIndex);
+                        <macro name="updateActions">deletedForm.getName()<comma/>"formId"<comma/>""</macro>;
+                    </do>
+                </for>
+            </onNodeDeleted>
+        </parameter>
+
+        <!-- DASHBOARD WINDOW -->
+        <parameter name="windows" description="Dashboard Windows" type="tree" group="Windows"
+                   rootNodeType="windowsRoot" namesAreGloballyUnique="true">
+
+            <nodeType name="windowsRoot" description="Dashboard Windows" renameAllowed="false"
+                      deleteAllowed="false" hasChildren="true"
+                      childrenAreFixed="false" childrenTypes="Dashboard:window">
+
+            </nodeType>
+
+            <nodeType name="Dashboard:window" description="Window" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="true"
+                      childrenAreFixed="false" childrenTypes="Dashboard:panel, Dashboard:formPanel, Dashboard:button">
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+                <macro name="panelParameters"/>
+            </nodeType>
+
+            <macro name="dashboardTree"/>
+
+            <onNodeAdded>
+                <if>macro("isEmpty", addedNode.param("title"))
+                    <then>
+                        addedNode.param("title") = addedNode.getName();
+                    </then>
+                </if>
+                <if>macro("isComponent", addedNode)
+                    <then>
+                        addedNode.param("type") = addedNode.getNode().m_Type.m_sDescription.getEnglish().toString();
+                    </then>
+                </if>
+                <if>addedNode.type() == "Dashboard:window"
+                    <then>
+                        addedNode.param("Layout:layoutChooser") = "WINDOW LAYOUT";
+                    </then>
+                </if>
+                <!-- PARENT LAYOUT -->
+                <macro name="updateParentLayoutParameter">addedNode</macro>
+            </onNodeAdded>
+
+            <onNodeRenamed>
+                <macro name="updateDependencies">oldNodeName<comma/>renamedNode<comma/>"renameDependency"</macro>
+                <macro name="updateStates">oldNodeName<comma/>"componentId"<comma/>renamedNode.getName()</macro>
+                <macro name="updateActions">oldNodeName<comma/>"formId"<comma/>renamedNode.getName()</macro>;
+            </onNodeRenamed>
+
+            <onNodeDeleted>
+                var deletedComponents = <macro name="flatten">deletedNode<comma/>"isComponent"</macro>;
+                <for>var componentIndex = 0<comma/>componentIndex &lt; deletedComponents.size()<comma/>componentIndex++
+                    <do>
+                        var deletedComponent = deletedComponents.get(componentIndex);
+                        <macro name="updateDependencies">deletedComponent.getName()<comma/>deletedComponent<comma/>"removeDependency"</macro>;
+                        <macro name="updateStates">deletedComponent.getName()<comma/>"componentId"<comma/>""</macro>;
+                    </do>
+                </for>
+                var deletedForms = <macro name="flatten">deletedNode<comma/>"isWindowOrForm"</macro>;
+                <for>var formIndex = 0<comma/>formIndex &lt; deletedForms.size()<comma/>formIndex++
+                    <do>
+                        var deletedForm = deletedForms.get(formIndex);
+                        <macro name="updateActions">deletedForm.getName()<comma/>"formId"<comma/>""</macro>;
+                    </do>
+                </for>
+            </onNodeDeleted>
+        </parameter>
+
+        <macro name="actionMap" arguments="true, true"/>
+
+        <parameter name="useConcurrentUDF" description="Concurrent UDF" type="Boolean" group="Dashboard Defaults" freehand="no"/>
+        <parameter name="systemDefaults" type="table" keyParameter="name" description="Default properties" optional="true"
+                   group="Dashboard Defaults" freehand="no">
+            <parameter name="name" description="Name" type="String" freehand="no">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("systemDefaults")));
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="value" description="Value" type="string" freehand="no"/>
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirm", list(param("systemDefaults")));
+            </confirmAddRow>
+        </parameter>
+
+    </parameters>
+
+    <loadCode>
+        editor.loadDashboard(currentParameters, <originalAxiom/>);
+    </loadCode>
+
+    <saveCode>
+        editor.saveDashboard(<axiomForSave/>, currentParameters);
+    </saveCode>
+
+    <!-- MACROS -->
+
+    <macros>
+        <macro name="dashboardTree">
+
+            <!-- DASHBOARD: Panels -->
+
+            <nodeType name="Dashboard:panel" description="Panel" renameAllowed="true" deleteAllowed="true"
+                      hasChildren="true" childrenAreFixed="false" childrenTypes="Dashboard:panel, Dashboard:formPanel,
+                        Dashboard:button, Dashboard:label, Dashboard:radioGroup, Dashboard:checkBox, Dashboard:table,
+                        Dashboard:combobox, Dashboard:multiSelection, Dashboard:inputTextField, Dashboard:datePicker,
+                        Dashboard:uploadButton,Dashboard:chart, Dashboard:dynamicTable, Dashboard:editableTable ">
+
+                <macro name="panelParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+
+            <nodeType name="Dashboard:formPanel" description="Form Panel" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="true"
+                      childrenAreFixed="false" childrenTypes="Dashboard:panel, Dashboard:formPanel,
+                        Dashboard:button, Dashboard:label, Dashboard:radioGroup, Dashboard:checkBox, Dashboard:table,
+                        Dashboard:combobox, Dashboard:multiSelection, Dashboard:inputTextField, Dashboard:datePicker, Dashboard:uploadButton">
+
+                <macro name="panelParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+
+            <!-- DASHBOARD: Components -->
+            <nodeType name="Dashboard:button" description="Button" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="componentParametersButton"/>
+                <parameter name="isEnabled" description="Is Enabled" type="string" group="Parameters"/>
+                <macro name="actionMap" arguments="true, false"/>
+                <parameter name="statePropertyToDisplay" description="State Property To Display" type="string" group="Parameters" freehand="no"/>
+                <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                    <choices>asDescription(list(
+                        "",
+                        ndo("MODEL",l("MODEL")),
+                        ndo("MODEL_SECURE",l("MODEL_SECURE")),
+                        ndo("STATIC", l("STATIC")),
+                        ndo("TABULAR", l("TABULAR")),
+                        ndo( "STATE", l( "STATE"))
+                        ))
+                    </choices>
+                </parameter>
+                <macro name="dataRequestParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+
+            <nodeType name="Dashboard:label" description="Label" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="componentParameters"/>
+                <parameter name="text" description="Text" type="string" group="Parameters" freehand="no"/>
+
+                <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                    <choices>asDescription(list(
+                        "",
+                        ndo("MODEL",l("MODEL")),
+                        ndo("MODEL_SECURE",l("MODEL_SECURE")),
+                        ndo("STATIC", l("STATIC")),
+                        ndo("TABULAR", l("TABULAR")),
+                        ndo("STATE", l("STATE"))
+                        ))
+                    </choices>
+                </parameter>
+                <macro name="dataRequestParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+
+            <nodeType name="Dashboard:radioGroup" description="Radio Group" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="componentParameters"/>
+                <parameter name="statePropertyToDisplay" description="State Property To Display" type="string" group="Parameters" freehand="no"/>
+                <macro name="outputFormatting"/>
+
+                <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                    <choices>asDescription(list(
+                        "",
+                        ndo("TABULAR",l("TABULAR")),
+                        ndo("MODEL", l("MODEL")),
+                        ndo("MODEL_SECURE", l("MODEL_SECURE")),
+                        ndo("STATIC", l("STATIC")),
+                        ndo("STATE", l("STATE"))
+                        ))
+                    </choices>
+                </parameter>
+                <macro name="dataRequestParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+
+            <nodeType name="Dashboard:chart" description="Chart" renameAllowed="true" hasChildren="false">
+
+                <macro name="componentParameters"/>
+                <macro name="chartParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+
+            </nodeType>
+
+            <nodeType name="Dashboard:checkBox" description="Check Box" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="componentParameters"/>
+                <parameter name="fieldLabel" description="Field Label" type="string" group="Parameters" freehand="no"/>
+                <parameter name="trueAlias" description="Alias for setting true state" type="string" group="Parameters" freehand="no"/>
+                <parameter name="statePropertyToDisplay" description="State Property To Display" type="string" group="Parameters" freehand="no"/>
+                <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                    <choices>asDescription(list(
+                        "",
+                        ndo("TABULAR",l("TABULAR")),
+                        ndo("MODEL", l("MODEL")),
+                        ndo("MODEL_SECURE", l("MODEL_SECURE")),
+                        ndo("STATIC", l("STATIC")),
+                        ndo("STATE", l("STATE"))
+                        ))
+                    </choices>
+                    <default>
+                        ""
+                    </default>
+                </parameter>
+                <macro name="dataRequestParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+
+            <nodeType name="Dashboard:table" description="Table" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="componentParameters"/>
+                <parameter name="allowExportToExcel" description="Allow Export To Excel" type="string" group="Parameters" freehand="no">
+                    <default>
+                        "NO"
+                    </default>
+                    <choices>asDescription(list(
+                        ndo("NO",l("NO")),
+                        ndo("YES", l("YES"))
+                        ))
+                    </choices>
+                </parameter>
+
+                <parameter name="tableType" description="Table Type" type="string" group="Parameters" freehand="no">
+                    <choices>asDescription(list(
+                        ndo("SINGLE_ROW_SELECTION",l("SINGLE_ROW_SELECTION")),
+                        ndo("MULTI_ROW_SELECTION", l("MULTI_ROW_SELECTION")),
+                        ndo("NO_SELECTION", l("NO_SELECTION"))
+                        ))
+                    </choices>
+                </parameter>
+
+                <parameter name="disableAutoFill" description="Disable Auto Fill" type="string" group="Parameters" freehand="no">
+                    <default>
+                        "NO"
+                    </default>
+                    <choices>asDescription(list(
+                        "",
+                        ndo("NO",l("NO")),
+                        ndo("YES", l("YES"))
+                        ))
+                    </choices>
+                </parameter>
+
+                <parameter name="keepSelection" description="Keep selection after Component Update" type="string" group="Parameters" freehand="no">
+                    <default>
+                        "NO"
+                    </default>
+                    <choices>asDescription(list(
+                        "",
+                        ndo("NO",l("NO")),
+                        ndo("YES", l("YES"))
+                        ))
+                    </choices>
+                </parameter>
+
+                <parameter name="table:layout" description="Layout" type="tree" allowCopyPaste="false" group="Parameters" rootNodeType="tableLayoutRoot" >
+
+                    <nodeType name="tableLayoutRoot" description="Layout" renameAllowed="true"
+                              deleteAllowed="false" hasChildren="true" childrenAreFixed="false" childrenTypes="tableLayoutColumn">
+                    </nodeType>
+
+                    <nodeType name="tableLayoutColumn" description="Layout Column" renameAllowed="true"
+                              deleteAllowed="true" hasChildren="false">
+
+                        <parameter name="statePropertyName" description="State Property Name" type="string" freehand="no">
+                            <readOnly/>
+                        </parameter>
+                        <parameter name="title" description="Title" type="string"/>
+                        <parameter name="isVisibleByDefault" description="Is Visible" type="string"/>
+                        <parameter name="columnStyle" description="Column Style" type="string" freehand="no"/>
+                        <parameter name="cellStyle" description="Cell Style" type="string"/>
+                        <parameter name="initialWidth" description="Initial Width" type="NullableInteger" freehand="no"/>
+                        <parameter name="isFixed" description="Is Fixed" type="string" freehand="no">
+                            <choices>asDescription(list(
+                                "",
+                                ndo("YES", l("YES")),
+                                ndo("NO",l("NO"))
+                                ))
+                            </choices>
+                        </parameter>
+                        <parameter name="isSortable" description="Is Sortable" type="string" freehand="no">
+                            <choices>asDescription(list(
+                                "",
+                                ndo("YES", l("YES")),
+                                ndo("NO",l("NO"))
+                                ))
+                            </choices>
+                        </parameter>
+
+                        <parameter name="cellRendererType" description="Cell Renderer Type" type="String" defaultValue="" freehand="no"  group="Cell Renderer">
+                            <choices>asDescription(list(
+                                "",
+                                ndo("FILE UPLOAD", l("FILE UPLOAD")),
+                                ndo("COMBO BOX",l("COMBO BOX")),
+                                ndo("TEXT FIELD",l("TEXT FIELD")),
+                                ndo("FORMATTING",l("FORMATTING")),
+                                ndo("BUTTON",l("BUTTON")),
+                                ndo("ICON BUTTON",l("ICON BUTTON")),
+                                ndo("PROGRESS BAR",l("PROGRESS BAR"))
+                                ))
+                            </choices>
+                        </parameter>
+
+                        <parameter name="buttonType" description="Button Type" type="string" freehand="no" group="Cell Renderer">
+                            <if>"BUTTON" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                    <choices>asDescription(list(
+                                        ndo("TEXT", l("TEXT")),
+                                        ndo("ICON AND TEXT",l("ICON AND TEXT")),
+                                        ndo("ICON",l("ICON")), ndo("LINK",l("LINK"))
+                                        ))
+                                    </choices>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="buttonText" description="Button Caption" type="string"  group="Cell Renderer">
+                            <if>"BUTTON" == param("cellRendererType")
+                                <then>
+                                    <if> "ICON" == param("buttonType")
+                                        <then>
+                                            <disabled/>
+                                        </then>
+                                        <else>
+                                            <enabled/>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="buttonSrc" description="Button Icon Source" type="string" freehand="no" group="Cell Renderer">
+                            <if>"BUTTON" == param("cellRendererType")
+                                <then>
+                                    <if> "TEXT" == param("buttonType")
+                                        <then>
+                                            <disabled/>
+                                        </then>
+                                        <else>
+                                            <enabled/>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+
+                        </parameter>
+                        <parameter name="linkUrl" description="Link URL" type="string" group="Cell Renderer">
+                            <if>"BUTTON" == param("cellRendererType")
+                                <then>
+                                    <if> "LINK" == param("buttonType")
+                                        <then>
+                                            <enabled/>
+                                        </then>
+                                        <else>
+                                            <removed/>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+
+                        </parameter>
+
+                        <parameter name="buttonStyle" description="Button Icon CSS Class Name" type="string" freehand="no" group="Cell Renderer">
+                            <if>"ICON BUTTON" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="isEnabled" description="Is Enabled" type="string" group="Cell Renderer">
+                            <if>"BUTTON" == param("cellRendererType") or  "ICON BUTTON" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <macro name="actionMap" arguments="param('cellRendererType').contains('BUTTON'), false"/>
+
+                        <parameter name="statePropertyToDisplay" description="State Property To Display" type="string" freehand="no" group="Cell Renderer">
+                            <if>"COMBO BOX" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="stateField" description="State Field" type="string" freehand="no" group="Cell Renderer">
+                            <if>"COMBO BOX" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="type" description="Formatting Type" type="string" freehand="no" group="Cell Renderer">
+                            <if>"FORMATTING" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                    <choices>asDescription(list(
+                                        ndo("DATE", l("DATE")),
+                                        ndo("NUMBER",l("NUMBER"))
+                                        ))
+                                    </choices>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="format" description="Format" type="string" freehand="no" group="Cell Renderer">
+                            <if>"FORMATTING" == param("cellRendererType") or "PROGRESS BAR" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="prefix" description="Prefix text" type="string" freehand="no" group="Cell Renderer">
+                            <if>"PROGRESS BAR" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="suffix" description="Suffix text" type="string" freehand="no" group="Cell Renderer">
+                            <if>"PROGRESS BAR" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="barStyle" description="Progress bar style" type="string" group="Cell Renderer">
+                            <if>"PROGRESS BAR" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="method" description="Method" type="string" freehand="no" group="Data Request">
+                            <if>"COMBO BOX" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                    <choices>asDescription(list(
+                                        ndo("STATIC", l("STATIC")),
+                                        ndo("STATE",l("STATE"))
+                                        ))
+                                    </choices>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+                        <macro name="dataRequestParameters"/>
+                    </nodeType>
+
+                    <onNodeAdded>
+                        addedNode.param("statePropertyName") = addedNode.getName();
+                    </onNodeAdded>
+
+                    <onNodeRenamed>
+                        renamedNode.param("statePropertyName") = renamedNode.getName();
+                    </onNodeRenamed>
+                </parameter>
+
+                <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                    <choices>asDescription(list(
+                        ndo("STATIC", l("STATIC")),
+                        ndo("TABULAR",l("TABULAR")),
+                        ndo("MODEL",l("MODEL")),
+                        ndo("MODEL_SECURE",l("MODEL_SECURE")),
+                        ndo("STATE",l("STATE"))
+                        ))
+                    </choices>
+                </parameter>
+                <macro name="dataRequestParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+
+            <nodeType name="Dashboard:editableTable" description="Editable Table" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="componentParameters"/>
+                <macro name="actionMap" arguments="true, true"/>
+                <parameter name="allowExportToExcel" description="Allow Export To Excel" type="string" group="Parameters" freehand="no">
+                    <default>
+                        "NO"
+                    </default>
+                    <choices>asDescription(list(
+                        ndo("NO",l("NO")),
+                        ndo("YES", l("YES"))
+                        ))
+                    </choices>
+                </parameter>
+
+                <parameter name="tableType" description="Table Type" type="string" group="Parameters" freehand="no">
+                    <choices>asDescription(list(
+                        ndo("SINGLE_ROW_SELECTION",l("SINGLE_ROW_SELECTION")),
+                        ndo("MULTI_ROW_SELECTION", l("MULTI_ROW_SELECTION")),
+                        ndo("NO_SELECTION", l("NO_SELECTION"))
+                        ))
+                    </choices>
+                </parameter>
+
+                <parameter name="disableAutoFill" description="Disable Auto Fill" type="string" group="Parameters" freehand="no">
+                    <default>
+                        "NO"
+                    </default>
+                    <choices>asDescription(list(
+                        "",
+                        ndo("NO",l("NO")),
+                        ndo("YES", l("YES"))
+                        ))
+                    </choices>
+                </parameter>
+
+                <parameter name="keepSelection" description="Keep selection after Component Update" type="string" group="Parameters" freehand="no">
+                    <default>
+                        "NO"
+                    </default>
+                    <choices>asDescription(list(
+                        "",
+                        ndo("NO",l("NO")),
+                        ndo("YES", l("YES"))
+                        ))
+                    </choices>
+                </parameter>
+
+                <parameter name="table:layout" description="Layout" type="tree" allowCopyPaste="false" group="Parameters" rootNodeType="tableLayoutRoot" >
+
+                    <nodeType name="tableLayoutRoot" description="Layout" renameAllowed="true"
+                              deleteAllowed="false" hasChildren="true" childrenAreFixed="false" childrenTypes="tableLayoutColumn">
+                    </nodeType>
+
+                    <nodeType name="tableLayoutColumn" description="Layout Column" renameAllowed="true"
+                              deleteAllowed="true" hasChildren="false">
+
+                        <parameter name="statePropertyName" description="State Property Name" type="string" freehand="no">
+                            <readOnly/>
+                        </parameter>
+                        <parameter name="title" description="Title" type="string"/>
+                        <parameter name="isVisibleByDefault" description="Is Visible" type="string"/>
+                        <parameter name="columnStyle" description="Column Style" type="string" freehand="no"/>
+                        <parameter name="cellStyle" description="Cell Style" type="string"/>
+                        <parameter name="initialWidth" description="Initial Width" type="NullableInteger" freehand="no"/>
+                        <parameter name="isFixed" description="Is Fixed" type="string" freehand="no">
+                            <choices>asDescription(list(
+                                "",
+                                ndo("YES", l("YES")),
+                                ndo("NO",l("NO"))
+                                ))
+                            </choices>
+                        </parameter>
+                        <parameter name="isSortable" description="Is Sortable" type="string" freehand="no">
+                            <choices>asDescription(list(
+                                "",
+                                ndo("YES", l("YES")),
+                                ndo("NO",l("NO"))
+                                ))
+                            </choices>
+                        </parameter>
+
+                        <parameter name="cellRendererType" description="Cell Renderer Type" type="String" defaultValue="" freehand="no"  group="Cell Renderer">
+                            <choices>asDescription(list(
+                                "",
+                                ndo("FILE UPLOAD", l("FILE UPLOAD")),
+                                ndo("COMBO BOX",l("COMBO BOX")),
+                                ndo("TEXT FIELD",l("TEXT FIELD")),
+                                ndo("FORMATTING",l("FORMATTING")),
+                                ndo("BUTTON",l("BUTTON")),
+                                ndo("ICON BUTTON",l("ICON BUTTON")),
+                                ndo("PROGRESS BAR",l("PROGRESS BAR"))
+                                ))
+                            </choices>
+                        </parameter>
+
+                        <parameter name="cellEditorType" description="Cell Editor Type" type="String" defaultValue="TEXT" freehand="no"  group="Cell Editor">
+                            <choices>asDescription(list(
+                                ndo("TEXT", l("TEXT")),
+                                ndo("COMBO BOX",l("COMBO BOX")),
+                                ndo("CHECK BOX",l("CHECK BOX")),
+                                ndo("DATE", l("DATE"))
+                                ))
+                            </choices>
+                        </parameter>
+                        <parameter name="buttonType" description="Button Type" type="string" freehand="no" group="Cell Renderer">
+                            <if>"BUTTON" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                    <choices>asDescription(list(
+                                        ndo("TEXT", l("TEXT")),
+                                        ndo("ICON AND TEXT",l("ICON AND TEXT")),
+                                        ndo("ICON",l("ICON")), ndo("LINK",l("LINK"))
+                                        ))
+                                    </choices>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+                        <parameter name="trueValue" description="True Value" type="string" freehand="no" group="Cell Editor">
+                            <if>"CHECK BOX" == param("cellEditorType")
+                                <then>
+                                    <enabled/>
+
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="falseValue" description="False Value" type="string" freehand="no" group="Cell Editor">
+                            <if>"CHECK BOX" == param("cellEditorType")
+                                <then>
+                                    <enabled/>
+
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="validationScript" description="Validation Script" type="string" freehand="no" group="Cell Editor"/>
+
+
+                        <parameter name="buttonText" description="Button Caption" type="string"  group="Cell Renderer">
+                            <if>"BUTTON" == param("cellRendererType")
+                                <then>
+                                    <if> "ICON" == param("buttonType")
+                                        <then>
+                                            <disabled/>
+                                        </then>
+                                        <else>
+                                            <enabled/>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="buttonSrc" description="Button Icon Source" type="string" freehand="no" group="Cell Renderer">
+                            <if>"BUTTON" == param("cellRendererType")
+                                <then>
+                                    <if> "TEXT" == param("buttonType")
+                                        <then>
+                                            <disabled/>
+                                        </then>
+                                        <else>
+                                            <enabled/>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+
+                        </parameter>
+                        <parameter name="linkUrl" description="Link URL" type="string" group="Cell Renderer">
+                            <if>"BUTTON" == param("cellRendererType")
+                                <then>
+                                    <if> "LINK" == param("buttonType")
+                                        <then>
+                                            <enabled/>
+                                        </then>
+                                        <else>
+                                            <removed/>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+
+                        </parameter>
+
+                        <parameter name="buttonStyle" description="Button Icon CSS Class Name" type="string" freehand="no" group="Cell Renderer">
+                            <if>"ICON BUTTON" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="isEnabled" description="Is Enabled" type="string" group="Cell Renderer">
+                            <if>"BUTTON" == param("cellRendererType") or  "ICON BUTTON" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <macro name="actionMap" arguments="param('cellRendererType').contains('BUTTON'), false"/>
+
+                        <parameter name="statePropertyToDisplay" description="State Property To Display" type="string" freehand="no" group="Cell Renderer">
+                            <if>"COMBO BOX" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="stateField" description="State Field" type="string" freehand="no" group="Cell Renderer">
+                            <if>"COMBO BOX" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="type" description="Formatting Type" type="string" freehand="no" group="Cell Renderer">
+                            <if>"FORMATTING" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                    <choices>asDescription(list(
+                                        ndo("DATE", l("DATE")),
+                                        ndo("NUMBER",l("NUMBER"))
+                                        ))
+                                    </choices>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="format" description="Format" type="string" freehand="no" group="Cell Renderer">
+                            <if>"FORMATTING" == param("cellRendererType") or "PROGRESS BAR" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="prefix" description="Prefix text" type="string" freehand="no" group="Cell Renderer">
+                            <if>"PROGRESS BAR" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="suffix" description="Suffix text" type="string" freehand="no" group="Cell Renderer">
+                            <if>"PROGRESS BAR" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="barStyle" description="Progress bar style" type="string" group="Cell Renderer">
+                            <if>"PROGRESS BAR" == param("cellRendererType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="selectFieldExpression" description="Select Field Expression" type="string" group="Cell Editor" freehand="no">
+                            <if>"COMBO BOX" == param("cellEditorType")
+                                <then>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </parameter>
+
+                        <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                            <choices>asDescription(list(
+                                ndo("STATIC", l("STATIC")),
+                                ndo("TABULAR",l("TABULAR")),
+                                ndo("MODEL",l("MODEL")),
+                                ndo("MODEL_SECURE",l("MODEL_SECURE")),
+                                ndo("STATE",l("STATE"))
+                                ))
+                            </choices>
+                        </parameter>
+                        <macro name="dataRequestParameters"/>
+                    </nodeType>
+
+                    <onNodeAdded>
+                        addedNode.param("statePropertyName") = addedNode.getName();
+                    </onNodeAdded>
+
+                    <onNodeRenamed>
+                        renamedNode.param("statePropertyName") = renamedNode.getName();
+                    </onNodeRenamed>
+                </parameter>
+
+                <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                    <choices>asDescription(list(
+                        ndo("STATIC", l("STATIC")),
+                        ndo("TABULAR",l("TABULAR")),
+                        ndo("MODEL",l("MODEL")),
+                        ndo("MODEL_SECURE",l("MODEL_SECURE")),
+                        ndo("STATE",l("STATE"))
+                        ))
+                    </choices>
+                </parameter>
+                <macro name="dataRequestParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+
+            <nodeType name="Dashboard:dynamicTable" description="Dynamic datasource table" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+                <parameter name="sourceState" description="Source state name" type="string" freehand="no"/>
+                <parameter name="instanceDateState" description="Instance date state name" type="string" freehand="no"/>
+                <parameter name="instanceKeyStates" description="Instance keys and values state names" type="table"
+                           freehand="no">
+                    <parameter name="name" description="Name" type="string" freehand="no"/>
+                    <parameter name="value" description="Value" type="string" freehand="no"/>
+                </parameter>
+
+                <macro name="componentParameters"/>
+                <parameter name="allowExportToExcel" description="Allow Export To Excel" type="string" group="Parameters" freehand="no">
+                    <default>
+                        "NO"
+                    </default>
+                    <choices>asDescription(list(
+                        ndo("NO", l("NO")),
+                        ndo("YES",l("YES"))
+                        ))
+                    </choices>
+                </parameter>
+                <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                    <choices>asDescription(
+                        ndo("DYNAMIC_SOURCE",l("DYNAMIC_SOURCE"))
+                        )
+                    </choices>
+                </parameter>
+                <macro name="dataRequestParameters"/>
+            </nodeType>
+
+            <nodeType name="Dashboard:datePicker" description="Date Picker" renameAllowed="true" deleteAllowed="true" hasChildren="false">
+
+                <macro name="componentParameters"/>
+                <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                    <choices>asDescription(list(
+                        "",
+                        ndo("MODEL", l("MODEL")),
+                        ndo("MODEL_SECURE", l("MODEL_SECURE")),
+                        ndo("STATIC",l("STATIC")),
+                        ndo("TABULAR",l("TABULAR")),
+                        ndo("STATE",l("STATE"))
+                        ))
+                    </choices>
+                </parameter>
+                <macro name="dataRequestParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+                <parameter name="format" description="Format" type="string" group="Parameters" freehand="no"/>
+
+                <parameter name="statePropertyToDisplay" description="Display Field" type="string" group="Parameters" freehand="no"/>
+                <parameter name="isRequired" description="Is Required" type="string" group="Parameters" freehand="no">
+                    <default>
+                        "NO"
+                    </default>
+                    <choices>asDescription(list(
+                        ndo("YES", l("YES")),
+                        ndo("NO",l("NO"))
+                        ))
+                    </choices>
+                </parameter>
+                <parameter name="validation" description="Validation Script" type="string" group="Parameters" freehand="no"/>
+                <parameter name="validationResult" description="Validation Result Field" type="string" group="Parameters" freehand="no"/>
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+
+            <nodeType name="Dashboard:combobox" description="Combo Box" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="componentParameters"/>
+                <parameter name="statePropertyToDisplay" description="State Property To Display" type="string" group="Parameters" freehand="no"/>
+                <parameter name="selectFieldExpression" description="Select Field Expression" type="string" group="Parameters" freehand="no"/>
+                <parameter name="template" description="Template for combobox" type="string" group="Parameters" freehand="no"/>
+                <parameter name="isAllSupported" description="Is All Supported" type="string" group="Parameters" freehand="no">
+                    <choices>asDescription(list(
+                        "",
+                        ndo("YES", l("YES")),
+                        ndo("NO",l("NO"))
+                        ))
+                    </choices>
+                </parameter>
+                <macro name="outputFormatting"/>
+                <parameter name="isRequired" description="Is Required" type="string" group="Parameters" freehand="no">
+                    <default>
+                        "NO"
+                    </default>
+                    <choices>asDescription(list(
+                        ndo("YES", l("YES")),
+                        ndo("NO",l("NO"))
+                        ))
+                    </choices>
+                </parameter>
+                <parameter name="validation" description="Validation Script" type="string" group="Parameters" freehand="no"/>
+                <parameter name="validationResult" description="Validation Result Field" type="string" group="Parameters" freehand="no"/>
+
+                <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                    <choices>asDescription(list(
+                        ndo("STATIC", l("STATIC")),
+                        ndo("TABULAR",l("TABULAR")),
+                        ndo("MODEL",l("MODEL")),
+                        ndo("MODEL_SECURE",l("MODEL_SECURE")),
+                        ndo("STATE",l("STATE"))
+                        ))
+                    </choices>
+                </parameter>
+                <macro name="dataRequestParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+
+            <nodeType name="Dashboard:multiSelection" description="MultiSelection" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="componentParameters"/>
+                <parameter name="statePropertyToDisplay" description="Display Field" type="string" group="Parameters" freehand="no"/>
+                <parameter name="height" description="Height" type="NullableInteger" group="Parameters" freehand="no"/>
+                <parameter name="hasCheckAllButton" description="Has Check All Button" type="string" group="Parameters" freehand="no">
+                    <choices>asDescription(list(
+                        "",
+                        ndo("YES", l("YES")),
+                        ndo("NO",l("NO"))
+                        ))
+                    </choices>
+                </parameter>
+                <macro name="outputFormatting"/>
+
+                <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                    <choices>asDescription(list(
+                        ndo("TABULAR",l("TABULAR")),
+                        ndo("MODEL",l("MODEL")),
+                        ndo("MODEL_SECURE",l("MODEL_SECURE")),
+                        ndo("STATIC", l("STATIC")),
+                        ndo("STATE",l("STATE"))
+                        ))
+                    </choices>
+                </parameter>
+                <macro name="dataRequestParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+
+            <nodeType name="Dashboard:inputTextField" description="Input Text Field" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="componentParameters"/>
+                <parameter name="statePropertyToDisplay" description="Display Field" type="string" group="Parameters" freehand="no"/>
+                <parameter name="emptyText" description="Empty Text" type="string" freehand="no"/>
+                <parameter name="isRequired" description="Is Required" type="string" group="Parameters" freehand="no">
+                    <default>
+                        "NO"
+                    </default>
+                    <choices>asDescription(list(
+                        ndo("YES",l("YES")),
+                        ndo("NO",l("NO"))
+                        ))
+                    </choices>
+                </parameter>
+                <parameter name="validation" description="Validation Script" type="string" group="Parameters" freehand="no"/>
+                <parameter name="validationResult" description="Validation Result Field" type="string" group="Parameters" freehand="no"/>
+                <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                    <choices> asDescription(list(
+                        "",
+                        ndo("TABULAR",l("TABULAR")),
+                        ndo("MODEL",l("MODEL")),
+                        ndo("MODEL_SECURE",l("MODEL_SECURE")),
+                        ndo("STATIC", l("STATIC")),
+                        ndo("STATE",l("STATE"))
+                        ))
+                    </choices>
+                    <default>
+                        ""
+                    </default>
+                </parameter>
+                <macro name="dataRequestParameters"/>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+
+            <nodeType name="Dashboard:uploadButton" description="Upload Button" renameAllowed="true"
+                      deleteAllowed="true" hasChildren="false">
+
+                <macro name="componentParameters"/>
+                <parameter name="fieldName" description="Field Name" type="string" freehand="no"/>
+
+                <parameter name="fileExtensions" description="Allowed file extensions" type="table" allowAddRemove="true"  freehand="no">
+                    <parameter name="value" description="Value" type="string" length="20"  freehand="no"/>
+                </parameter>
+
+                <parameter name="fileMimeTypes" description="Allowed MIME types" type="table" allowAddRemove="true"  freehand="no">
+                    <parameter name="value" description="Value" type="string" length="20"  freehand="no"/>
+                </parameter>
+
+                <defaultNodeName>
+                    ;<macro name="getNodeName">currentNode</macro>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    var allNodes = <macro name="getAll">"isSomething"</macro>;
+                    var allNodeNames = macro("map", allNodes, "getName");
+                    <if>allNodeNames.contains(newValue)
+                        <then>
+                            ;l("Node name '%1' is not unique in the Dashboard.", newValue)
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </nodeNameValidation>
+            </nodeType>
+        </macro>
+
+        <!-- PARAMETERS -->
+        <macro name="panelParameters">
+            <parameter name="title" description="Title" type="string" group="Parameters" freehand="no">
+                <onParameterChange>
+                    <macro name="updateActions">currentNode.getName()<comma/>"formTitle"<comma/>currentNode.param("title")</macro>
+                </onParameterChange>
+            </parameter>
+
+            <parameter name="hideIfComponentIsEmpty" description="Hide If Component Is Empty" type="string" group="Parameters" freehand="no"/>
+
+            <macro name="layoutParameters"/>
+            <macro name="layoutDataParameters"/>
+        </macro>
+
+        <macro name="componentParameters">
+             <macro name="componentParametersCommonTitle"/>
+             <macro name="componentParametersWithoutTitle"/>
+        </macro>
+
+        <macro name="componentParametersButton">
+            <macro name="componentParametersButtonTitle"/>
+            <macro name="componentParametersWithoutTitle"/>
+        </macro>
+
+        <macro name="componentParametersCommonTitle">
+            <parameter name="title" description="Title" type="string" group="Parameters" freehand="no">
+                <validation>
+                    <if>macro("isEmpty", newValue)
+                        <then>
+                            ;l("Title cannot be empty")
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </validation>
+
+                <onParameterChange>
+                    <macro name="updateDependencies">currentNode.getName()<comma/>currentNode<comma/>
+                        "changeDependencyTitle"
+                    </macro>
+                    <macro name="updateStates">currentNode.getName()<comma/>"componentTitle"<comma/>
+                        currentNode.param("title")
+                    </macro>
+                </onParameterChange>
+            </parameter>
+
+        </macro>
+
+        <macro name="componentParametersButtonTitle">
+            <parameter name="title" description="Title" type="string" group="Parameters">
+                <validation>
+                    <if>macro("isEmpty", newValue)
+                        <then>
+                            ;l("Title cannot be empty")
+                        </then>
+                        <else>
+                            ;null
+                        </else>
+                    </if>
+                </validation>
+                <createDefaultNonFreehandValue>
+                    var result = l("Empty expression!").toString()
+                    ;result
+                </createDefaultNonFreehandValue>
+                <onParameterChange>
+                    <macro name="updateDependencies">currentNode.getName()<comma/>currentNode<comma/>
+                        "changeDependencyTitle"
+                    </macro>
+                    <macro name="updateStates">currentNode.getName()<comma/>"componentTitle"<comma/>
+                        currentNode.param("title")
+                    </macro>
+                </onParameterChange>
+            </parameter>
+
+        </macro>
+
+        <macro name="componentParametersWithoutTitle">
+
+            <parameter name="type" description="Type" type="string" group="Parameters" freehand="no">
+                <readOnly/>
+            </parameter>
+
+            <parameter name="isVisible" description="Is Visible" type="string" group="Parameters" freehand="no"/>
+
+            <macro name="layoutDataParameters"/>
+            <macro name="dependencies"/>
+            <macro name="resetStateDependencies"/>
+
+            <parameter name="bpmProcessIds" description="BPM Process IDs" group="BPM" type="Table" freehand="no">
+                <parameter name="value" description="Value" type="string" freehand="no"/>
+            </parameter>
+
+            <parameter name="toolTipTitle" description="ToolTip Title" type="string" group="Parameters" freehand="no">
+                <if>"Dashboard:chart" != currentNode.type()
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+            <parameter name="toolTipText" description="ToolTip Text" type="string" group="Parameters" freehand="no">
+                <if>"Dashboard:chart" != currentNode.type()
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+
+        </macro>
+
+        <!--action map-->
+        <macro name="actionMap" arguments="isEnabled, isGlobal">
+            <parameter name="actionMap" description="Action Map" type="tree" group="Actions" rootNodeType="Dashboard:actionMap"
+                       plugInClass="axiomsl.gui.dashboard.editor.ActionsParameterValue">
+                <if><isEnabled/>
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+                <nodeType name="Dashboard:actionMap" description="Action Map" renameAllowed="false" deleteAllowed="true"
+                          hasChildren="true" childrenAreFixed="false" childrenTypes="Dashboard:actionChain">
+
+                    <parameter name="actionKey" description="Action Key" type="string" freehand="no"/>
+                </nodeType>
+
+                <nodeType name="Dashboard:actionChain" description="Action Chain" renameAllowed="false"
+                          deleteAllowed="true" hasChildren="true" childrenAreFixed="false"
+                          childrenTypes="Dashboard:action, Dashboard:actionChain, Dashboard:actionMap">
+
+                    <parameter name="key" description="Key" type="string"  freehand="no"/>
+                    <parameter name="iterateOver" description="Iterate Over" type="string"  freehand="no"/>
+                </nodeType>
+
+                <nodeType name="Dashboard:action" description="Action" renameAllowed="false"
+                          deleteAllowed="true" hasChildren="true" childrenTypes="Dashboard:actionComponentState">
+
+                    <parameter name="type" description="Type" type="string"  freehand="no">
+                        <if><isGlobal/>
+                            <then>
+                                <choices>asDescription(ndo("ASL",l("ASL")))
+                                </choices>
+                            </then>
+                            <else>
+                                <choices>asDescription(list(
+                                    ndo("SHOW_FORM",l("SHOW_FORM")),
+                                    ndo("HIDE_FORM",l("HIDE_FORM")),
+                                    ndo("UPLOAD_FILE", l("UPLOAD_FILE")),
+                                    ndo("RMI",l("RMI")),
+                                    ndo("OPEN_HYPERLINK",l("OPEN_HYPERLINK")),
+                                    ndo("ASL",l("ASL")),
+                                    ndo("REFRESH_DYNAMIC",l("REFRESH_DYNAMIC")),
+                                    ndo("INJECT_STATES",l("INJECT_STATES")),
+                                    ndo("OPEN_DASHBOARD",l("OPEN_DASHBOARD"))
+                                    ))
+                                    </choices>
+                            </else>
+                        </if>
+                    </parameter>
+
+                    <parameter name="return" description="Return" type="string"  freehand="no"/>
+
+                    <parameter name="dashboardId" description="Dashboard ID(objectId_branchId)" type="String" freehand="no">
+                        <if>"OPEN_DASHBOARD" == param("type")
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+                    </parameter>
+
+                    <parameter name="dashboardMapping" description="Dashboard Mapping Name" type="String" freehand="no">
+                        <if>"OPEN_DASHBOARD" == param("type")
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+                    </parameter>
+
+                    <parameter name="dashboardHttpUrl" description="Dashboard HTTP Url" type="String" freehand="no">
+                        <if>"OPEN_DASHBOARD" == param("type")
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+                    </parameter>
+
+                    <parameter name="componentId" description="Component ID" type="String" freehand="no">
+                        <if>"REFRESH_DYNAMIC" == param("type") or "INJECT_STATES" == param("type")
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+
+
+                        <attribute name="lookupFromValues">
+                            l("Component") <comma/>
+
+                            var components = <macro name="getAll">"isComponent"</macro>;
+
+                            var ndoList = list();
+                            <for>var i = 0<comma/>i &lt; components.size()<comma/>i++
+                                <do>
+                                    ndoList.add(ndo(components.get(i).getName(), components.get(i).param("title")));
+                                </do>
+                            </for>
+
+                            ;ndoList
+                        </attribute>
+
+                        <convertInputValue>
+                            ;inputValue.getName()
+                        </convertInputValue>
+
+                        <onParameterChange>
+                            var components = <macro name="getAll">"isComponent"</macro>;
+                            var component = macro("chooseByID", components, newValue);
+                        </onParameterChange>
+                    </parameter>
+
+                    <parameter name="map" description="Component States to Inject" type="table" freehand="no">
+                        <if>"INJECT_STATES" == param("type")
+                            <then><enabled/></then>
+                            <else><removed/></else>
+                        </if>
+
+                        <parameter name="name" description="Name" type="string" freehand="no"/>
+                        <parameter name="value" description="Value" type="string" freehand="no"/>
+                    </parameter>
+
+                    <!-- SHOW FORM, HIDE FORM, UPLOAD_FILE -->
+                    <parameter name="formId" description="Form ID" type="string"  freehand="no">
+                        <if>"SHOW_FORM" == param("type") or "HIDE_FORM" == param("type") or "UPLOAD_FILE" == param("type")
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+
+                        <attribute name="lookupFromValues">
+                            l("Forms")<comma/>
+                            var forms = <macro name="getAll">"isWindowOrForm"</macro>;
+
+                            var ndoList = list();
+                            <for>var i = 0<comma/>i &lt; forms.size()<comma/>i++
+                                <do>
+                                    ndoList.add(ndo(forms.get(i).getName(), forms.get(i).param("title")));
+                                </do>
+                            </for>
+
+                            ;ndoList
+                        </attribute>
+
+                        <convertInputValue>
+                            ;inputValue.getName()
+                        </convertInputValue>
+                    </parameter>
+
+                    <parameter name="resetFields" description="Reset fields" type="boolean"  defaultValue="false" freehand="no">
+                        <if>"SHOW_FORM" == param("type") or "HIDE_FORM" == param("type")
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+                    </parameter>
+
+                    <parameter name="formTitle" description="Form Title" type="string" noSerialization="yes"  freehand="no">
+                        <if>"SHOW_FORM" == param("type") or "HIDE_FORM" == param("type") or "UPLOAD_FILE" == param("type")
+                            <then>
+                                <readonly/>;
+                                <default>
+                                    ""
+                                </default>;
+                                <equals>
+                                    var forms = <macro name="getAll">"isWindowOrForm"</macro>;
+                                    var form = macro("chooseByID", forms, param("formId"));
+                                    var result = "";
+                                    <if>form != null
+                                        <then>
+                                            result = form.param("title");
+                                        </then>
+                                    </if>
+                                    ;result
+                                </equals>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+                    </parameter>
+
+                    <!-- ASL -->
+                    <parameter name="expression" description="Expression" type="string" freehand="yes">
+                        <if>"ASL" == param("type")
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+                    </parameter>
+
+                    <!-- RMI -->
+                    <parameter name="methodName" description="Method Name" type="string"  freehand="no">
+                        <if>"RMI" == param("type")
+                            <then>
+                                <enabled/>
+                                <choices>
+                                    "executeBPMUserTask",
+                                    "assignBPMUserTask",
+                                    "unassignBPMUserTask"
+                                </choices>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+                    </parameter>
+
+                    <parameter name="parameters" description="Parameters" type="table" allowAddRemove="true"  freehand="no">
+                        <if>"RMI" == param("type")
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+                        <parameter name="value" description="Value" type="string" length="20"  freehand="no"/>
+                    </parameter>
+
+                    <!-- OPEN HYPERLINK -->
+                    <parameter name="hyperlink" description="Hyperlink" type="string"  freehand="no">
+                        <if>"OPEN_HYPERLINK" == param("type")
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+                    </parameter>
+
+                    <parameter name="roles" description="Roles" type="table" keyParameter="role" uniqueKey="true"
+                               allowCopyPaste="false" freehand="no">
+                        <parameter name="role" description="Roles" type="string" freehand="no">
+                            <readOnly/>
+                            <!-- only chosen from lookup -->
+                            <attribute name="lookupFromValues">
+                                l("Roles")<comma/>
+                                var roles = editor.getRemoteProxy().lookupObjects("Role");
+                                var lookupRows = new("java.util.Vector");
+                                <for>var index = 0<comma/>index &lt; roles.size()<comma/>index++
+                                    <do>
+                                        lookupRows.add(roles.get(index).getName());
+                                    </do>
+                                </for>
+                                function("java.util.Collections", "sort", lookupRows);
+                                ;lookupRows
+                            </attribute>
+                        </parameter>
+                    </parameter>
+                </nodeType>
+                <onNodeAdded>
+                    addedNode.setName(addedNode.getName().replaceAll("(^New_|_[0-9]+$)", "").replaceAll("_", " "));
+                </onNodeAdded>
+
+                <nodeType name="Dashboard:actionComponentState" description="Component_id" renameAllowed="true"
+                          deleteAllowed="true" hasChildren="true" childrenTypes="Dashboard:actionState">
+                    <parameter name="componentId" description="Component ID" type="string" freehand="no">
+                        <onParameterChange>
+                            <if>!oldValue.equals(newValue)
+                                <then>
+                                    currentNode.setName(newValue);
+                                </then>
+                            </if>
+                        </onParameterChange>
+                    </parameter>
+                </nodeType>
+                <onNodeRenamed>
+                    <if>"Dashboard:actionComponentState" == renamedNode.type()
+                        <then>
+                            renamedNode.param("componentId") = renamedNode.getName();
+                        </then>
+                    </if>
+                </onNodeRenamed>
+                <validateNode>
+                    <if>"Dashboard:action" == parentNode.type() and parentNode.param("type") != "OPEN_DASHBOARD"
+                        <then>
+                            return l("Cannot add anything but panel into panel with TAB layout");
+                        </then>
+                    </if>
+                </validateNode>
+
+                <nodeType name="Dashboard:actionState" description="State Row" renameAllowed="false"
+                          deleteAllowed="true" hasChildren="false">
+                    <parameter name="map" description="Component States to Inject in open dashboard" type="table" freehand="no">
+                        <parameter name="name" description="Name" type="string" freehand="no"/>
+                        <parameter name="value" description="Value" type="string" freehand="no"/>
+                    </parameter>
+                </nodeType>
+            </parameter>
+        </macro>
+
+        <!-- LAYOUT -->
+        <macro name="layoutParameters">
+            <parameter name="Layout:layoutChooser" description="Layout" type="string" group="Layout" freehand="no">
+                <choices>asDescription(list(
+                    ndo("ROW LAYOUT",l("ROW LAYOUT")),
+                    ndo("WINDOW LAYOUT",l("WINDOW LAYOUT")),
+                    ndo("FORM LAYOUT",l("FORM LAYOUT")),
+                    ndo("TAB LAYOUT",l("TAB LAYOUT")),
+                    ndo("BORDER LAYOUT",l("BORDER LAYOUT")),
+                    ndo("FIT LAYOUT",l("FIT LAYOUT"))
+                    ))
+                </choices>
+
+                <onParameterChange>
+                    <for>var i = 0;<comma/>i &lt; currentNode.childCount()<comma/>i++
+                        <do>
+                            <macro name="updateParentLayoutParameter">currentNode.child(i)</macro>
+                        </do>
+                    </for>
+                </onParameterChange>
+            </parameter>
+
+            <parameter name="Layout:width" description="Width" type="NullableInteger"  group="Layout" freehand="no"/>
+            <parameter name="Layout:height" description="Height" type="NullableInteger" group="Layout" freehand="no"/>
+            <parameter name="Layout:border" description="Border" type="Boolean" group="Layout" defaultValue="false" freehand="no"/>
+            <parameter name="Layout:frame" description="Frame" type="string" group="Layout" defaultValue="NO" freehand="no">
+                <choices>asDescription(list(
+                    "",
+                    ndo("YES",l("YES")),
+                    ndo("NO",l("NO"))
+                    ))
+                </choices>
+            </parameter>
+            <parameter name="Layout:isShowHeader" description="Show Header" type="string" group="Layout" defaultValue="NO" freehand="no">
+                <choices>asDescription(list(
+                    "",
+                    ndo("YES",l("YES")),
+                    ndo("NO",l("NO"))
+                    ))
+                </choices>
+            </parameter>
+
+            <!-- WINDOW LAYOUT -->
+            <parameter name="Layout:resizable" description="Resizable" type="string" group="Layout" defaultValue="NO" freehand="no">
+                <if>"WINDOW LAYOUT" == param("Layout:layoutChooser")
+                    <then>
+                        <enabled/>
+                        <choices>asDescription(list(
+                            "",
+                            ndo("YES",l("YES")),
+                            ndo("NO",l("NO"))
+                            ))
+                        </choices>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="Layout:closable" description="Closable" type="string" group="Layout" defaultValue="YES" freehand="no">
+                <if>"WINDOW LAYOUT" == param("Layout:layoutChooser")
+                    <then>
+                        <enabled/>
+                        <choices>asDescription(list(
+                            "",
+                            ndo("YES",l("YES")),
+                            ndo("NO",l("NO"))
+                            ))
+                        </choices>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="Layout:draggable" description="Draggable" type="string" group="Layout" defaultValue="YES" freehand="no">
+                <if>"WINDOW LAYOUT" == param("Layout:layoutChooser")
+                    <then>
+                        <enabled/>
+                        <choices>asDescription(list(
+                            "",
+                            ndo("YES",l("YES")),
+                            ndo("NO",l("NO"))
+                            ))
+                        </choices>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+
+            <!-- ROW LAYOUT -->
+            <parameter  name="Layout:orientation" description="Orientation" type="string" group="Layout" freehand="no">
+                <if>"ROW LAYOUT" == param("Layout:layoutChooser")
+                    <then>
+                        <enabled/>
+                        <choices>asDescription(list(
+                            ndo("VERTICAL",l("VERTICAL")),
+                            ndo("HORIZONTAL",l("HORIZONTAL"))
+                            ))
+                        </choices>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+
+            <!-- TAB LAYOUT -->
+            <parameter name="Layout:isTab" description="Is Tab" type="Boolean" group="Layout" defaultValue="false" freehand="no">
+                <if>"TAB LAYOUT" == param("Layout:layoutChooser")
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+
+            <!-- BORDER LAYOUT -->
+            <parameter name="Layout:isMainPanel" description="Is Main Panel" type="Boolean" group="Layout" defaultValue="false" freehand="no">
+                <if>"BORDER LAYOUT" == param("Layout:layoutChooser")
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+        </macro>
+
+        <!-- LAYOUT DATA -->
+        <macro name="layoutDataParameters">
+            <parameter name="LayoutData:parentLayout" description="Parent Layout" type="string" group="Layout Data" hidden="true" freehand="no"/>
+
+            <parameter name="LayoutData:layoutData" description="Layout Data" type="string" group="Layout Data" hidden="true" noSerialization="yes" freehand="no">
+                <equals>
+                    var parentLayout = param("LayoutData:parentLayout");
+                    <case>
+                        macro("isEmpty", parentLayout)
+                        <then>
+                            ;"LAYOUT DATA"
+                        </then>
+                        "BORDER LAYOUT" == parentLayout
+                        <then>
+                            ;"BORDER LAYOUT DATA"
+                        </then>
+                        "ROW LAYOUT" == parentLayout
+                        <then>
+                            ;"ROW LAYOUT DATA"
+                        </then>
+                        <default>
+                            ;"LAYOUT DATA"
+                        </default>
+                    </case>
+                </equals>
+            </parameter>
+
+            <!-- LAYOUT DATA -->
+            <parameter name="LayoutData:margins" description="Equal Margins" type="NullableInteger" group="Layout Data" freehand="no"/>
+            <parameter name="LayoutData:margin_left" description="Margin Left" type="NullableInteger" group="Layout Data" freehand="no"/>
+            <parameter name="LayoutData:margin_right" description="Margin Right" type="NullableInteger" group="Layout Data" freehand="no"/>
+            <parameter name="LayoutData:margin_top" description="Margin Top" type="NullableInteger" group="Layout Data" freehand="no"/>
+            <parameter name="LayoutData:margin_bottom" description="Margin Bottom" type="NullableInteger" group="Layout Data" freehand="no"/>
+
+            <!-- BORDER LAYOUT DATA -->
+            <parameter name="LayoutData:layoutRegion" description="Layout Region" type="string" group="Layout Data" freehand="no">
+                <if>"BORDER LAYOUT DATA" == param("LayoutData:layoutData")
+                    <then>
+                        <enabled/>
+                        <choices>asDescription(list(
+                            ndo("CENTER",l("CENTER")),
+                            ndo("NORTH",l("NORTH")),
+                            ndo("SOUTH",l("SOUTH")),
+                            ndo("EAST",l("EAST")),
+                            ndo("WEST",l("WEST"))
+                            ))
+                        </choices>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="LayoutData:size" description="Size" type="NullableDouble" group="Layout Data" freehand="no">
+                <if>"BORDER LAYOUT DATA" == param("LayoutData:layoutData")
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="LayoutData:floatable" description="Floatable" type="string" defaultValue="NO" group="Layout Data" freehand="no">
+                <if>"BORDER LAYOUT DATA" == param("LayoutData:layoutData")
+                    <then>
+                        <enabled/>
+                        <choices>asDescription(list(
+                            "",
+                            ndo("YES",l("YES")),
+                            ndo("NO",l("NO"))
+                            ))
+                        </choices>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="LayoutData:split" description="Split" type="string" defaultValue="NO" group="Layout Data" freehand="no">
+                <if>"BORDER LAYOUT DATA" == param("LayoutData:layoutData")
+                    <then>
+                        <enabled/>
+                        <choices>asDescription(list(
+                            "",
+                            ndo("YES",l("YES")),
+                            ndo("NO",l("NO"))
+                            ))
+                        </choices>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+
+            <!-- ROW LAYOUT DATA -->
+            <parameter name="LayoutData:width" description="Width" type="NullableDouble" group="Layout Data" freehand="no">
+                <if>"ROW LAYOUT DATA" == param("LayoutData:layoutData")
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="LayoutData:height" description="Height" type="NullableDouble" group="Layout Data" freehand="no">
+                <if>"ROW LAYOUT DATA" == param("LayoutData:layoutData")
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+            </parameter>
+        </macro>
+
+        <macro name="updateParentLayoutParameter" arguments="node">
+            var parent = <node/>.parent();
+            <if>!macro("isPanel",  parent)
+                <then>
+                    <node/>.param("LayoutData:parentLayout") = "";
+                </then>
+                <else>
+                    <node/>.param("LayoutData:parentLayout") = parent.param("Layout:layoutChooser");
+                </else>
+            </if>
+        </macro>
+
+        <!-- OUTPUT FORMATTING -->
+        <macro name="outputFormatting">
+            <parameter name="formattingType" description="Formatting Type" type="string" group="Parameters" defaultValue="" freehand="no">
+                <choices>asDescription(list(
+                    "",
+                    ndo("NUMBER",l("NUMBER")),
+                    ndo("DATE",l("DATE"))
+                    ))
+                </choices>
+            </parameter>
+            <parameter name="format" description="Format" type="string" group="Parameters" freehand="no"/>
+        </macro>
+
+        <!-- DATA REQUEST -->
+        <macro name="dataRequestParameters">
+            <!-- MODEL  and TABULAR -->
+            <parameter name="model" description="Dictionary Entry" group="Data Request" type="String" freehand="no">
+                <if>"MODEL" == param("method") or "MODEL_SECURE" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+
+                <attribute name="lookupFromValues">
+                    l("Data Dictionary Entry")
+                    <comma/>
+                    var entries = <macro name="flatten">param("dataDictionary")<comma/>"isDataModelEntry"</macro>;
+
+                    var nameList = list();
+                    <for>var i = 0<comma/>i &lt; entries.size()<comma/>i++
+                        <do>
+                            nameList.add(entries.get(i).getName());
+                        </do>
+                    </for>
+
+                    ;nameList
+                </attribute>
+
+                <convertInputValue>
+                    ;inputValue.getName()
+                </convertInputValue>
+
+                <verifyForSave>
+                    var paramValue = currentParameter.getParameterValue();
+                    var entries = <macro name="flatten">param("dataDictionary")<comma/>"isDataModelEntry"</macro>;
+                    entries = macro("map", entries, "getName");
+                    <if>macro("isEmpty", paramValue)
+                        <then>
+                            error(l("Cannot save the Dashboard. Data Model Entry is not specified in '%1'.",currentNode.getName()))
+                        </then>
+                        <else>
+                            <if>entries.contains(paramValue)
+                                <then>
+                                    ;true
+                                </then>
+                                <else>
+                                    errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Data Model Entry '%1' was not found.", paramValue)));
+                                    ;false
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </verifyForSave>
+            </parameter>
+
+            <parameter name="tabular" description="Dictionary Entry" group="Data Request" type="String" freehand="no">
+                <if>"TABULAR" != param("method")
+                    <then><removed/></then>
+                    <else><enabled/></else>
+                </if>
+
+                <attribute name="lookupFromValues">
+                    l("Data Dictionary Entry")
+                    <comma/>
+                    var entries = <macro name="flatten">param("dataDictionary")<comma/>"isTabularReportEntry"</macro>;
+
+                    var nameList = list();
+                    <for>var i = 0<comma/>i &lt; entries.size()<comma/>i++
+                        <do>
+                            nameList.add(entries.get(i).getName());
+                        </do>
+                    </for>
+
+                    ;nameList
+                </attribute>
+
+                <convertInputValue>
+                    ;inputValue.getName()
+                </convertInputValue>
+
+                <verifyForSave>
+                    var paramValue = currentParameter.getParameterValue();
+                    var entries = <macro name="flatten">param("dataDictionary")<comma/>"isTabularReportEntry"</macro>;
+                    entries = macro("map", entries, "getName");
+                    <if>macro("isEmpty", paramValue)
+                        <then>
+                            error(l("Cannot save the Dashboard.").concat(" ").concat(l("Tabular Report Entry is not specified in '%1'.", currentNode.getName())))
+                        </then>
+                        <else>
+                            <if>entries.contains(paramValue)
+                                <then>
+                                    ;true
+                                </then>
+                                <else>
+                                    errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Tabular Report Entry '%1' was not found.", paramValue)));
+                                    ;false
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </verifyForSave>
+            </parameter>
+
+            <parameter name="source" description="Source" group="Data Request" type="String" freehand="no">
+            <if>"DYNAMIC_SOURCE" != param("method")
+                <then><removed/></then>
+                <else><enabled/></else>
+            </if>
+            </parameter>
+            <parameter name="instanceDate" description="Instance Date" type="String" group="Data Request">
+                <if>"MODEL" == param("method")  or  "DYNAMIC_SOURCE" == param("method")  or  "MODEL_SECURE" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+                <!-- TODO: verifyForSave -->
+            </parameter>
+
+            <parameter name="instanceKeys" description="Instance Keys" type="table" group="Data Request">
+                <if>"MODEL" == param("method")  or  "DYNAMIC_SOURCE" == param("method")  or  "MODEL_SECURE" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+
+                <parameter name="name" description="Name" type="string" />
+                <parameter name="value" description="Value" type="string"/>
+            </parameter>
+
+            <parameter name="isAllInstances" description="Is All Instances" type="string" group="Data Request" defaultValue="" freehand="no">
+                <if>"MODEL" == param("method") or  "MODEL_SECURE" == param("method")
+                    <then>
+                        <enabled/>
+                        <choices>asDescription(list(
+                            "",
+                            ndo("YES",l("YES")),
+                            ndo("NO",l("NO"))
+                            ))
+                        </choices>
+                    </then>
+                    <else><removed/></else>
+                </if>
+            </parameter>
+
+            <parameter name="selectList" description="Select List" type="table" group="Data Request" freehand="no">
+                <if>"MODEL" == param("method") or "TABULAR" == param("method") or  "MODEL_SECURE" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+
+                <parameter name="statePropertyName" description="State Property Name" type="string" freehand="no"/>
+
+                <parameter name="column" description="Column" type="string" freehand="no">
+                    <attribute name="lookupFromValues">
+                        l("Data Dictionary Entry")
+                        <comma/>
+                        <if>macro("isEmpty", param("model")) and macro("isEmpty", param("tabular"))
+                            <then>
+                                ;editor.getEntryDescriptions(param("dataDictionary"), null)
+                            </then>
+                            <else>
+                                <if>"MODEL" == param("method")  or  "MODEL_SECURE" == param("method")
+                                    <then>
+                                        ;editor.getEntryDescriptions(macro("getEntry", param("model"), "isDataModelEntry"), null)
+                                    </then>
+                                    <else>
+                                        ;editor.getEntryDescriptions(macro("getEntry", param("tabular"), "isTabularReportEntry"), null)
+                                    </else>
+                                </if>
+                            </else>
+                        </if>
+                    </attribute>
+
+                    <verifyForSave>
+                        var model_entries;
+                        <if>"MODEL" == param("method")  or "MODEL_SECURE" == param("method")
+                            <then>
+                                model_entries = editor.getEntryDescriptions(macro("getEntry", param("model"), "isDataModelEntry"), null)
+                            </then>
+                            <else>
+                                model_entries = editor.getEntryDescriptions(macro("getEntry", param("tabular"), "isTabularReportEntry"), null)
+                            </else>
+                        </if>
+                        model_entries = macro("map", model_entries, "getName");
+                        <forTable name="selectList">
+                            var paramValue = currentParameter.getParameterValue();
+                            <if>model_entries.contains(paramValue)
+                                <then>
+                                    ;true
+                                </then>
+                                <else>
+                                    errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Column '%1' was not found.", paramValue)));
+                                    ;false
+                                </else>
+                            </if>
+                        </forTable>
+                    </verifyForSave>
+                </parameter>
+            </parameter>
+
+            <parameter name="orderByList" description="Order By List" type="table" group="Data Request" freehand="no">
+                <if>"MODEL" == param("method") or "MODEL_SECURE" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+
+                <parameter name="column" description="Column" type="string" freehand="no">
+                    <attribute name="lookupFromValues">
+                        l("Data Dictionary Entry")
+                        <comma/>
+                        ;editor.getEntryDescriptions(param("dataDictionary"), null)
+                    </attribute>
+
+                    <validation>
+                        <if>macro("isEmpty", newValue)
+                            <then>
+                                errorMessage(l("Column cannot be empty."));
+                                ;false
+                            </then>
+                        </if>
+                    </validation>
+
+                    <verifyForSave>
+                        var entries = editor.getEntryDescriptions(param("dataDictionary"), null);
+                        entries = macro("map", entries, "getName");
+                        <forTable name="orderByList">
+                            var paramValue = currentParameter.getParameterValue();
+                            <if>entries.contains(paramValue)
+                                <then>
+                                    ;true
+                                </then>
+                                <else>
+                                    errorMessage(l("Cannot save the Dashboard.").concat(" ").concat(l("Data Dictionary Entry '%1' was not found.", paramValue)));
+                                    ;false
+                                </else>
+                            </if>
+                        </forTable>
+                    </verifyForSave>
+                </parameter>
+
+                <parameter name="isAscending" description="Is Ascending" type="boolean" freehand="no"/>
+            </parameter>
+
+            <parameter name="condition" description="Condition" type="string" group="Data Request" length="40">
+                <if>"MODEL" == param("method") or "TABULAR" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+            </parameter>
+
+            <parameter name="conditionTable" description="Condition Table" type="table" group="Data Request">
+                <if>"MODEL_SECURE" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+                <parameter name="name" description="Condition ID" type="string" freehand="no">
+                    <validation>
+                        <if>macro("isEmpty", newValue)
+                            <then>
+                                errorMessage(l("Column cannot be empty."));
+                                ;false
+                            </then>
+                        </if>
+                    </validation>
+                </parameter>
+                <parameter name="value" description="Value" type="string" freehand="yes">
+                    <validation>
+                        <if>macro("isEmpty", newValue)
+                            <then>
+                                errorMessage(l("Column cannot be empty."));
+                                ;false
+                            </then>
+                        </if>
+                    </validation>
+                </parameter>
+            </parameter>
+
+            <parameter name="variables" description="Variables Table" type="table" group="Data Request">
+                <if>"MODEL_SECURE" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+                <parameter name="name" description="Variable ID" type="string" freehand="no">
+                    <validation>
+                        <if>macro("isEmpty", newValue)
+                            <then>
+                                errorMessage(l("Column cannot be empty."));
+                                ;false
+                            </then>
+                        </if>
+                    </validation>
+                </parameter>
+                <parameter name="value" description="Value" type="string" freehand="no">
+                    <validation>
+                        <if>macro("isEmpty", newValue)
+                            <then>
+                                errorMessage(l("Column cannot be empty."));
+                                ;false
+                            </then>
+                        </if>
+                    </validation>
+                </parameter>
+                <parameter name="type" description="Type" type="string" freehand="no">
+                    <choices>asDescription(list(
+                        "",
+                        ndo("INTEGER",l("INTEGER")),
+                        ndo("FLOAT",l("FLOAT")),
+                        ndo("STRING", l("STRING")),
+                        ndo("DATE", l("DATE"))
+                        ))
+                    </choices>
+                </parameter>
+                <parameter name="isList" description="Is List" type="string" freehand="no">
+                    <choices>asDescription(list(
+                        ndo("NO",l("NO")),
+                        ndo("YES", l("YES"))
+                        ))
+                    </choices>
+                </parameter>
+            </parameter>
+
+            <parameter name="isDistinct" description="Is Distinct" type="string" group="Data Request" defaultValue="" freehand="no">
+                <if>"MODEL" == param("method") or "MODEL_SECURE" == param("method")
+                    <then>
+                        <enabled/>
+                        <choices>asDescription(list(
+                            "",
+                            ndo("YES",l("YES")),
+                            ndo("NO",l("NO"))
+                            ))
+                        </choices>
+                    </then>
+                    <else><removed/></else>
+                </if>
+            </parameter>
+
+            <parameter name="reportDate" description="Report Date" type="string" group="Data Request">
+                <if>"TABULAR" == param("method")
+                    <then><enabled/><default>""</default></then>
+                    <else><removed/></else>
+                </if>
+                <!-- TODO: verifyForSave -->
+            </parameter>
+
+            <parameter name="parameterValues" description="Task Parameter Values" type="tree" group="Data Request" rootNodeType="parameterValuesRoot" freehand="no" allowCopyPaste="false">
+
+                <if>"TABULAR" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+
+                <nodeType name="parameterValuesRoot" description="Parameter Values" renameAllowed="false" deleteAllowed="false"
+                          hasChildren="true" childrenAreFixed="false" childrenTypes="parameterValue">
+                </nodeType>
+
+                <nodeType name="parameterValue" description="Parameter Value" renameAllowed="true" deleteAllowed="true"
+                          hasChildren="true" childrenAreFixed="false" childrenTypes="parameterValue">
+
+                    <parameter name="name" description="Name" type="string" freehand="no">
+                        <readOnly/>
+                    </parameter>
+
+                    <!-- Parameter is used to explicitly "notify" other parameters about changes -->
+                    <parameter name="updateFlag" description="Update Flag" type="Boolean" hidden="true" freehand="no">
+                        <default>
+                            ;true
+                        </default>
+
+                        <onParameterChange>
+                            currentParameter.setValueInternal(false);
+                        </onParameterChange>
+                    </parameter>
+
+                    <parameter name="valueType" description="Value Type" type="string" defaultValue="STRING" freehand="no">
+                        <if>param("updateFlag") and (macro("isEmpty", currentNode) or currentNode.childCount() == 0)
+                            <then>
+                                <enabled/>
+                                <choices>asDescription(list(
+                                    ndo("STRING",l("STRING")),
+                                    ndo("INTEGER",l("INTEGER")),
+                                    ndo("FLOAT",l("FLOAT")),
+                                    ndo("DATE",l("DATE")),
+                                    ndo("VECTOR",l("VECTOR")),
+                                    ndo("FREEHAND",l("FREEHAND"))
+                                    ))
+                                </choices>
+                            </then>
+                            <else>
+                                <choices>asDescription(ndo("VECTOR",l("VECTOR")))
+                                </choices>
+                                <readOnly/>
+                            </else>
+                        </if>
+                    </parameter>
+
+                    <parameter name="value" description="Value" type="string" freehand="no">
+                        <if>("VECTOR" == param("valueType")) or ("FREEHAND" == param("valueType"))
+                            <then><removed/></then>
+                            <else><enabled/></else>
+                        </if>
+
+                        <validation>
+                            <if>macro("isEmpty", newValue)
+                                <then>
+                                    ;null
+                                </then>
+                                <else>
+                                    <try>
+                                        <case>
+                                            "INTEGER" == param("valueType")
+                                            <then>
+                                                function("java.lang.Integer", "parseInt", newValue);
+                                                ;null
+                                            </then>
+                                            "FLOAT" == param("valueType")
+                                            <then>
+                                                function("java.lang.Float", "parseFloat", newValue);
+                                                ;null
+                                            </then>
+                                            "DATE" == param("valueType")
+                                            <then>
+                                                var dateFormat = new("java.text.SimpleDateFormat", "yyyy-MM-dd HH:mm:ss");
+                                                dateFormat.parse(newValue);
+                                                ;null
+                                            </then>
+                                            <default>
+                                                ;null
+                                            </default>
+                                        </case>
+                                        <catch>var e</catch>
+                                        <if>"DATE" == param("valueType")
+                                            <then>
+                                                ;l("Wrong date format. Use 'yyyy-MM-dd HH:mm:ss' pattern.")
+                                            </then>
+                                            <else>
+                                                ;l("Value doesn't correspond to type: %1.", param("valueType"))
+                                            </else>
+                                        </if>
+                                    </try>
+                                </else>
+                            </if>
+                        </validation>
+
+                        <verifyForSave>
+                            <if>macro("isEmpty", currentParameter.getValue()) and (!(param("valueType") == "STRING"))
+                                <then>
+                                    error(l("Empty Task Parameter Value in %1", param("name")));
+                                    ;false
+                                </then>
+                                <else>
+                                    ;true
+                                </else>
+                            </if>
+                        </verifyForSave>
+                    </parameter>
+
+                    <parameter name="freehandValue" description="Value" type="string" freehand="yes">
+                        <if>not ("FREEHAND" == param("valueType"))
+                            <then><removed/></then>
+                            <else><enabled/></else>
+                        </if>
+                    </parameter>
+                </nodeType>
+
+                <onNodeAdded>
+                    var parentNode = addedNode.parent();
+                    <if>parentNode.getNode().m_Type.m_sName == "parameterValue"
+                        <then>
+                            parentNode.param("updateFlag") = true;
+                        </then>
+                    </if>
+                    addedNode.param("name") = addedNode.getName();
+                </onNodeAdded>
+
+                <onNodeRenamed>
+                    renamedNode.param("name") = renamedNode.getName();
+                </onNodeRenamed>
+
+                <onNodeDeleted>
+                    var parentNode = deletedNode.parent();
+                    <if>parentNode.getNode().m_Type.m_sName == "parameterValue"
+                        <then>
+                            parentNode.param("updateFlag") = true;
+                        </then>
+                    </if>
+                </onNodeDeleted>
+            </parameter>
+
+            <parameter name="streams" description="Streams" type="table" group="Data Request" freehand="no" reorder="false">
+                <if>"TABULAR" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+
+                <parameter name="streamKeyName" description="Stream Key Name" type="string" freehand="no"/>
+                <parameter name="streamKeyValue" description="Stream Key Value" type="string"/>
+
+                <!-- TODO: reorder (group by key) -->
+            </parameter>
+
+            <!--&lt;!&ndash; RMI &ndash;&gt;-->
+            <!--<parameter name="methodName" description="Method Name" type="string" group="Data Request">-->
+            <!--<if>"RMI" == param("method")-->
+            <!--<then><enabled/></then>-->
+            <!--<else><removed/></else>-->
+            <!--</if>-->
+            <!--</parameter>-->
+
+            <!--<parameter name="parameters" description="Parameters" type="table" group="Data Request">-->
+            <!--<if>"RMI" == param("method")-->
+            <!--<then><enabled/></then>-->
+            <!--<else><removed/></else>-->
+            <!--</if>-->
+
+            <!--<parameter name="value" description="Value" type="string"/>-->
+            <!--</parameter>-->
+
+            <!--&lt;!&ndash; REST &ndash;&gt;-->
+            <!--<parameter name="url" description="Url" type="string" group="Data Request">-->
+            <!--<if>"REST" == param("method")-->
+            <!--<then><enabled/></then>-->
+            <!--<else><removed/></else>-->
+            <!--</if>-->
+            <!--</parameter>-->
+
+            <!-- STATIC -->
+            <parameter name="layout" description="Layout" type="table" group="Data Request" freehand="no">
+                <if>"STATIC" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+
+                <parameter name="value" description="Value" type="string" freehand="no"/>
+            </parameter>
+
+            <parameter name="grid" description="Grid" type="table" keyParameter="staticRow" uniqueKey="false" group="Data Request" allowCopyPaste="false" reorder="false" freehand="no">
+                <if>"STATIC" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+
+                <parameter name="staticRow" description="Static Row" type="string" freehand="no">
+                    <readOnly/>
+
+                    <attribute name="lookupFromValues">
+                        l("Static Row Number")<comma/>
+                        var namePrefix = "Static Row ";
+                        var grid = param("grid");
+                        var maxRowNumber = 0;
+                        <for>var index = 0<comma/>index &lt; grid.size()<comma/>index++
+                            <do>
+                                var staticRow = grid.get(index).param("staticRow");
+                                <if>staticRow.startsWith(namePrefix)
+                                    <then>
+                                        var staticRowNumber = function("java.lang.Integer", "parseInt", staticRow.replaceFirst("^Static Row ", ""));
+                                        <if>staticRowNumber > maxRowNumber
+                                            <then>
+                                                maxRowNumber = staticRowNumber;
+                                            </then>
+                                        </if>
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+
+                        var lookupRows = new("java.util.Vector");
+                        <for>var index = 1<comma/>index &lt; maxRowNumber + 2<comma/>index++
+                            <do>
+                                lookupRows.add(index);
+                            </do>
+                        </for>
+                        function("java.util.Collections", "sort", lookupRows);
+                        ;lookupRows
+                    </attribute>
+
+                    <convertInputValue>
+                        ;"Static Row " + inputValue
+                    </convertInputValue>
+
+                    <onParameterChange>
+                        var grid = param("grid").getLines();
+                        <if>macro("isEmpty", oldValue)
+                            <then>
+                                var insertIndex = - 1;
+                                var newStaticRow = function("java.lang.Integer", "parseInt", grid.get(grid.size() - 1).getParameterValue("staticRow").replaceFirst("^Static Row ", ""));
+                                <for>var index = 0<comma/>index &lt; grid.size() - 1<comma/>index++
+                                    <do>
+                                        var currentRow = function("java.lang.Integer", "parseInt", grid.get(index).getParameterValue("staticRow").replaceFirst("^Static Row ", ""));
+                                        <if>insertIndex &lt; 0 and currentRow &gt; newStaticRow
+                                            <then>
+                                                insertIndex = index;
+                                            </then>
+                                        </if>
+                                    </do>
+                                </for>
+
+                                <if>insertIndex >= 0
+                                    <then>
+                                        grid.insertElementAt(grid.get(grid.size() - 1), insertIndex);
+                                        grid.remove(grid.size() - 1);
+                                    </then>
+                                </if>
+                            </then>
+                        </if>
+                        param("grid").setLines(grid);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="value" description="Value" type="string" freehand="no"/>
+
+                <onRowDeleted>
+                    var deletedStaticRow = deletedRow.param("staticRow");
+                    var grid = param("grid");
+                    var isLast = true;
+                    <for>var index = 0<comma/>index &lt; grid.size()<comma/>index++
+                        <do>
+                            <if>grid.get(index).param("staticRow") == deletedStaticRow
+                                <then>
+                                    isLast = false;
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+
+                    <if>isLast
+                        <then>
+                            var deletedStaticRowIndex = <macro name="getStaticRowIndex">deletedStaticRow</macro>;
+                            <for>var index = 0<comma/>index &lt; grid.size()<comma/>index++
+                                <do>
+                                    var currentStaticRow = grid.get(index).param("staticRow");
+                                    var currentStaticRowIndex = <macro name="getStaticRowIndex">currentStaticRow</macro>;
+                                    <if>currentStaticRowIndex &gt; deletedStaticRowIndex
+                                        <then>
+                                            grid.get(index).param("staticRow") = "Static Row " + (currentStaticRowIndex - 1);
+                                        </then>
+                                    </if>
+                                </do>
+                            </for>
+                        </then>
+                    </if>
+                </onRowDeleted>
+            </parameter>
+
+            <!-- STATE -->
+            <parameter name="componentId" description="Component ID" type="String" group="Data Request" freehand="no">
+                <if>"STATE" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+
+                <attribute name="lookupFromValues">
+                    l("Component") <comma/>
+
+                    var components = <macro name="getAll">"isComponent"</macro>;
+                    components.remove(currentNode);
+
+                    var ndoList = list();
+                    <for>var i = 0<comma/>i &lt; components.size()<comma/>i++
+                        <do>
+                            ndoList.add(ndo(components.get(i).getName(), components.get(i).param("title")));
+                        </do>
+                    </for>
+
+                    ;ndoList
+                </attribute>
+
+                <convertInputValue>
+                    ;inputValue.getName()
+                </convertInputValue>
+
+                <onParameterChange>
+                    var components = <macro name="getAll">"isComponent"</macro>;
+                    var value = macro("chooseByID", components, newValue);
+                    <if>"STATE" == param("method")
+                        <then>
+                            <if>value == null
+                                <then>
+                                    param("componentTitle") = "";
+                                </then>
+                                <else>
+                                    param("componentTitle") = value.param("title");
+                                </else>
+                            </if>
+                        </then>
+                    </if>
+                </onParameterChange>
+            </parameter>
+
+            <parameter name="componentTitle" description="Component Title" type="string" group="Data Request" noSerialization="yes" freehand="no">
+                <if>"STATE" == param("method")
+                    <then>
+                        <enabled/>
+                        <readOnly/>
+                        <default>""</default>
+                    </then>
+                    <else><removed/></else>
+                </if>
+            </parameter>
+
+            <parameter name="state:selectList" description="Select List" type="table" group="Data Request" freehand="no">
+                <if>"STATE" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+
+                <parameter name="value" description="Value" type="string" freehand="no"/>
+            </parameter>
+
+            <parameter name="filter" description="Filter" type="string" group="Data Request" freehand="no">
+                <if>"STATE" == param("method")
+                    <then><enabled/></then>
+                    <else><removed/></else>
+                </if>
+            </parameter>
+        </macro>
+
+        <!-- DEPENDENCIES -->
+        <macro name="dependencies">
+            <parameter name="dependencies" description="Dependencies" type="table" keyParameter="componentID" allowCopyPaste="false" group="Dependencies" freehand="no">
+                <parameter name="componentID" description="Component ID" type="String" freehand="no">
+                    <readOnly/>
+
+                    <attribute name="lookupFromValues">
+                        l("Component") <comma/>
+
+                        var components = <macro name="getAll">"isComponent"</macro>;
+                        components.remove(currentNode);
+
+                        var dependencies = currentNode.param("dependencies");
+                        <for>var i = 0<comma/>i &lt; dependencies.size()<comma/>i++
+                            <do>
+                                <!-- @NotNull -->
+                                var component = macro("chooseByID", components, dependencies.get(i).param("componentID"));
+                                components.remove(component);
+                            </do>
+                        </for>
+
+                        var ndoList = list();
+                        <for>var i = 0<comma/>i &lt; components.size()<comma/>i++
+                            <do>
+                                ndoList.add(ndo(components.get(i).getName(), components.get(i).param("title")));
+                            </do>
+                        </for>
+
+                        ;ndoList
+                    </attribute>
+
+                    <convertInputValue>
+                        ;inputValue.getName()
+                    </convertInputValue>
+
+                    <onParameterChange>
+                        var components = <macro name="getAll">"isComponent"</macro>;
+                        var component = macro("chooseByID", components, newValue);
+                        param("componentType") = component.getNode().m_Type.m_sDescription.toString();
+                        param("componentTitle") = component.param("title");
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="componentType" description="Type" type="string" freehand="no">
+                    <readOnly/>
+                    <default>""</default>
+                </parameter>
+
+                <parameter name="componentTitle" description="Title" type="string" freehand="no">
+                    <readOnly/>
+                    <default>""</default>
+                </parameter>
+            </parameter>
+        </macro>
+
+        <macro name="resetStateDependencies">
+            <parameter name="resetStateDependencies" description="Reset State Dependencies" type="table" keyParameter="componentID" allowCopyPaste="false" group="Dependencies" freehand="no">
+                <if>macro("hasResetStateDependencies", currentNode)
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <removed/>
+                    </else>
+                </if>
+                <parameter name="componentID" description="Component ID" type="String" freehand="no">
+                    <readOnly/>
+
+                    <attribute name="lookupFromValues">
+                        l("Component") <comma/>
+
+                        var components = <macro name="getAll">"isComponent"</macro>;
+                        components.remove(currentNode);
+
+                        var dependencies = currentNode.param("resetStateDependencies");
+                        <for>var i = 0<comma/>i &lt; dependencies.size()<comma/>i++
+                            <do>
+                                <!-- @NotNull -->
+                                var component = macro("chooseByID", components, dependencies.get(i).param("componentID"));
+                                components.remove(component);
+                            </do>
+                        </for>
+
+                        var ndoList = list();
+                        <for>var i = 0<comma/>i &lt; components.size()<comma/>i++
+                            <do>
+                                ndoList.add(ndo(components.get(i).getName(), components.get(i).param("title")));
+                            </do>
+                        </for>
+
+                        ;ndoList
+                    </attribute>
+
+                    <convertInputValue>
+                        ;inputValue.getName()
+                    </convertInputValue>
+
+                    <onParameterChange>
+                        var components = <macro name="getAll">"isComponent"</macro>;
+                        var component = macro("chooseByID", components, newValue);
+                        param("componentType") = component.getNode().m_Type.m_sDescription.toString();
+                        param("componentTitle") = component.param("title");
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="componentType" description="Type" type="string" noSerialization="yes" freehand="no">
+                    <readOnly/>
+                    <default>""</default>
+                </parameter>
+
+                <parameter name="componentTitle" description="Title" type="string" noSerialization="yes" freehand="no">
+                    <readOnly/>
+                    <default>""</default>
+                </parameter>
+            </parameter>
+        </macro>
+
+        <!-- UPDATES -->
+        <macro name="getNodeName" arguments="component">
+            var suffixFormatter = new("java.text.DecimalFormat", "000");
+
+            var allStuff = <macro name="getAll">"isSomething"</macro>;
+            var allStuffNames = macro("map", allStuff, "getName");
+
+            var componentType = <component/>.getNode().m_Type.m_sDescription.getEnglish().toString().replace(' ', '_');
+            var maxSuffix = 0;
+            var currentSuffix = 0;
+            <for>var stuffNameIndex = 0<comma/>stuffNameIndex &lt; allStuffNames.size()<comma/>stuffNameIndex++
+                <do>
+                    <if>allStuffNames.get(stuffNameIndex).matches("^New_" + componentType + "_[\d]+$")
+                        <then>
+                            currentSuffix = function("java.lang.Integer", "parseInt", allStuffNames.get(stuffNameIndex).replaceAll("^New_" + componentType + "_", ""));
+                            <if>currentSuffix > maxSuffix
+                                <then>
+                                    maxSuffix = currentSuffix;
+                                </then>
+                            </if>
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;"New_" + componentType + "_" + suffixFormatter.format(1 + maxSuffix)
+        </macro>
+
+        <macro name="updateStates" arguments="updatingNodeID, parameterName, parameterValue">
+            var components = macro("getAll", "isComponent");
+            <for>var index = 0<comma/>index &lt; components.size()<comma/>index++
+                <do>
+                    var component = components.get(index);
+                    <if>macro("hasParam", component, "method") and "STATE" == component.param("method") and component.param("componentId") == <updatingNodeID/>
+                        <then>
+                            component.param(<parameterName/>) = <parameterValue/>;
+                        </then>
+                    </if>
+                </do>
+            </for>
+        </macro>
+
+        <macro name="updateActions" arguments="updatingNodeID, parameterName, parameterValue">
+            var buttons = macro("getAll", "isButton");
+            var actions = list();
+            <for>var index = 0<comma/>index &lt; buttons.size()<comma/>index++
+                <do>
+                    actions.addAll(macro("flatten", buttons.get(index).param("actionMap"), "isAction"));
+                </do>
+            </for>
+
+            <for>var index = 0<comma/>index &lt; actions.size()<comma/>index++
+                <do>
+                    var action = actions.get(index);
+                    var type = action.param("type");
+                    <if>"SHOW_FORM" == type or "HIDE_FORM" == type or "UPLOAD_FILE" == type
+                        <then>
+                            <if>action.param("formId") == <updatingNodeID/>
+                                <then>
+                                    action.param(<parameterName/>) = <parameterValue/>;
+                                </then>
+                            </if>
+                        </then>
+                    </if>
+                </do>
+            </for>
+        </macro>
+
+        <macro name="updateDependencies" arguments="oldName, changedNode, macroName">
+            <if>macro("isComponent", <changedNode/>)
+                <then>
+                    var components = <macro name="getAll">"isComponent"</macro>;
+                    <for>var i = 0<comma/>i &lt; components.size()<comma/>i++
+                        <do>
+                            var dependencies = components.get(i).param("dependencies");
+                            <for>var j = 0<comma/>j &lt; dependencies.size()<comma/>j++
+                                <do>
+                                    var dependency = dependencies.get(j);
+                                    <if>dependency.param("componentID") == <oldName/>;
+                                        <then>
+                                            macro(<macroName/>, dependencies, dependency, j, <changedNode/>);
+                                        </then>
+                                    </if>
+                                </do>
+                            </for>
+                        </do>
+                    </for>
+                </then>
+            </if>
+        </macro>
+
+        <macro name="renameDependency" arguments="dependencies, dependency, dependencyIndex, changedNode">
+            <dependency/>.getParam("componentID").setValueInternal(<changedNode/>.getName());
+        </macro>
+
+        <macro name="changeDependencyTitle" arguments="dependencies, dependency, dependencyIndex, changedNode">
+            <dependency/>.param("componentTitle") = <changedNode/>.param("title");
+        </macro>
+
+        <macro name="removeDependency" arguments="dependencies, dependency, dependencyIndex, changedNode">
+            <dependencies/>.remove(<dependencyIndex/>);
+        </macro>
+
+        <!-- DATA DICTIONARY UTILS -->
+        <macro name="isTabularReportEntry" arguments="node">
+            var nodeType = node.getNode().m_Type.m_sName;
+            ;"Dashboard:dictionary_TABULAR" == nodeType or "Dashboard:dictionary_DYNAMIC_TABULAR" == nodeType
+        </macro>
+
+        <macro name="isDataModelEntry" arguments="node">
+            var nodeType = node.getNode().m_Type.m_sName;
+            ;"Dashboard:dictionary_DATAMODEL" == nodeType or "Dashboard:dictionary_DYNAMIC_MODEL" == nodeType
+        </macro>
+
+        <macro name="isDataDictionaryEntry" arguments="node">
+            ;node.getNode().m_Type.m_sName.startsWith("Dashboard:dictionary_")
+        </macro>
+
+        <macro name="getSourceFieldName" arguments="sourceField">
+            ;<sourceField/>.getName()
+        </macro>
+
+        <macro name="getModelFieldName" arguments="modelField">
+            ;<modelField/>.getAlias() + "." + <modelField/>.getName()
+        </macro>
+
+        <macro name="entryParameters">
+            <parameter name="name" description="Name" type="string" freehand="no">
+                <onParameterChange>
+                    <if>!oldValue.equals(newValue)
+                        <then>
+                            currentNode.setName(newValue);
+                        </then>
+                    </if>
+                </onParameterChange>
+            </parameter>
+
+            <parameter name="type" description="Type" type="string" freehand="no">
+                <readOnly/>
+                <default>
+                    ;currentNode.getNode().m_Type.m_sDescription.getEnglish().toString()
+                </default>
+            </parameter>
+
+            <parameter name="description" description="Description" type="string" freehand="no"/>
+        </macro>
+
+        <macro name="isValidTabularReportField" arguments="object">
+            ;"TabularReport:field" == <object/>.getObjectType() or "TabularReport:syntheticField" == <object/>.getObjectType() or "TabularReport:subTotalField" == <object/>.getObjectType() or "TabularReport:auxField" == <object/>.getObjectType()
+        </macro>
+
+        <!-- DASHBOARD EDITOR UTILS -->
+        <macro name="clearStringParameter" arguments="parameterName">
+            <if>!macro("isEmpty", param(<parameterName/>))
+                <then>
+                    param(<parameterName/>) = "";
+                </then>
+            </if>
+        </macro>
+
+        <macro name="isSomething" arguments="node">
+            ;macro("isComponent", <node/>) or macro("isPanel", <node/>)
+        </macro>
+
+        <macro name="isWindowOrForm" arguments="node">
+            ;"Dashboard:formPanel" == <node/>.type() or "Dashboard:window" == <node/>.type()
+        </macro>
+
+        <macro name="isPanel" arguments="node">
+            ;"Dashboard:panel" == <node/>.type() or "Dashboard:formPanel" == <node/>.type() or "Dashboard:window" == <node/>.type();
+        </macro>
+
+        <macro name="isComponent" arguments="node">
+            ;<node/>.type().startsWith("Dashboard:") and !macro("isPanel", <node/>)
+        </macro>
+
+        <macro name="isButton" arguments="node">
+            ;"Dashboard:button" == <node/>.type()
+        </macro>
+
+        <macro name="isAction" arguments="node">
+            ;"Dashboard:action" == <node/>.type()
+        </macro>
+
+        <macro name="isFieldEntry" arguments="node">
+            ;<node/>.type().startsWith("Dashboard:dictionary_") and <node/>.type().endsWith("FIELD")
+        </macro>
+
+        <macro name="isNotNull" arguments="value">
+            <if><value/> == null
+                <then>
+                    ;false
+                </then>
+                <else>
+                    ;true
+                </else>
+            </if>
+        </macro>
+
+        <macro name="hasParam" arguments="context, param">
+            ;<context/>.getParameterList().getParameter(<param/>) != null
+        </macro>
+
+
+        <macro name="hasResetStateDependencies" arguments="node">
+            var nodeType = <node/>.type();
+            var result = !("Dashboard:uploadButton" == nodeType or "Dashboard:button" == nodeType
+            or "Dashboard:label" == nodeType or "Dashboard:checkBox" == nodeType or "Dashboard:chart" == nodeType);
+            ;result
+        </macro>
+
+        <macro name="getAll" arguments="macroName">
+            var viewRoot = param("view");
+            var windowsRoot = param("windows");
+
+            var result = macro("flatten", viewRoot, <macroName/>);
+            result.addAll(macro("flatten", windowsRoot, <macroName/>));
+
+            ;result
+        </macro>
+
+        <macro name="getName" arguments="item">
+            <if><item/> instanceof "java.lang.String"
+                <then>
+                    ;<item/>
+                </then>
+                <else>
+                    ;<item/>.getName()
+                </else>
+            </if>
+        </macro>
+
+        <macro name="getNameProperty" arguments="item">
+            ;<item/>.getProperty("name")
+        </macro>
+
+        <macro name="chooseByID" arguments="components, id">
+            var result = null;
+            <for>var j = 0<comma/>j &lt; <components/>.size()<comma/>j++
+                <do>
+                    <if><id/> == <components/>.get(j).getName()
+                        <then>
+                            result = <components/>.get(j);
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;result
+        </macro>
+
+        <macro name="getStaticRowIndex" arguments="staticRow">
+            ;function("java.lang.Integer", "parseInt", <staticRow/>.replaceFirst("^Static Row ", ""))
+        </macro>
+
+        <macro name="clearStringParameter" arguments="parameterName">
+            <if>!macro("isEmpty", param(<parameterName/>))
+                <then>
+                    param(<parameterName/>) = "";
+                </then>
+            </if>
+        </macro>
+
+        <!-- DATA MODEL UTILS -->
+        <!-- TODO: use or remove -->
+        <macro name="getAsOfDateList" arguments="branchId, dataModel">
+            var dataModelInstances = macro("locateObject",<branchId/>, <dataModel/>, "DataModelInstances");
+            var dataModelInstancesTable = dataModelInstances.getTable("instances");
+
+            var macrosAsOfDateList = list();
+            var dataModelInstanceProperties = null;
+            <for>var dataModelInstanceIndex = 0<comma/>dataModelInstanceIndex &lt; dataModelInstancesTable.size()<comma/>dataModelInstanceIndex++
+                <do>
+                    dataModelInstanceProperties = new(
+                    "axiomsl.server.instancemanager.DataModelInstanceProperties",
+                    null, dataModelInstances, dataModelInstancesTable.get(dataModelInstanceIndex), null, editor.getAxiomEnvironment()
+                    );
+                    macrosAsOfDateList.add(dataModelInstanceProperties.getInstanceDate());
+                </do>
+            </for>
+
+            ;<macro name="map">macrosAsOfDateList<comma/>"toString"</macro>
+        </macro>
+
+        <!-- TODO: use or remove -->
+        <macro name="locateObject" arguments="branchId, objectName, objectType">
+            var objectIDClass = "axiomsl.server.object_framework.ObjectID";
+            <if>macro("isEmpty", <objectName/>) or macro("isEmpty", <objectType/>)
+                <then>
+                    ;null
+                </then>
+                <else>
+                    var objectId = function(objectIDClass, "createNameId",<objectType/>, <branchId/>, <objectName/>);
+                    ;editor.locateIfExists(objectId);
+                </else>
+            </if>
+        </macro>
+
+        <macro name="checkObjectExists" arguments="branchId, objectName, objectType">
+            ;editor.getRemoteProxy().isObjectExists(<objectType/>, <objectName/>, <branchId/>)
+        </macro>
+
+        <macro name="getEntry" arguments="name, typeMacro">
+            var entries = <macro name="flatten">param("dataDictionary")<comma/><typeMacro/></macro>;
+            var index = 0;
+            <for>var i = 0<comma/>i &lt; entries.size()<comma/>i++
+                <do>
+                    <if>entries.get(i).getName().equals(<name/>)
+                        <then>
+                            index = i;
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;entries.get(index)
+        </macro>
+
+        <!-- TREE UTILS -->
+        <macro name="flatten" arguments="root, macroName">
+            var flattenStack = list();
+            flattenStack.add(<root/>);
+            var flattenTree = list();
+            <for><comma/>!flattenStack.isEmpty()<comma/>
+                <do>
+                    var indx = flattenStack.size() - 1;
+                    var node = flattenStack.get(indx);
+                    flattenStack.removeElementAt(indx);
+                    <for>var i = 0<comma/>i &lt; node.childCount()<comma/>i++
+                        <do>
+                            flattenStack.add(node.child(i));
+                        </do>
+                    </for>
+                    var macroResult = macro(<macroName/>, node);
+                    <if>macroResult
+                        <then>
+                            flattenTree.add(node);
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;flattenTree
+        </macro>
+
+        <!-- FUNCTIONAL UTILS -->
+        <macro name="toString" arguments="object">
+            ;<object/>.toString()
+        </macro>
+
+        <macro name="map" arguments="items, macroName">
+            var mapResult = list();
+            <for>var mapItemIndex = 0<comma/>mapItemIndex &lt; <items/>.size()<comma/>mapItemIndex++
+                <do>
+                    mapResult.add(macro(<macroName/>, <items/>.get(mapItemIndex)));
+                </do>
+            </for>
+            ;mapResult
+        </macro>
+
+        <macro name="filter" arguments="items, macroName">
+            var filterResult = list();
+            <for>var filterItemIndex = 0<comma/>filterItemIndex &lt; <items/>.size()<comma/>filterItemIndex++
+                <do>
+                    <if>macro(<macroName/>, <items/>.get(filterItemIndex))
+                        <then>
+                            filterResult.add(<items/>.get(filterItemIndex));
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;filterResult
+        </macro>
+
+        <macro name="chartParameters">
+            <parameter name="subtitle" type="string" description="Subtitle" group="Parameters" freehand="no"/>
+            <parameter name="polar" type="boolean" description="Polar" group="Parameters" freehand="no"/>
+            <parameter name="startAngle" type="NullableInteger" description="Start Angle" group="Parameters" freehand="no"/>
+            <parameter name="endAngle" type="NullableInteger" description="End Angle" group="Parameters" freehand="no"/>
+            <parameter name="pointStart" type="NullableInteger" description="Point Start" group="Parameters" freehand="no"/>
+            <parameter name="pointInterval" type="NullableInteger" description="Points Interval" group="Parameters" freehand="no"/>
+            <parameter name="inverted" type="boolean" description="Inverted" group="Parameters" freehand="no"/>
+            <parameter name="zoom" type="string" description="Zoom" group="Parameters" freehand="no">
+                <choices>asDescription(list(
+                    ndo("NO",l("NO")),
+                    ndo("X_AND_Y",l("X_AND_Y")),
+                    ndo("X",l("X")),
+                    ndo("Y",l("Y"))
+                    ))
+                </choices>
+            </parameter>
+            <parameter name="method" description="Method" type="string" group="Data Request" freehand="no">
+                <choices>asDescription(list(
+                    ndo("STATIC",l("STATIC")),
+                    ndo("TABULAR",l("TABULAR")),
+                    ndo("MODEL",l("MODEL")),
+                    ndo("MODEL_SECURE",l("MODEL_SECURE")),
+                    ndo("STATE",l("STATE"))
+                    ))
+                </choices>
+            </parameter>
+            <macro name="dataRequestParameters"/>
+
+
+            <parameter name="legendBorder" description="Border" type="NullableDouble" group="Legend" freehand="no"/>
+            <parameter name="legendX" description="Horizontal Position" type="string" group="Legend" freehand="no">
+                <choices> asDescription(list(
+                    ndo("RIGHT",l("RIGHT")),
+                    ndo("LEFT",l("LEFT")),
+                    ndo("CENTER",l("CENTER"))
+                    ))
+                </choices>
+            </parameter>
+            <parameter name="legendY" description="Vertical Position" type="string" group="Legend" freehand="no">
+                <choices> asDescription(list(
+                    ndo("TOP",l("TOP")),
+                    ndo("MIDDLE",l("MIDDLE")),
+                    ndo("BOTTOM",l("BOTTOM"))
+                    ))
+                </choices>
+            </parameter>
+
+            <parameter name="xAxises" description="X-axes" type="tree" group="X-axes" rootNodeType="Dashboard:axises">
+                <macro name="chartAxises"/>
+            </parameter>
+
+            <parameter name="yAxises" description="Y-axes" type="tree" group="Y-axes" rootNodeType="Dashboard:axises">
+                <macro name="chartAxises"/>
+            </parameter>
+
+            <parameter name="series" description="Series" type="tree" group="Series" rootNodeType="Dashboard:seriesRoot">
+                <macro name="initSeries"/>
+            </parameter>
+        </macro>
+
+        <macro name="chartAxises">
+            <nodeType name="Dashboard:axises" description="Axes" hasChildren="true" childrenTypes="Dashboard:chartAxis" deleteAllowed="false" renameAllowed="false">
+            </nodeType>
+            <nodeType name="Dashboard:chartAxis" description="Axis" hasChildren="false" deleteAllowed="true" renameAllowed="true">
+                <parameter name="axisId" type="integer" description="Axis ID" group="Parameters" freehand="no"/>
+                <parameter name="name" type="string" description="Axis Name" group="Parameters" freehand="no"/>
+                <parameter name="interval" type="NullableInteger" description="Interval" group="Optional" freehand="no"/>
+                <parameter name="color" type="string" description="Axis Color" group="Optional" freehand="no"/>
+                <parameter name="gridColor" type="string" description="Grid Color" group="Optional" freehand="no"/>
+                <parameter name="min" type="NullableDouble" description="Min" group="Optional" freehand="no"/>
+                <parameter name="max" type="NullableDouble" description="Max" group="Optional" freehand="no"/>
+                <parameter name="labelColor" type="string" description="Label Color" group="Optional" freehand="no"/>
+                <parameter name="labelPostfix" type="string" description="Label Postfix" group="Optional" freehand="no"/>
+                <parameter name="labelDataType" type="string" description="Label Data Type" group="Optional" freehand="no">
+                    <choices> asDescription(list(
+                        "",
+                        ndo("LONG",l("LONG")),
+                        ndo("DOUBLE",l("DOUBLE")),
+                        ndo("STRING",l("STRING"))
+                        ))
+                    </choices>
+                </parameter>
+            </nodeType>
+        </macro>
+
+        <macro name="initSeries">
+            <nodeType name="Dashboard:seriesRoot" description="Series Root" hasChildren="true" childrenTypes="Dashboard:series" deleteAllowed="false" renameAllowed="false">
+            </nodeType>
+            <nodeType name="Dashboard:series" description="Series" hasChildren="false" deleteAllowed="true" renameAllowed="true">
+                <parameter name="name" type="string" description="Name" group="Parameters" freehand="no"/>
+                <parameter name="type" description="Type" type="string" freehand="no">
+                    <choices> asDescription(list(
+                        ndo("AREA",l("AREA")),
+                        ndo("AREA_SPLINE",l("AREA_SPLINE")),
+                        ndo("BAR",l("BAR")),
+                        ndo("COLUMN",l("COLUMN")),
+                        ndo("LINE",l("LINE")),
+                        ndo("PIE",l("PIE")),
+                        ndo("SCATTER",l("SCATTER")),
+                        ndo("SPLINE",l("SPLINE"))
+                        ))
+                    </choices>
+                </parameter>
+                <parameter name="centerX" description="X Center" type="NullableInteger" group="Parameters" freehand="no">
+                    <if>"PIE".equals(param("type"))
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="centerY" description="Y Center" type="NullableInteger" group="Parameters" freehand="no">
+                    <if>"PIE".equals(param("type"))
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="innerSize" description="Inner Size" type="NullableInteger" group="Parameters" freehand="no">
+                    <if>"PIE".equals(param("type"))
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="size" description="Size" type="NullableInteger" group="Parameters" freehand="no">
+                    <if>"PIE".equals(param("type"))
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="stacking" type="string" description="Stacking" group="Parameters" freehand="no">
+                    <choices>asDescription(list(
+                        ndo("NO",l("NO")),
+                        ndo("NORMAL",l("NORMAL")),
+                        ndo("PERCENT",l("PERCENT"))
+                        ))
+                    </choices>
+                </parameter>
+                <parameter name="xAxisId" type="integer" description="X Axis ID" group="Parameters" freehand="no"/>
+                <parameter name="yAxisId" type="integer" description="Y Axis ID" group="Parameters" freehand="no"/>
+                <parameter name="color" type="string" description="Color" group="Parameters" freehand="no"/>
+                <parameter name="style" type="string" description="Style" group="Parameters" freehand="no">
+                    <choices>
+                        "SOLID", "DOT", "DASH", "SHORT_DASH", "SHORT_DOT", "SHORT_DASH_DOT", "SHORT_DASH_DOT_DOT", "LONG_DASH", "DASH_DOT", "LONG_DASH_DOT", "LONG_DASH_DOT_DOT"
+                    </choices>
+                </parameter>
+                <parameter name="animation" type="boolean" description="Animation" group="Parameters" freehand="no"/>
+                <parameter name="pointPadding" description="Point Padding" type="NullableDouble" group="Parameters" freehand="no">
+                    <if>"COLUMN".equals(param("type")) or "BAR".equals(param("type"))
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="groupPadding" description="Group Padding" type="NullableDouble" group="Parameters" freehand="no">
+                    <if>"COLUMN".equals(param("type")) or "BAR".equals(param("type"))
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+                <!--Data-->
+                <parameter name="nameProperty" description="Name Property" type="string" group="Data Mapping" freehand="no"/>
+                <parameter name="xValueProperty" description="X Value Property" type="string" group="Data Mapping" freehand="no"/>
+                <parameter name="yValueProperty" description="Y Value Property" type="string" group="Data Mapping" freehand="no"/>
+                <parameter name="categoryProperty" description="Category Property" type="string" group="Data Mapping" freehand="no"/>
+                <parameter name="stackProperty" description="Stack Property" type="string" group="Data Mapping" freehand="no"/>
+            </nodeType>
+        </macro>
+    </macros>
+</data_set_category>

@@ -1,0 +1,40 @@
+<metadata>
+    <object type="ModifyModel" extends="ObjectInBranch,DocData" version="32">
+        <property name="model" valueType="url" targetObjectType="DataModel"/>
+	<property name="modifications" valueType="tree" rootNodeType="ModifyModel:root"/>
+	<property name="instanceKeys" valueType="table" rowTypes="InstanceKey" optional="true" essential="all"/>
+	<property name="streamKeys" valueType="table" rowTypes="ModifyModel:streamKey"  optional="true" essential="all"/>
+    <property name="freezeLevel" valueType="integer" optional="true" essential="true"/>
+    </object>
+    <objectNode type="ModifyModel:root" version="8" extends="ReferencibleSubobject">
+        <children childrenTypes="ModifyModel:modification"/>
+    </objectNode>
+    <objectNode type="ModifyModel:modification" version="20" extends="ReferencibleSubobject">
+	    <property name="existingNode" valueType="url" targetObjectType="DataModel:node"/>
+        <property name="mandatoryInJoin" valueType="boolean" defaultValue="false"/>
+        <property name="additionalConstraint" valueType="table" rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, DataModel:fieldReference, ModifyModel:localFieldReference "/>
+        <property name="additionalJoinExpression" valueType="table" rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, DataModel:fieldReference, ModifyModel:localFieldReference"/>
+        <children childrenTypes="ModifyModel:node"/>
+   </objectNode>
+    <objectNode type="ModifyModel:node" version="9" extends="ReferencibleSubobject">
+        <!--Different from DataModel:node in that expressions can contain ModifyModel:localFieldReference -->
+        <property name="dataSource" valueType="url" targetObjectType="DataSource"/>
+        <property name="relationshipToParent" valueType="string" choices="ONE_TO_ONE,ONE_OR_ZERO_TO_ONE,MANY_OR_ZERO_TO_ONE,MANY_TO_ONE" defaultValue="ONE_TO_ONE"/>
+        <property name="mandatoryInJoin" valueType="boolean" defaultValue="false"/>
+        <property name="additionalConstraint" valueType="table" rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, DataModel:fieldReference, ModifyModel:localFieldReference "/>
+        <property name="additionalJoinExpression" valueType="table" rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, DataModel:fieldReference, ModifyModel:localFieldReference"/>
+        <property name="instanceSelectionRule" valueType="object" objectType="InstanceSelectionRule" />
+        <property name="join" valueType="table" rowTypes="DataModel:node:join"/>
+    	<children childrenTypes="ModifyModel:node"/>
+    </objectNode>
+    <object type="ModifyModel:localFieldReference" version="3">
+        <!--modifications[*] will only be ModifyModel:node-->
+        <property name="value" valueType="url" urlStructure="ModifyModel[this].modifications[*].dataSource.layout[*]" targetObjectType="DataSource:field"/>
+    </object>
+    <object type="ModifyModel:streamKey" version="1">
+        <property name="streamKeyName" valueType="string"/>
+        <property name="streamKeyColumn" valueType="object" objectType="DataModel:fieldReference, ModifyModel:localFieldReference"/>
+        <!--these additional columns are used for mapping purposes only-->
+        <property name="additionalStreamColumns" valueType="table" rowTypes="DataModel:fieldReference, ModifyModel:localFieldReference"/>
+    </object>
+</metadata>

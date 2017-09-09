@@ -1,0 +1,52 @@
+Type:	DataSource
+Name:	test_fields
+Desc:	Test Fields
+Object ID:	7f5ef73b-757f-4ffa-83d9-cb5cf259fc1d
+Branch ID:	68b7506a-69d3-4255-9a4b-a03c53614e96
+
+Enum	Name	Value	ValueType	Text
+1	name	test_fields	string	None
+2	description	Test Fields	string	None
+3	objectId	7f5ef73b-757f-4ffa-83d9-cb5cf259fc1d	string	None
+4	branchId	68b7506a-69d3-4255-9a4b-a03c53614e96	string	None
+5	hosting	INTERNAL	string	None
+6	dbSource	None	url	DBSource["ORACLE"{4e6e5b36-b98d-45ad-b5a5-a13c97df8b8f}]
+7	loader	None	url	DataSourceLoader["load_file"{load_file}]
+8	defaultVisibilityInModel	true	boolean	None
+9	dataStructure	FLAT	string	None
+10	layout	None	table	
+11	keyFields	None	table	
+12	index	None	table	
+13	createIndexOnKeyFields	true	boolean	None
+14	indexOnKeyFieldsClustered	true	boolean	None
+15	storageType	PERMANENT	string	None
+16	internalSourceTablePrefix	test_fields_	string	None
+17	loaderConfigFields	None	table	
+18	loaderActions	None	table	None
+19	postTableCreationStatements	None	table	None
+20	postAdjustmentTableCreationStatements	None	table	None
+21	dataLoadVariables	None	table	None
+22	computeStatistics	NONE	string	None
+23	reapplyAdjustmentsAfterDataLoad	false	boolean	None
+24	archivalProperties	None	object	
+25	validations	None	table	None
+26	delimiter	\t	string	None
+27	optionallyEnclosedBy	'	string	None
+28	skipRows	0	integer	None
+29	newlineConversion	dos	string	None
+30	targetEncoding	UTF8	string	None
+31	convertEncoding	false	boolean	None
+32	trailingNullCols	true	boolean	None
+33	columnHeadersFromFile	false	boolean	None
+34	loaderControlFile		string	None
+35	parameterIsNotAFile	false	boolean	None
+36	codeWillCreateFile	false	boolean	None
+37	loaderPreprocessCode		string	None
+38	fourEyesCheck	false	boolean	None
+39	readOnlyAdjustment	false	boolean	None
+40	keepTableContent	false	boolean	None
+41	loadSheetName	Sheet1	string	None
+42	maxErrors	2147483647	integer	None
+43	doNotFailIfRejected	false	boolean	None
+44	freezeLevel	1	integer	None
+45	instanceRebuildRestriction	AlterFullRebuild	string	None

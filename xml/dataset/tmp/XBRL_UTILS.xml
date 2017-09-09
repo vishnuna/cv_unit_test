@@ -1,0 +1,67 @@
+<data_set_category name="XBRL_UTILS" description="XBRL Utils" windowTitle="" objectType="">
+    <macros>
+        <macro name="getMRMReportsList" arguments="axiomObject, returnNDO">
+            var mrmLookupList = list();
+            var mrm=<axiomObject/>;
+            <if>mrm != null
+                <then>
+                    var mappedReports = editor.getTableRows(mrm.getTable("mappedReports"),
+                    mrm.getReference("reportingModule"));
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; mappedReports.size()
+                        <comma/>
+                        i++
+                        <do>
+                            var mr = mappedReports.get(i);
+                            <if>!mr.isExcluded()
+                                <then>
+                                    <if><returnNDO/>
+                                        <then>
+                                            mrmLookupList.add(ndo(mr.getName(),mr.getLongName()));
+                                        </then>
+                                        <else>
+                                            mrmLookupList.add(mr.getName())
+                                        </else>
+                                    </if>
+
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+                </then>
+            </if>
+            ;mrmLookupList
+        </macro>
+
+        <macro name="reportsTableIsEmpty">
+            <if>
+                param("includedReportList").size() == 0
+                <then>
+                    errorMessage('Report Table is empty');
+                    return false;
+                </then>
+                <else>
+                    return true;
+                </else>
+            </if>
+        </macro>
+
+        <macro name="getLatestSubmissionFileName" arguments="editor">
+            <try>
+                <if>external("asOfDate")!=null
+                    <then>
+                        var helper = new("axiomsl.xbrl.mapping.instance.SubmissionFileStatusHelper",
+                        <editor/>.getPlugIn().getCurrentTask());
+                        <if>helper.getSubmissionFileName()!=null
+                            <then>
+                                ;helper.getSubmissionFileName()
+                            </then>
+                        </if>
+                    </then>
+                </if>
+                <catch/>
+            </try>
+        </macro>
+    </macros>
+</data_set_category>

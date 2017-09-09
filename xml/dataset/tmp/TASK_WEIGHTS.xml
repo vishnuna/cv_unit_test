@@ -1,0 +1,88 @@
+<data_set_category name="TASK_WEIGHTS"
+                   description="Task Weights"
+                   windowTitle="Task Weights Setup"
+                   entityName="Task Weights"
+                   icon="image.reports"
+                   windowIcon="windowicon.branch"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="TaskWeights"
+                   singleDataSet="TaskWeights"
+                   fixedNameMode="true" >
+                   <!--extends="DOC_DATA, COMMON_UTILS"-->
+        >
+
+    <parameters>
+        <parameter name="taskWeights" description="Task Weights" type="table" allowAddRemove="false" reorder="false" group="Task Weights">
+
+            <parameter name="type" description="Task Type" type="string" readOnly="true"></parameter>
+            <parameter name="default" description="Default Weight" type="integer" readOnly="true"></parameter>
+            <parameter name="override" description="Override" type="NullableInteger" readOnly="false">
+                <validation>
+                    <if> !<newValue/>.isNull() and <newValue/>.intValue() &lt; 0
+                        <then>
+                            errorMessage(l("Weights can't be negative."));
+                            return false;
+                        </then>
+                    </if>
+                </validation>
+            </parameter>
+
+        </parameter>
+
+        <parameter name="totalWeightPerNode" description="Limit on total tasks` weight per node (if zero, weight is unlimited)" type="Integer" defaultValue="0" length="10">
+            <validation>
+                <if><newValue/> != null and <newValue/>.intValue() &lt; 0
+                    <then>
+                        errorMessage(l("Value can't be negative.(or invalid)"));
+                        return false;
+                    </then>
+                </if>
+            </validation>
+        </parameter>
+
+    </parameters>
+
+    <loadCode>
+        var taskTypes = axiomObjectManager.getDictionary().getTaskTypeMap();
+        var taskWeightsWrapper = new("axiomsl.server.task.TaskWeightsWrapper", <originalAxiom/>);
+        param("totalWeightPerNode") = new("java.lang.Integer", <originalAxiom/>.getOptionalValue("totalWeightPerNode", "0").toString());
+        <!--UI parser uses reflection extensively, let's wrap de-serialized object to avoid IllegalAccessException-->
+        var taskTypesList = new("java.util.ArrayList", taskTypes.values());
+        <for>
+            var i = 0 <comma/> i &lt; taskTypesList.size() <comma/> i++
+            <do>
+                var row = param("taskWeights").addLine();
+                var taskType = taskTypesList.get(i);
+                row.param("default") = taskType.getWeight();
+                row.param("type") = taskType.getTaskType();
+                row.param("override") = taskWeightsWrapper.getOverridingWeight(taskType);
+                <!--row.param("override") = taskTypesList.get(i).getOverridingWeight(<axiomObjectManager/>);-->
+            </do>
+        </for>
+    </loadCode>
+
+    <saveCode>
+        var taskTypes = axiomObjectManager.getDictionary().getTaskTypeMap();
+        var taskWeights = param("taskWeights");
+        <axiomForSave/>.setProperty("totalWeightPerNode", param("totalWeightPerNode"));  
+        var taskWeightsWrapper = new("axiomsl.server.task.TaskWeightsWrapper", <axiomForSave/>);
+        <for>
+            var i = 0 <comma/> i &lt; taskWeights.size() <comma/> i++
+            <do>
+                var row = taskWeights.get(i);
+                var taskType = taskTypes.get( row.param("type") );
+                var override = row.param("override");
+                <if> override.isNull()
+                    <then>
+                         taskWeightsWrapper.setOverridingWeight(taskType, null);
+                    </then>
+                    <else>
+                         taskWeightsWrapper.setOverridingWeight(taskType, row.param("override").toOriginalObject());
+                    </else>
+                </if>
+            </do>
+        </for>
+    </saveCode>
+
+</data_set_category>

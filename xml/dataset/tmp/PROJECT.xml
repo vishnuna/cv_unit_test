@@ -1,0 +1,167 @@
+<data_set_category name="PROJECT"
+                   description="Project"
+                   windowTitle="Project Setup"
+                   entityName="Project"
+                   icon="project"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="Project"
+                   generatingObjectType="DeltaObject"
+                   extends="COMMON_UTILS, DOC_DATA">
+
+    <events>
+        <event name="project">
+            <filter property="eventType" value="AXIOM_OBJECT_UPDATE_EVENT"/>
+            <filter property="objectType" value="Project"/>
+        </event>
+    </events>
+
+    <parameters>
+
+        <parameter name="groupName" description="Group" type="String">
+            <attribute name="lookupFromNamedList">l("Group")
+                <comma/>
+                var list = new("axiomsl.util.ui.GroupedList", editor.getRemoteProxy(), "Project", l("Groups"), null, null, true, editor.getAxiomEnvironment());
+                list
+            </attribute>
+            <convertInputValue>
+                  <if> inputValue instanceof "axiomsl.util.ui.GroupFolder"
+                    <then>
+                        ;inputValue.getFullName();
+                    </then>
+                 </if>
+             </convertInputValue>
+             <validation>
+                 macro("checkGroupExists", newValue);
+             </validation>
+            <verifyForSave>
+                macro("checkGroupExists", param("groupName"));
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="defaultDBSource" description="Default DB Source" type="String" defaultValue="">
+            <choices>
+                var sources = list();
+                sources.add(ndo("", ""));
+                sources.addAll(editor.getRemoteProxy().lookupObjects("DBSource"));
+                sources
+            </choices>
+        </parameter>
+
+        <parameter name="newBranchButton" description="" type="Component" noSerialization="yes">
+            <attribute name="componentClass">"axiomsl.gui.project.NewBranchButton"</attribute>
+        </parameter>
+
+        <parameter name="branchTable" description="Project Branches" type="table" length="7" paramForAdditionalComponents="name" allowAddRemove="false" reorder="false" keyParameter="name">
+            <readonly/>
+            <parameter name="name" description="Branch Name" type="String" length="20" isDataSet="Branch" readOnly="true">
+            </parameter>
+            <parameter name="description" description="Description" type="String">
+                <readonly/>
+            </parameter>
+
+            <if> event("project") != null
+                <then>
+                    <if> dataSet.getAxiomObject() != null and event("project").getDbId() == dataSet.getAxiomObject().createDbID()
+                        <then>
+                            dataSet.setAxiomObject(event("project").getObject());
+                            macro("refreshTable");
+                        </then>
+                    </if>
+                </then>
+            </if>
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        var project = <originalAxiom/>;
+        <!--dataSetDescription = project.getProperty("description");-->
+        <!--dataSet.setAxiomObject(project);-->
+        editor.setProjectId(project.getId());
+        macro("refreshTable");        
+
+        <if> project.propertyIsSet("defaultDBSource")
+            <then>
+                param("defaultDBSource") = project.getReference("defaultDBSource").getTargetObjectName();
+            </then>
+            <else>
+                param("defaultDBSource") = "";
+            </else>
+        </if>
+    </loadCode>
+    
+    <saveCode>
+        var consructor = new("axiomsl.server.DeltaConstuctor", <axiomForSave/>, "Project");
+        consructor.addSetPropertyDelta("name", <axiomForSave/>.getProperty("name"));
+        consructor.addSetPropertyDelta("description", <axiomForSave/>.getProperty("description"));
+        <!--TODO - Move this two conditionals to DOC_DATA , if  possible-->
+         consructor.addSetPropertyDelta("comment", param("comment"));
+         consructor.addSetPropertyDelta("docFile", param("docFile"));
+
+        var helper = new("axiomsl.accessors.GroupsAccessor", editor.getAxiomObjectManager(), editor.getAxiomEnvironment(), "Project", null);
+        consructor.addSetPropertyDelta("groupNodeId", helper.getIdByPathIfExists(param("groupName")));
+
+        <!--TODO - maybe re-locate object-->
+        <!--TODO - lock against all branch modifications, until saved-->
+        <!--var newObject = <axiomForSave/>;-->
+        <!--save as will be disallowed by the editor-->
+        <!--<if> dataSet.getAxiomObject() != null-->
+              <!--<then>-->
+                  <!--newObject.copyPropertiesFrom(dataSet.getAxiomObject(), new("axiomsl.server.object_framework.RouteToObject"),newObject.COPY_CLONE, array("name", "description"), null);-->
+              <!--</then>-->
+        <!--</if>-->
+
+        <if>param("defaultDBSource") != null and param("defaultDBSource") != ""
+            <then>
+                var defaultDBSource = editor.locateObjectByName("DBSource", param("defaultDBSource"));
+                consructor.addSetPropertyDelta("defaultDBSource", new("axiomsl.server.object_framework.ObjectReferenceImpl", <axiomForSave/>, function("axiomsl.server.object_framework.RouteToObject", "createDirectRoute", defaultDBSource), defaultDBSource))
+            </then>
+            <else>
+                var deltaObject = consructor.addSingleDelta();
+                consructor.addOperation(deltaObject, "removeProperty", "defaultDBSource", null);
+            </else>
+        </if>
+    </saveCode>
+
+    <macros>
+        <macro name="refreshTable">
+            var groupId = dataSet.getAxiomObject().getOptionalValue("groupNodeId", "");
+            var helper = new("axiomsl.accessors.GroupsAccessor", editor.getAxiomObjectManager(), editor.getAxiomEnvironment(), "Project", null);
+            var name = helper.getFullNameIfExists(groupId);
+            <if> name == null
+                <then>
+                    name = "NONEXISTING GROUP: " + groupId; 
+                </then>
+            </if>
+            param("groupName") = name;
+            var branches = dataSet.getAxiomObject().getTable("branches");
+            var rows = list();
+            <for>var i = 0
+                <comma/>
+                i &lt; branches.size()
+                <comma/>
+                i ++
+                <do>
+                    var row = tableRow();
+                    row.param("name") = branches.get(i).getString("name");
+                    row.param("description") = branches.get(i).getString("description");
+                    row.setID(branches.get(i).getString("id"));
+                    rows.add(row);
+                </do>
+            </for>
+            param("branchTable") = rows; <!-- this code will work for redisplay -->
+        </macro>
+
+        <macro name="checkGroupExists" arguments="value">
+            var helper = new("axiomsl.accessors.GroupsAccessor", editor.getAxiomObjectManager(), editor.getAxiomEnvironment(), "Project", null);
+                 var isExists = helper.isPathExists(<value/>);
+                 <if> !isExists
+                     <then>
+                        errorMessage(l("Group '%1' doesn't exists!", <value/>));
+                        ;false
+                     </then>
+                 </if>
+        </macro>
+    </macros>
+    
+</data_set_category>

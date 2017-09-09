@@ -1,0 +1,7 @@
+<metadata>
+	<object type="ObjectInBranch" extends="GlobalObject" version="2">
+		<!-- deprecated -->
+		<property name="projectId" optional="true" valueType="string" canBeEmpty="false"/>
+		<property name="branchId" valueType="string" canBeEmpty="false"/>
+	</object>
+</metadata>

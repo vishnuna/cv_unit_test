@@ -1,0 +1,17 @@
+<metadata>
+    <object type="ModelBasedTask" extends="ObjectInBranch,DocData" version="5">
+        <property name="models" valueType="table" rowTypes="ModelBasedTask:modelEntry" essential="all"/>
+        <!--models are essential because need to invalidate workflow (update streams)-->
+        <property name="requiresAllModels" valueType="boolean" optional="true" defaultValue="false" essential="true"/>
+        <property name="freezeLevel" valueType="integer" optional="true" essential="true"/>
+        <property name="parameters" valueType="table" optional="true" rowTypes="WorkFlow:parameter"/>
+    </object>
+    <object type="ModelBasedTask:modelEntry" version="3">
+		<property name="dataModel" valueType="url" targetObjectType="DataModel"/>
+		<!-- if a task has hardcoded (non-user-defined) instance keys, such as Market Date,
+		  instantiation rules must be selected for them as well, in addition to rules for user-defined
+		  instance keys
+		  -->
+		<property name="instanceSelectionRule" valueType="object" objectType="InstanceSelectionRule"/>
+	</object>
+</metadata>

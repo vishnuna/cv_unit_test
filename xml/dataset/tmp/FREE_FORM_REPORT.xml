@@ -1,0 +1,433 @@
+<data_set_category name="FREE_FORM_REPORT"
+	description="FREE_FORM_REPORT"
+	windowTitle="FREE_FORM_REPORT"
+	entityName="Free Form Report"
+	icon="report_writer"
+	screenWidth="600"
+	screenHeight="600"
+    objectType="FreeFormReport"
+    extends="MODEL_DATES, ARCHIVAL_PROPERTIES, COMMON_UTILS, DOC_DATA, FREEZE_PROPERTIES">
+
+    <parameters>
+
+        <parameter name="dbSourceForResults" description="DB Source"
+                   group="Parameters" type="String" defaultValue="" length="20">
+            <choices>
+                <!--<asDescription>-->
+                    var sources = editor.getRemoteProxy().lookupObjects("DBSource");
+                <!--</asDescription>-->
+            </choices>
+            <default>
+                  macro("getDefaultDBSource");
+            </default>
+        </parameter>
+        <parameter name="asof_date_cell" description="As of date cell in spreadsheet" group="Parameters" type="String"
+                   length="20">
+            <validation>
+                return dataSet.validateCellReference(newValue, l("The cell %1 does not exist in spreadsheet.",newValue))
+            </validation>
+
+            <onParameterChange>
+                dataSet.getDateFromSpreadsheet();
+            </onParameterChange>
+        </parameter>
+
+        <parameter name="electronic_submission_cell" description="Cell(s) for electronic submission"
+                   group="Parameters" type="String" length="20">
+            <validation>
+                return dataSet.validateElecSubRangeReference(newValue, l("The cell(s) %1 do not exist in spreadsheet.",newValue))
+            </validation>
+        </parameter>
+
+        <parameter name="ready_to_sign_off_cell" description="Ready to sign off cell" group="Parameters" type="String" length="20">
+            <validation>
+                return dataSet.validateRangeReference(newValue, l("The cell(s) %1 do not exist in spreadsheet.",newValue))
+            </validation>
+        </parameter>
+
+        <parameter name="ready_to_sign_off_complete_value" description="Ready to sign off 'complete' value" group="Parameters" defaultValue="OK" type="String" length="20"/>
+
+        <parameter name="ready_to_submit_cell" description="Ready to generate electronic submission cell" group="Parameters" type="String" length="20">
+            <validation>
+                return dataSet.validateRangeReference(newValue, l("The cell(s) %1 do not exist in spreadsheet.",newValue))
+            </validation>
+        </parameter>
+
+        <parameter name="ready_to_submit_complete_value" description="Ready to generate electronic submission 'complete' value" group="Parameters" defaultValue="OK" type="String" length="20"/>
+
+        <parameter name="skipBlankLinesInElecSubm" description="Skip blank lines in electronic submission"
+                   group="Parameters" type="Boolean" defaultValue="true" length="20"/>
+
+        <parameter name="edit_check_sheet" description="Worksheet(s) containing edit checks"
+                   group="Parameters" type="String" length="20">
+            <validation>
+                return dataSet.validateDelimitedReferences(newValue, ",");
+            </validation>
+        </parameter>
+
+        <!--<parameter name="followXrefsIndefinitely" description="Follow Cross-References of referenced reports"-->
+                   <!--type="Boolean"/>-->
+
+        <parameter name="export_XLS_print_area" description="Use Print Area for exporting to Excel file"
+                   type="Boolean"/>
+
+        <parameter name="removeConditionalFormatsOnExport" description="Remove conditional formats on export"
+                   type="Boolean"/>
+
+        <parameter name="removeConditionalFormatsOnPrint" description="Remove conditional formats on print"
+                   type="Boolean"/>
+
+        <parameter name="save_cached_values" description="Save cached data values with report" type="Boolean"/>
+        <parameter name="zipped" description="Compact data" type="Boolean" defaultValue="true"/>
+
+        <macro name="storageTypeParameter"/>
+
+        <parameter name="adjustmentRestriction" description="Restrict adjustments to" group="Parameters" type="String" defaultValue="NONE" length="20">
+            choices(<asDescription>
+                <!--ndo("SEGMENTED", l("Separate table for each report instance")), ndo("CONTINUOUS", l("One table holds all report-->
+                <!--instances"))-->
+                <!--todo: if oracle-->
+                ndo("NONE", l("Do not restrict")), ndo("SHEET", l("Sheets named *ADJ")), ndo("CELL", l("Cells named *ADJ and *COM")), ndo("COM", l("Cells named *COM"))
+            </asDescription>
+            )
+        </parameter>
+
+        <parameter name="unicodeContents" description="Unicode content of cells" group="Parameters" type="Boolean" defaultValue="false" length="20"/>
+
+        <parameter name="submissionFileEncoding" description="Submission File Encoding" group="Parameters" type="String" defaultValue="UTF8" length="20">
+            <editable/>
+            macro("encodingChoices")
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="checkNonstandardFonts" description="Check nonstandard fonts on report save" group="Parameters" type="Boolean" defaultValue="true" length="20"/>
+        
+        <parameter name="parameters" description="Variable Definitions" type="table" length="4" keyParameter="name" group="Variables">
+            <parameter name="name" description="Variable Name" type="String" freehand="no">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniqueness", list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="description" description="Description" type="String" freehand="no"/>
+            <parameter name="dataType" description="Type" type="String" freehand="no">
+                choices(<asDescription>
+                    ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE"))
+                </asDescription>)
+                <default>
+                'VARCHAR'
+                </default>
+            </parameter>
+            <!--<parameter name="lookupFormula" description="Lookup Expression" type="String" wrapOnReport="true" freehand="yes"/>-->
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirm", list());
+            </confirmAddRow>
+        </parameter>
+
+        <parameter name="parameterValuesForPreview" description="Variable Values for Preview" type="table" keyParameter="name" length="4" reorder="false" allowAddRemove="false" group="Variables">
+            <parameter name="name" description="Variable Name" type="String">
+                <readonly/>
+            </parameter>
+            <parameter name="value" description="Variable Value" noTypeConversions="true" type="axiomsl.gui.batch.execution.Dummy"> <!-- dummy type-->
+                <default>macro("getDefalutVarValue", param("parameters"), param("name"), "")</default>;
+            </parameter>
+            <equals>
+                macro("loadTable", <forTable name="parameters">param("name")</forTable>, <forTable name="parameters">param("dataType")</forTable>, if(paramIsSet("parameterValuesForPreview"), param("parameterValuesForPreview"), null))
+            </equals>
+        </parameter>
+
+        <parameter name="models" description="Models" type="table" keyParameter="name" length="7" group="Models">
+            <readonly/>
+
+            <parameter name="name" description="Model Name" type="String" length="20" wrapOnReport="true">
+                <readonly/>
+            </parameter>
+
+            <confirmAddRow>
+                false
+            </confirmAddRow>
+            
+            <parameter name="description" description="Model Description" noSerialization="yes" type="String" wrapOnReport="true">
+                <readonly/>
+                <equals>
+                    <if> <param name="name"/> == "" || dataSet.isSaveAsIs()
+                        <then>""</then>
+                        <else>
+                            <case>
+                                editor.isObjectValid("DataModel", param("name"))
+                                <then>
+                                    editor.getRemoteProxy().getModelDescription(param("name"), editor.getBranchId());
+                                </then>
+                                editor.isObjectExists("DataModel", param("name"))
+                                <then>
+                                    "!!! Data Model is Invalid !!!"
+                                </then>
+                                <else>
+                                    "!!! Data Model Not Found !!!" 
+                                </else>
+                            </case>
+                        </else>
+                    </if>
+                </equals>
+            </parameter>
+        </parameter>
+        <parameter name="requiresAllModels" description="Requires all models for execution" group="Models" type="Boolean" optional="true" defaultValue="true"/>
+
+        <parameter name="postprocessCode" description="Report Postprocess Code" group="Postprocess Code" type="String" optional="true" defaultValue="" length="20">
+			<attribute name="multiLine"> 10 </attribute>
+            <attribute name="unlimitedSize"> true </attribute>
+			<!-- because we're saving via task parameters and that removes newlines -->
+			<attribute name="lookupAppend">true</attribute>
+			<attribute name="lookupFromValues"> l("Macro") <comma/>
+                var reportConstants = list();
+                reportConstants.add(ndo("jbook", l("Excel spreadsheet object (JBook)")));
+                reportConstants.add(ndo("task", l("Task object (available only on execution)")));
+                reportConstants.addAll(macro("taskTags"));
+                new("axiomsl.util.ui.NamedList", "Parameters", l("Parameters"), reportConstants.toArray()),
+                macro("reportLookup");
+            </attribute>
+            <validation>
+                macro("validateXML")
+            </validation>
+		</parameter>
+
+        <parameter name="computeStatistics" description="Compute Statistics On Results" type="String" group="Parameters" length="20">
+            choices(<asDescription>
+                 ndo("NONE", l("NONE")), ndo("FOR_ALL_COLUMNS", l("FOR_ALL_COLUMNS")), ndo("FOR_KEY_COLUMNS", l("FOR_KEY_COLUMNS"))
+            </asDescription>)
+            <default>
+                'FOR_ALL_COLUMNS'
+            </default>
+		</parameter>
+        <parameter name="populateData" description="Populate Cell By Cell data with" type="String" group="Parameters" length="20">
+            choices(<asDescription>
+                 ndo("ALL_NONEMPTY", l("All non-empty or named cells")), ndo("NAMED_CELLS", l("Only named cells")), ndo("NONE", l("Nothing"))
+            </asDescription>)
+            <default>
+                'NAMED_CELLS'
+            </default>
+		</parameter>
+        <parameter name="changeDefaultCellDataSize" description="Override default cell_varchar_data size for cell data" type="boolean" defaultValue="false" group="Parameters" />
+        <parameter name="cellDataSize" description="cell_varchar_data size"  type="integer" defaultValue="1000" group="Parameters" length="20">
+                  <if>
+                      <param name="changeDefaultCellDataSize"/>
+                      == false
+                      <then>
+                          <removed/>
+                      </then>
+                      <else>
+                          <enabled/>
+                      </else>
+                  </if>
+                <verifyForSave>
+                    macro("isPositive");
+                </verifyForSave>
+        </parameter>
+        <parameter name="allowExternalDataPermissions" description="Allow External Data Permissions" group="Parameters" type="Boolean" optional="true" defaultValue="true"/>
+    </parameters>
+
+    <loadCode>
+        param("asof_date_cell") = <originalAxiom/>.getString("asofDateCell");
+        param("electronic_submission_cell") = <originalAxiom/>.getString("elecSubmissionCell");
+        <if><originalAxiom/>.propertyIsSet("readyToSignOffCell")
+            <then>
+                param("ready_to_sign_off_cell") = <originalAxiom/>.getString("readyToSignOffCell");
+                param("ready_to_sign_off_complete_value") = <originalAxiom/>.getString("readyToSignOffCompleteValue");
+            </then>
+            <else>
+                param("ready_to_sign_off_cell") = "";
+                param("ready_to_sign_off_complete_value") = "OK";
+            </else>
+        </if>
+        <if><originalAxiom/>.propertyIsSet("readyToSubmitCell")
+            <then>
+                param("ready_to_submit_cell") = <originalAxiom/>.getString("readyToSubmitCell");
+                param("ready_to_submit_complete_value") = <originalAxiom/>.getString("readyToSubmitCompleteValue");
+            </then>
+            <else>
+                param("ready_to_submit_cell") = "";
+                param("ready_to_submit_complete_value") = "OK";
+            </else>
+        </if>
+        param("skipBlankLinesInElecSubm") = <originalAxiom/>.getBoolean("skipBlankLinesInElecSubm");
+        param("edit_check_sheet") = <originalAxiom/>.getString("editChecksSheet");
+        <!--param("followXrefsIndefinitely") = <originalAxiom/>.getBoolean("followAllXrefs");-->
+        param("export_XLS_print_area") = <originalAxiom/>.getBoolean("exportXLSPrintArea");
+        <if><originalAxiom/>.propertyIsSet("removeConditionalFormatsOnExport")
+            <then>
+                param("removeConditionalFormatsOnExport") = <originalAxiom/>.getBoolean("removeConditionalFormatsOnExport");
+            </then>
+            <else>
+                param("removeConditionalFormatsOnExport") = false;
+            </else>
+        </if>
+        param("removeConditionalFormatsOnPrint") = <originalAxiom/>.getBoolean("removeConditionalFormatsOnPrint");
+        param("save_cached_values") = <originalAxiom/>.getBoolean("saveCachedValues");
+        param("storageType") = <originalAxiom/>.getString("storageType");
+        param("adjustmentRestriction") = <originalAxiom/>.getOptionalValue("adjustmentRestriction", "NONE");
+        param("unicodeContents") = <originalAxiom/>.getOptionalBoolean("unicodeContents");
+        param("submissionFileEncoding") = <originalAxiom/>.getOptionalValue("submissionFileEncoding", "UTF8");
+        param("computeStatistics") = <originalAxiom/>.getOptionalValue("computeStatistics", "FOR_ALL_COLUMNS");
+        param("dbSourceForResults") = <originalAxiom/>.getReference("dbSourceForResults").getTargetObjectName();
+        param("zipped") = <originalAxiom/>.getBoolean("zipped");
+        param("populateData") = <originalAxiom/>.getOptionalValue("populateData", "ALL_NONEMPTY");
+        <if><originalAxiom/>.propertyIsSet("postprocessCode")
+            <then>
+                param("postprocessCode") = <originalAxiom/>.getString("postprocessCode");
+            </then>
+            <else>
+               param("postprocessCode") = "";
+            </else>
+        </if>
+        param("requiresAllModels") = <originalAxiom/>.getOptionalValue("requiresAllModels",false);
+        param("checkNonstandardFonts") = <originalAxiom/>.getOptionalValue("checkNonstandardFonts",true);
+
+        var models = <originalAxiom/>.getTable("models");
+        <for>var i = 0
+            <comma/>
+            i &lt; models.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("models").addLine();
+                var modelRef = models.get(i).getReference("dataModel");
+                row.param("name") = modelRef.getTargetObjectName(dataSet.getRouteFromCurrentBranch(), true);<!-- no invalid prefix-->
+                row.setID(modelRef.getTargetObjectID(dataSet.getRouteFromCurrentBranch(), editor.getBranchId()).getObjectId());
+            </do>
+        </for>
+
+        param("parameters");
+        <if><originalAxiom/>.propertyIsSet("parameters")
+            <then>
+            var parameters = <originalAxiom/>.getTable("parameters");
+            <for>var i = 0
+                <comma/>
+                i &lt; parameters.size()
+                <comma/>
+                i ++
+                <do>
+                    var row = param("parameters").addLine();
+                    row.param("name") = parameters.get(i).getString("name");
+                    row.param("dataType") = parameters.get(i).getString("dataType");
+                    row.param("description") = parameters.get(i).getString("description");
+                </do>
+            </for>
+            </then>
+        </if>
+        param("parameterValuesForPreview") = macro("loadTableFromAxiomObject", <originalAxiom/>.getOptionalValue("parameterValuesForPreview", null), <originalAxiom/>.getOptionalValue("parameters", null));
+        <if><originalAxiom/>.propertyIsSet("changeDefaultCellDataSize")
+        <then>
+            param("changeDefaultCellDataSize") = <originalAxiom/>.getBoolean("changeDefaultCellDataSize");
+        </then>
+        <else>
+            param("changeDefaultCellDataSize") = false;
+        </else>
+        </if>
+        <if><originalAxiom/>.propertyIsSet("cellDataSize")
+        <then>
+            param("cellDataSize") = <originalAxiom/>.getInteger("cellDataSize");
+        </then>
+        </if>
+        param("allowExternalDataPermissions") = <originalAxiom/>.getOptionalValue("allowExternalDataPermissions",false);
+    </loadCode>
+
+    <saveCode>
+        var report = <axiomForSave/>;
+
+        report.setProperty("dbSourceForResults", report.createReferencePropertyValue("DBSource", param("dbSourceForResults")));
+        report.setProperty("storageType", param("storageType"));
+        report.setProperty("adjustmentRestriction", param("adjustmentRestriction"));
+        report.setProperty("unicodeContents", param("unicodeContents"));
+        report.setProperty("asofDateCell", param("asof_date_cell"));
+        report.setProperty("elecSubmissionCell", param("electronic_submission_cell"));
+        report.setProperty("readyToSignOffCell", param("ready_to_sign_off_cell"));
+        report.setProperty("readyToSignOffCompleteValue", param("ready_to_sign_off_complete_value"));
+        report.setProperty("readyToSubmitCell", param("ready_to_submit_cell"));
+        report.setProperty("readyToSubmitCompleteValue", param("ready_to_submit_complete_value"));
+        report.setProperty("skipBlankLinesInElecSubm", param("skipBlankLinesInElecSubm"));
+        report.setProperty("editChecksSheet", param("edit_check_sheet"));
+        report.setProperty("exportXLSPrintArea", param("export_XLS_print_area"));
+        report.setProperty("checkNonstandardFonts", param("checkNonstandardFonts"));
+        report.setProperty("removeConditionalFormatsOnExport", param("removeConditionalFormatsOnExport"));
+        report.setProperty("removeConditionalFormatsOnPrint", param("removeConditionalFormatsOnPrint"));
+        report.setProperty("requiresAllModels", param("requiresAllModels"));
+        <!--report.setProperty("followAllXrefs", param("followXrefsIndefinitely"));-->
+        report.setProperty("saveCachedValues", param("save_cached_values"));
+        report.setProperty("zipped", param("zipped"));
+        report.setProperty("postprocessCode", param("postprocessCode"));
+        report.setProperty("submissionFileEncoding", param("submissionFileEncoding"));
+        report.setProperty("computeStatistics", param("computeStatistics"));
+        report.setProperty("populateData", param("populateData"));
+        var modelTable = report.getTable("models");
+        var models = param("models");
+        <for>var i = 0
+            <comma/>
+            i &lt; models.size()
+            <comma/>
+            i ++
+            <do>
+                var row = models.get(i);
+                var modelName = row.param("name");
+                var modelRow = modelTable.addRow("ModelBasedTask:modelEntry");
+                modelRow.setProperty("dataModel", modelRow.createReferencePropertyValue("DataModel", if(operationType == editor.getManager().SAVE_EXISTING, dataSet.subtractRouteFromCurrentBranch(modelName), modelName)));<!-- subtract route for saving free form adjustments (save into orig branch) --> 
+            </do>
+        </for>
+
+        var parametersTable = null;
+        var parameters = param("parameters");
+
+        <if> !report.propertyIsSet("parameters")
+            <then>
+                parametersTable = report.createTablePropertyValue();
+                report.setProperty("parameters", parametersTable);
+            </then>
+            <else>
+                parametersTable = report.getTable("parameters");
+            </else>
+        </if>
+
+        <for>var i = 0
+            <comma/>
+            i &lt; parameters.size()
+            <comma/>
+            i ++
+            <do>
+                var variable = parametersTable.addRow("WorkFlow:parameter");
+
+                variable.setProperty("name", parameters.get(i).param("name"));
+                variable.setProperty("dataType", parameters.get(i).param("dataType"));
+                variable.setProperty("description", parameters.get(i).param("description"));
+             </do>
+		</for>
+
+        var parameterValuesTable = report.createTablePropertyValue();
+        report.setProperty("parameterValuesForPreview", parameterValuesTable);
+        report.setProperty("changeDefaultCellDataSize", param("changeDefaultCellDataSize"));
+        <if> param("changeDefaultCellDataSize")==true
+            <then>
+                report.setProperty("cellDataSize", param("cellDataSize"));
+            </then>
+        </if>
+        report.setProperty("allowExternalDataPermissions", param("allowExternalDataPermissions"));
+        macro("saveTable", param("parameterValuesForPreview"), parameterValuesTable);
+    </saveCode>
+
+    <macros>
+        <!--override from MODEL_DATES-->
+        <macro name="modelDateChanged" arguments="modelName">
+            <!--recalc jbook with changed date for selected model-->
+            dataSet.recalcWithDates(<modelName/>);
+        </macro>
+        <!--override from STREAMS-->
+        <macro name="streamChanged" arguments="streamName">
+            <!--clean cache if stream was changed-->
+            dataSet.recalcWithStreams();
+        </macro>
+    </macros>
+
+</data_set_category>

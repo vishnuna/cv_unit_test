@@ -1,0 +1,687 @@
+<data_set_category name="SYSTEM_DEFAULTS"
+                   description="System Defaults"
+                   windowTitle="System Defaults Setup"
+                   entityName="System Defaults"
+                   icon="image.reports"
+                   windowIcon="windowicon.branch"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="SystemDefaults"
+                   singleDataSet="SystemDefaults"
+                   fixedNameMode="true"
+                   extends="DOC_DATA, COMMON_UTILS">
+
+    <parameters>
+        <parameter name="calendar" description="Default Calendar" type="String" length="15"/>
+        <parameter name="user_dormant_days" description="# of days before user is deactivated due to inactivity" type="Integer" defaultValue="180" length="15">
+            <verifyForSave>
+                macro("isPositiveOrZero");
+            </verifyForSave>
+        </parameter>
+        <parameter name="pwd_reuse_days" description="# of days before a password can be reused" type="Integer" defaultValue="90" length="15">
+            <verifyForSave>
+                macro("isPositiveOrZero");
+            </verifyForSave>
+        </parameter>
+        <parameter name="pwd_reuse_number" description="# of different password changes before a password can be reused" type="Integer"  defaultValue="10" length="15">
+            <verifyForSave>
+                macro("isPositiveOrZero");
+            </verifyForSave>
+        </parameter>
+        <parameter name="default_db_source" description="Default DB Source" type="String" length="15">
+            <choices>
+              	var sources = editor.getRemoteProxy().lookupObjects("DBSource");
+            </choices>
+        </parameter>
+        <parameter name="useSystemDbGroupForTasksExecution" description="Use SYSTEM DB User Group for task executions" type="boolean" defaultValue="false"/>
+        <parameter name="useSystemDbGroupForAdjustments" description="Use SYSTEM DB User Group for adjustment operations" type="boolean" defaultValue="false"/>
+        <!-- AXIOM-3556, yes/no option changed to yes/no/disabled -->
+        <!-- if it is going to be restored - return "require_comment" back to <macro name="standaloneProperties">... below -->
+        <!--parameter name="require_comment" description="Require nonempty comment on every change" type="boolean" length="15"/-->
+        <parameter name="require_comment" description="Require nonempty comment on every change" type="String" length="15">
+            choices(<asDescription>
+            ndo("true", l("Yes")), ndo("false", l("No")), ndo("disabled", l("Disable comments"))
+        </asDescription>)
+            <default>
+                'false'
+            </default>
+        </parameter>
+
+        <parameter name="open_new_created_project_branch_automatically" description="Open newly created project/branch automatically" type="String" length="15">
+            choices(<asDescription>
+            ndo("false", l("No")), ndo("in_current_window", l("In Current Window")), ndo("in_new_window", l("In New Window"))
+        </asDescription>)
+            <default>
+                'false'
+            </default>
+        </parameter>
+        <parameter name="open_saved_as_branch_automatically" description="Open saved-as branch automatically" type="String" length="15">
+            choices(<asDescription>
+            ndo("false", l("No")), ndo("in_current_window", l("In Current Window")), ndo("in_new_window", l("In New Window"))
+        </asDescription>)
+            <default>
+                'false'
+            </default>
+        </parameter>
+
+        <parameter name="current_environment_name" description="Current Environment Name" type="String" length="15"/>
+
+        <parameter name="taskMXdefault" description="Max Memory per Task = Current server setting" type="boolean" defaultValue="true"/>
+
+        <parameter name="taskMX" description="Max Memory per Task (megabytes)" type="integer" length="15" defaultValue="1000">
+            <if>param("taskMXdefault")
+                <then><disabled/></then>
+                <else><enabled/></else>
+            </if>
+            <verifyForSave>
+                macro("isPositive");
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="maxRaisedJVMCount" description="Max Raised JVM count" type="integer" length="15" defaultValue="0">
+            <verifyForSave>
+                macro("isPositiveOrZero");
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="locksWaitTime" description="Automatically reclaim locks on inactivity (timeout, minutes)" type="integer" length="15" defaultValue="5">
+            <verifyForSave>
+                macro("isPositiveOrZero");
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="memoryBasedFetchSize" description="Memory based data load fetch size (num of rows)" type="integer" length="15" defaultValue="1000">
+            <verifyForSave>
+                macro("isPositiveOrZero");
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="memoryBasedBatchSize" description="Memory based data load batch size (num of rows)" type="integer" length="15" defaultValue="5000">
+            <verifyForSave>
+                macro("isPositiveOrZero");
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="inMemoryExecutionFetchSize" description="Fetch size for in memory execution (num of rows)" type="integer" length="15" defaultValue="10000">
+            <verifyForSave>
+                macro("isPositiveOrZero");
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="historySize" description="Retain prior execution logs (count)" type="integer" length="15" defaultValue="2">
+            <verifyForSave>
+                macro("isPositive");
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="taskJVMParams" description="Additional Task JVM Options" type="string" length="15" defaultValue="">
+        </parameter>
+
+        <parameter name="reportSubmitDir" description="Report Submission Folder (on server)" type="String" length="30" group="Folders">
+            <verifyForSave>
+                <if>param("reportSubmitDir") != "" and !macro("isAbsolute", param("reportSubmitDir"))
+                    <then>
+                        errorMessage(l("'Report Submission Folder' must be an absolute path"));
+                        return false;
+                    </then>
+                </if>
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="docDir" description="Folder for Documentation (on server)" type="String" length="30" group="Folders">
+            <verifyForSave>
+                <if>param("docDir") != "" and !macro("isAbsolute", param("docDir"))
+                    <then>
+                        errorMessage(l("'Folder for Documentation' must be an absolute path"));
+                        return false;
+                    </then>
+                </if>
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="downloadReportSubDir" description="SubFolders structure for Reports Download (on client)" type="String" length="30" group="Folders">
+        </parameter>
+
+        <parameter name="archivePath" description="Folder structure for archive path" type="String" length="30" group="Folders" defaultValue="$projectid/$branchid">
+            <attribute name="lookupAppend">true</attribute>
+            <attribute name="lookupFromValues"> l("Template") <comma/>macro("lookupArchiveTemplates")</attribute>
+            <attribute name="lookupAppendSeparator">" "</attribute>
+        </parameter>
+
+        <parameter name="downloadReportSubDirInZip" description="Folder structure for submission files in archive" type="String" length="30" group="Folders" defaultValue="$reportName_$date_$firm_$entity_$copyNumber">
+        </parameter>
+
+        <parameter name="emailScript" description="E-mail function" type="String" length="30" defaultValue="EmailFunction">
+            <choices>
+              	macro("getEmailFunctions");
+            </choices>
+        </parameter>
+
+        <parameter name="axiomSupportEmail" description="Axiom support e-mail" type="String" length="30" />
+        <parameter name="reportTemplateBuilderUrl" description="Report template builder URL (i.e. http://127.0.0.1:8080/axiom)" type="String"/>
+        <parameter name="help_info_synt" description="" type="Component" group="Archiving" noSerialization="yes">
+            <attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+            <attribute name="text">l("Alternative command line for Zip/Unzip for archiving: command parameters(optional) $ARCHIVE_NAME(optional) $FILE_NAME(optional)")</attribute>
+            <attribute name="color">macro("LIGHT_GRAY")</attribute>
+        </parameter>
+        <parameter name="zipCommandForArchiver" description="Zip Command Line For Archiving" type="String" length="30" group="Archiving">
+            <attribute name="lookupAppend">true</attribute>
+            <attribute name="lookupFromValues"> l("Template") <comma/>macro("lookupTemplates")</attribute>
+            <attribute name="lookupAppendSeparator">" "</attribute>
+        </parameter>
+        <parameter name="zipCommandForUnArchiver" description="Zip Command For Unarchiving" type="String" length="30" group="Archiving">
+            <attribute name="lookupAppend">true</attribute>
+            <attribute name="lookupFromValues"> l("Template") <comma/>macro("lookupTemplates")</attribute>
+            <attribute name="lookupAppendSeparator">" "</attribute>
+        </parameter>
+        <parameter name="alternateArchiving" description="Alternate archiving (populate axiom_archive_instances table)" type="boolean" length="15" group="Archiving"/>
+
+        <attribute name="lookupAppendSeparator">", "</attribute>
+        <parameter name="alwaysExportCurrent" description="Always export objects in current version format" type="boolean" length="30" />
+        <parameter name="doNotAskUserOnAlterTableErrors" description="Do not ask user for confirmation if ALTER TABLE rebuild fails" type="boolean" length="30" />
+        <parameter name="log_report_access" description="Log report access in axiom_report_history" type="boolean" length="30" />
+        <parameter name="log_task_execution" description="Log task execution in axiom_task_history" type="boolean" length="30" />
+
+        <parameter name="remote_debug_tasks" description="Remote Debug for Tasks" type="boolean" length="15" group="Debugging"/>
+        <parameter name="remote_debug_tasks_start_suspended" description="Tasks start suspended" type="boolean" defaultValue="false" length="15" group="Debugging">
+            <if>param("remote_debug_tasks")
+                <then><enabled/></then>
+                <else><removed/></else>
+            </if>
+        </parameter>
+        <parameter name="remote_debug_tasks_port" description="Starting port # for debug"  type="Integer" defaultValue="5005" length="15" group="Debugging">
+            <if>param("remote_debug_tasks")
+                <then><enabled/></then>
+                <else><removed/></else>
+            </if>
+            <verifyForSave>
+                macro("isPositiveOrZero");
+            </verifyForSave>
+        </parameter>
+        <parameter name="keep_temp_content" description="Do not delete temporary files/tables" type="boolean" length="15" group="Debugging"/>
+        <parameter name="maxImportBadFileSize" description="Max import bad file size (kilobytes)" type="integer" length="15" defaultValue="100"  group="Debugging"/>
+        <parameter name="dropTemporaryTables" description="" type="Component" group="Debugging" noSerialization="yes">
+            <attribute name="componentClass">"axiomsl.toolkit.dataset_editor.dynamicparameters.DropTemporaryTablesButton"</attribute>
+        </parameter>
+        <parameter name="enableGCTaskLogging" description="Enable GC logging for tasks" type="Boolean"  length="15" group="Debugging"/>
+        <parameter name="proxyHost" description="Proxy host" type="String" length="15" group="HTTP Proxy"/>
+        <parameter name="proxyPort" description="Proxy port" type="Integer" length="15" group="HTTP Proxy">
+            <verifyForSave>
+                macro("isPositiveOrZero");
+            </verifyForSave>
+        </parameter>
+        <parameter name="proxyUser" description="User" type="String"  length="15" group="HTTP Proxy"/>
+        <parameter name="proxyPassword" description="Password" isPassword="true" type="String" length="15" group="HTTP Proxy"/>
+
+        <parameter name="validateSchema" description="Validate submission xml file" type="String" group="Folders" length="15">
+            choices(<asDescription>
+            ndo("NONE", l("NONE")), ndo("INTERNET", l("INTERNET")), ndo("LOCAL", l("LOCAL")), ndo("INTERNET or LOCAL", l("INTERNET or LOCAL"))
+        </asDescription>)
+            <default>
+                'NONE'
+            </default>
+        </parameter>
+        <parameter name="validateSchemaFolder" description="Validate submission schema folder (on server)"  type="String" length="30" group="Folders">
+            <if>
+				<param name="validateSchema"/> == "LOCAL" or <param name="validateSchema"/> == "INTERNET or LOCAL"
+                <then>
+					<enabled/>
+				</then>
+				<else>
+                    <removed/>
+                </else>
+            </if>
+            <attribute name="uploadButton">list(l("Upload archived Schemas"), "zip", "Archived Schemas")</attribute>
+            <verifyForSave>
+                <if>
+				    <param name="validateSchema"/> == "LOCAL" or <param name="validateSchema"/> == "INTERNET or LOCAL"
+                    <then>
+                        <if> macro("verifyNonEmpty")
+                            <then>
+                                var dir = editor.getServerProxy().getFileInformation(param("validateSchemaFolder"));
+                                <if> dir.exists() and dir.isDirectory()
+                                    <then>
+                                        true
+                                    </then>
+                                    <else>
+                                        errorMessage(l("%1 does not exist or is not a directory", currentParameter.getDescription(true)));
+                                        false
+                                    </else>
+                                </if>
+                            </then>
+                            <else>
+                                false
+                            </else>
+                        </if>
+                    </then>
+                </if>
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="defaultStorageType" description="Default Storage Type" defaultValue="CONTINUOUS_PARTITION" type="String">
+            choices(
+            <asDescription>
+                ndo("PERMANENT", l("PERMANENT")), ndo("SEGMENTED", l("SEGMENTED")), ndo("CONTINUOUS", l("CONTINUOUS")), ndo("CONTINUOUS_PARTITION",
+                l("CONTINUOUS_PARTITION"))
+            </asDescription>
+            )
+        </parameter>
+
+        <parameter name="viewer_loading_fetch_size" description="Viewer inital row count limit" type="Integer" defaultValue="100" length="15">
+            <verifyForSave>
+                macro("isPositiveOrZero");
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="enable_adjust_frozen_ffr" description="Allow creating a copy of frozen report instance for adjustment" type="boolean" length="30" />
+
+        <parameter name="doNotFreezeReportsForDifferentDates" description="When freezing tasks do not freeze FreeForm reports for different dates" type="boolean" defaultValue="false" length="30"/>
+
+        <parameter name="disableSSL" description="Disable SSL handshake" type="boolean" defaultValue="false" length="30"/>
+
+        <parameter name="balancingAlgorithm" description="Cluster load balancing algorithm" type="String" length="30" defaultValue="Default">
+                <if> !axiomObjectManager.getLicenseSupport().getLicenseProperty(class("axiomsl.util.CommonConstants").LICENSE_CLUSTER_SUPPORT)
+                    <then>
+                        <removed/>
+                    </then>
+                    <else>
+                        <choices>
+                            var l = list();
+                            var algorithms =  new("java.util.HashMap", axiomObjectManager.getNodeManager().getAlgorithmMap());
+                            var keys = new("java.util.ArrayList",algorithms.keySet());
+                            function("java.util.Collections","sort",keys);
+                            <for>var i = 0 <comma/> i &lt; keys.size() <comma/> i++
+                                <do>
+                                    var key = keys.get(i);
+                                    l.add(ndo(key,algorithms.get(key)));
+                                </do>
+                            </for>
+                            <asDescription>l</asDescription>
+                        </choices>
+                    </else>
+                </if>
+        </parameter>
+
+        <parameter name="sharedDir" description="Path to shared directory on server" length="40" type="string"/>
+
+        <parameter name="freezeDuringSignOff" description="Freeze tasks during sign off" type="boolean" defaultValue="true" length="30" group="Enterprise Reports"/>
+
+        <parameter name="checkSubmitPermissionForERSubmissionDownload" description="Check submit permission for download on 'Enterprise Report Submission' screen" type="boolean" defaultValue="true" length="30" group="Enterprise Reports"/>
+
+        <parameter name="reportingSystems" description="Reporting Systems" type="table" allowAddRemove="false" reorder="false" group="Enterprise Reports">
+            <parameter name="reportingSystem" description="Reporting System" type="string">
+                <readOnly/>
+            </parameter>
+            <parameter name="isEnabled" description="Enabled" type="boolean" defaultValue="true"/>
+
+            <verifyForSave>
+                var disabledRegulators = new("java.util.HashSet");
+                var regulatorsWithReports = list();
+
+                <for> var i = 0 <comma/> i &lt; param("reportingSystems").size() <comma/> i++
+                    <do>
+                        var row = param("reportingSystems").get(i);
+                        var regulator = row.param("reportingSystem");
+                        <if> !row.param("isEnabled")
+                            <then>
+                                disabledRegulators.add(regulator);
+                            </then>
+                        </if>
+                    </do>
+                </for>
+
+                var calendarID = function("axiomsl.server.object_framework.ObjectID", "createNameId", "EnterpriseReportCalendar", null, "EnterpriseReportCalendar");
+                <if>!disabledRegulators.isEmpty() and manager.objectExists(calendarID, axiomEnvironment)
+                    <then>
+                        var calendar = editor.locateObjectById("EnterpriseReportCalendar", "EnterpriseReportCalendar");
+                        var reports = calendar.getTable("reports");
+                        <for>var i = 0 <comma/> i &lt; reports.size() <comma/> i++
+                            <do>
+                                var node = reports.get(i);
+                                var reportingSystem = node.getProperty("reportingSystem");
+                                <if>disabledRegulators.contains(reportingSystem) and !regulatorsWithReports.contains(reportingSystem)
+                                    <then>
+                                        regulatorsWithReports.add(reportingSystem);
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+                    </then>
+                </if>
+
+                <if>!regulatorsWithReports.isEmpty()
+                    <then>
+                        var regString = regulatorsWithReports.toString();
+                        regString = regString.substring(1, regString.length() - 1);
+                        <if> regulatorsWithReports.size() == 1
+                            <then>
+                                return confirm(l("There are reports for %1 regulator that are about to be deleted. Are you sure?", regString));
+
+                            </then>
+                            <else>
+                                return confirm(l("There are reports for %1 regulators that are about to be deleted. Are you sure?", regString));
+                            </else>
+                        </if>
+                    </then>
+                </if>
+
+                return true;
+            </verifyForSave>
+
+        </parameter>
+
+        <parameter name="genericReportingSystemName" description="Name of the generic reporting system" type="string" defaultValue="Generic" length="50" group="Enterprise Reports"/>
+        <parameter name="genericReportingSystemName2" description="Name of the generic reporting system 2" type="string" defaultValue="Generic2" length="50" group="Enterprise Reports"/>
+        <parameter name="genericReportingSystemName3" description="Name of the generic reporting system 3" type="string" defaultValue="Generic3" length="50" group="Enterprise Reports"/>
+
+        <parameter name="doNotValidateModelsInShorthands" description="Do not validate model usage in shorthands" type="boolean" defaultValue="false" length="30" group="Backward compatibility"/>
+        <parameter name="useInnerJoinForBusinessDayConditions" description="Use inner join for Business Day Interval conditions" type="boolean" defaultValue="false" length="30" group="Backward compatibility"/>
+        <parameter name="taskStarterAddsEtlMode" description="Command line Task Starter always adds etlMode to Workflow key parameters" type="boolean" defaultValue="true" length="30" group="Backward compatibility"/>
+        <parameter name="checkNonStreamDataPermissionColumns" description="Check Data Permissions for columns that have not been restricted by Stream values during Task execution" type="boolean" defaultValue="true" length="30" group="Backward compatibility"/>
+
+        <parameter name="properties" description="Other Properties" type="table" length="15" reorder="false" allowAddRemove="true" keyParameter="name" group="Other">
+	        <parameter name="name" description="Name" type="string">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniqueness", list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="value" description="Value" type="string"/>
+        </parameter>
+
+        <parameter name="BPMUserExport" description="Allow exporting users to BPM" type="boolean" defaultValue="true">
+            <if> !axiomObjectManager.getLicenseSupport().getLicenseProperty(class("axiomsl.util.CommonConstants").LICENSE_BPM_SUPPORT)
+            <then>
+                <removed/>
+            </then>
+            </if>
+        </parameter>
+
+        <parameter name="BPMUserCleanup" description="Allow removing unknown users from BPM" type="boolean" defaultValue="true">
+            <if> !axiomObjectManager.getLicenseSupport().getLicenseProperty(class("axiomsl.util.CommonConstants").LICENSE_BPM_SUPPORT)
+            <then>
+                <removed/>
+            </then>
+            <else>
+                <if>!param("BPMUserExport")
+                    <then><disabled/></then>
+                    <else><enabled/></else>
+                </if>
+            </else>
+        </if>
+        </parameter>
+        <parameter name="fourEyesSignOff" description="Four eyes signoff" type="boolean" defaultValue="false"/>
+
+        <parameter name="dashboardURL" description="Dashboard URL" type="string" defaultValue="http://127.0.0.1:8888" length="50" />
+
+    </parameters>
+
+    <loadCode>
+        var properties = <originalAxiom/>.getProperty("properties");
+        var standaloneProperties = macro("standaloneProperties");
+
+        var emailScript = properties.locateIfExists("emailScript");
+        <if> emailScript != null
+            <then>
+                emailScript = emailScript.getString("value");
+            </then>
+        </if>
+        <if> emailScript != null and emailScript.contains("$subject") and !"mailx -s $subject [-b $recipient] default@yourbank.com".equals(emailScript)
+            <then>
+message("You had the email command previously defined as:
+"+emailScript+"
+Please implement the matching functionality using Email Function.
+Copy-paste that command now, it will be lost when SystemDefaults is saved.")
+            </then>
+        </if>
+
+        <!--just deserialize-->
+        <!--<for> var i = 0 <comma/> i &lt; standaloneProperties.size() <comma/> i++-->
+            <!--<do>-->
+                <!--param(standaloneProperties.get(i)) = "";-->
+            <!--</do>-->
+        <!--</for>-->
+        param("properties");
+        param("taskMXdefault") = true;
+        param("axiomSupportEmail") = class("axiomsl.util.PropUtils").getEmailAddressForSupport(false, editor.getRemoteProxy());
+        param("downloadReportSubDir") = class("axiomsl.util.PropUtils").getDownloadReportSubDir(editor.getRemoteProxy());
+
+        var reportingSystemsFound = false;
+        <for> var i = 0 <comma/> i &lt; properties.size() <comma/> i++
+            <do>
+                var row = properties.get(i);
+                var name = row.getString("name");
+                var value = row.getString("value");
+                <if> name != null and value != null and !"".equals(name)
+                    <then>
+                        <case>
+                            name.equals("taskMX")
+                            <then>
+                                param("taskMXdefault") = false;
+                                param(name) = value;
+                            </then>
+                            name.equals("reportingSystems")
+                            <then>
+                                reportingSystemsFound = true;
+                                var intValue = function("java.lang.Integer", "parseInt", value);
+
+                                var reportingSystems = function("axiomsl.util.ReportingSystem", "values");
+                                <for>var t = 0 <comma/> t &lt; reportingSystems.size() <comma/> t++
+                                    <do>
+                                        var rs = reportingSystems.get(t);
+                                        macro("addFirmRow", rs.toString(), intValue, rs.getBitValue());
+                                    </do>
+                                </for>
+                            </then>
+                            standaloneProperties.contains(name)
+                            <then>
+                                param(name) = value;
+                            </then>
+                            <else>
+                                var newRow = param("properties").addLine();
+                                newRow.param("name") = name;
+                                newRow.param("value") = value;
+                            </else>
+                        </case>
+                    </then>
+                </if>
+            </do>
+        </for>
+
+        <if> !reportingSystemsFound
+            <then>
+                var reportingSystems = function("axiomsl.util.ReportingSystem", "values");
+                <for>var t = 0 <comma/> t &lt; reportingSystems.size() <comma/> t++
+                    <do>
+                        macro("addNewFirmRow", reportingSystems.get(t).toString());
+                    </do>
+                </for>
+            </then>
+        </if>
+    </loadCode>
+
+    <newCode>
+        var reportingSystems = function("axiomsl.util.ReportingSystem", "values");
+        <for>var t = 0 <comma/> t &lt; reportingSystems.size() <comma/> t++
+            <do>
+                macro("addNewFirmRow", reportingSystems.get(t).toString());
+            </do>
+        </for>
+    </newCode>
+
+    <saveCode>
+        var table = <axiomForSave/>.getTable("properties");
+        var standaloneProperties = macro("standaloneProperties");
+        <for> var i = 0 <comma/> i &lt; standaloneProperties.size() <comma/> i++
+            <do>
+                var name = standaloneProperties.get(i);
+                var value = param(name);
+                <if> value != null
+                     and (name != "axiomSupportEmail" or !"".equals(value))
+                    <then>
+                        var row = table.addRow("SystemDefaults:property");
+                        row.setProperty("name", name);
+
+                        <case>
+                            name == "proxyPassword"
+                            <then>
+                                <if>
+                                    !value.startsWith("#") <!-- not already loaded as encrypted --> and  value != ""
+                                    <then>
+                                        value = "#"+function("axiomsl.util.basic.StringEncrypt", "getInstance").encrypt(value);
+                                    </then>
+                                </if>
+                            </then>
+                            name == "reportingSystems"
+                            <then>
+                                 var result = 0;
+                                 <for> var j = 0 <comma/> j &lt; param("reportingSystems").size() <comma/> j++
+                                     <do>
+                                         var rsRow = param("reportingSystems").get(j);
+                                         <if>rsRow.param("isEnabled")
+                                             <then>
+                                                var reportingSystems = function("axiomsl.util.ReportingSystem", "values");
+                                                <for>var t = 0 <comma/> t &lt; reportingSystems.size() <comma/> t++
+                                                    <do>
+                                                        var rs = reportingSystems.get(t);
+                                                        <if>rs.toString() == rsRow.param("reportingSystem")
+                                                            <then>
+                                                                result = result + rs.getBitValue();
+                                                            </then>
+                                                        </if>
+                                                    </do>
+                                                </for>
+                                             </then>
+                                         </if>
+                                     </do>
+                                 </for>
+                                 value = result;
+                            </then>
+                        </case>
+                        row.setProperty("value", value.toString());
+                    </then>
+                </if>
+            </do>
+        </for>
+
+        var otherProperties = param("properties");
+        <for> var i = 0 <comma/> i &lt; otherProperties.size() <comma/> i++
+            <do>
+                var paramRow = otherProperties.get(i);
+                var name = paramRow.param("name");
+                var value = paramRow.param("value");
+                <if> name != null and !"".equals(name) and value != null
+                    <then>
+                        var row = table.addRow("SystemDefaults:property");
+                        row.setProperty("name", name);
+                        row.setProperty("value", value);
+                    </then>
+                </if>
+            </do>
+        </for>
+
+    </saveCode>
+
+    <macros>
+          <macro name="standaloneProperties">
+              ;list("validateSchema",
+              "validateSchemaFolder",
+              "proxyHost", "proxyPort", "proxyUser", "proxyPassword",
+              "reportSubmitDir",
+              "docDir",
+              "downloadReportSubDir",
+              "archivePath",
+              "downloadReportSubDirInZip",
+              "emailScript",
+              "axiomSupportEmail",
+              "reportTemplateBuilderUrl",
+              "zipCommandForArchiver",
+              "zipCommandForUnArchiver",
+              "alternateArchiving",
+              "viewer_loading_fetch_size",
+              "enable_adjust_frozen_ffr",
+              "doNotFreezeReportsForDifferentDates",
+              "disableSSL",
+              "balancingAlgorithm",
+              "sharedDir",
+              "calendar",
+              "user_dormant_days",
+              "pwd_reuse_days",
+              "pwd_reuse_number",
+              "default_db_source",
+              "current_environment_name",
+              "require_comment",
+              "open_new_created_project_branch_automatically",
+              "open_saved_as_branch_automatically",
+              "remote_debug_tasks", "remote_debug_tasks_start_suspended", "remote_debug_tasks_port",
+              "keep_temp_content",
+              "taskMX",
+              "taskJVMParams",
+              "maxRaisedJVMCount",
+              "historySize",
+              "locksWaitTime",
+              "memoryBasedFetchSize",
+              "memoryBasedBatchSize",
+              "inMemoryExecutionFetchSize",
+              "defaultStorageType",
+              "maxImportBadFileSize",
+              "reportingSystems",
+              "alwaysExportCurrent",
+              "doNotAskUserOnAlterTableErrors",
+              "freezeDuringSignOff",
+              "checkSubmitPermissionForERSubmissionDownload",
+              "genericReportingSystemName",
+              "genericReportingSystemName2",
+              "genericReportingSystemName3",
+              "log_report_access",
+              "log_task_execution",
+              "enableGCTaskLogging",
+              "doNotValidateModelsInShorthands",
+              "useInnerJoinForBusinessDayConditions",
+              "taskStarterAddsEtlMode",
+              "checkNonStreamDataPermissionColumns",
+              "BPMUserExport",
+              "BPMUserCleanup",
+              "fourEyesSignOff",
+              "dashboardURL",
+              "useSystemDbGroupForTasksExecution",
+              "useSystemDbGroupForAdjustments")
+          </macro>
+
+          <macro name="addNewFirmRow" arguments="name">
+              var firm = param("reportingSystems").addLine();
+              firm.param("reportingSystem") = <name/>;
+              firm.param("isEnabled") = true;
+          </macro>
+
+          <macro name="addFirmRow" arguments="name, intValue, bit">
+              var firm = param("reportingSystems").addLine();
+              firm.param("reportingSystem") = <name/>;
+              firm.param("isEnabled") = (<intValue/> / <bit/> % 2 == 1);
+          </macro>
+          <macro name="lookupTemplates" >
+            var lookup = list();
+            lookup.add("$FILE_NAME");
+            lookup.add("$ARCHIVE_NAME");
+            ;lookup
+           </macro>
+        <macro name="lookupArchiveTemplates" >
+            var lookup = list();
+            lookup.add("$projectid");
+            lookup.add("$projectname");
+            lookup.add("$branchid");
+            lookup.add("$branchname");
+            lookup.add("$id");
+            lookup.add("$name");
+            lookup.add("$type");
+            lookup.add("$today");
+            lookup.add("$instanceKeyValues");
+            lookup.add("$instanceDate");
+            lookup.add("$archivalFrequency");
+            ;lookup
+        </macro>
+    </macros>
+</data_set_category>

@@ -1,0 +1,99 @@
+<metadata>
+	<object type="FreeFormReport" extends="ModelBasedReport" version="10">
+		<!-- dbSource is where the data tables for FreeFormReport results will be stored -->
+		<property name="dbSourceForResults" valueType="url" targetObjectType="DBSource"/>
+		<property name="archivalProperties" valueType="object" objectType="ArchivalProperties"/>
+		<property name="storageType" valueType="string" choices="PERMANENT, CONTINUOUS, CONTINUOUS_PARTITION, SEGMENTED"/>
+		<property name="elecSubmissionCell" valueType="string"/>
+        <property name="readyToSignOffCell" valueType="string" optional="true"/>
+        <property name="readyToSignOffCompleteValue" valueType="string" defaultValue="OK" optional="true" />
+        <property name="readyToSubmitCell" valueType="string" optional="true"/>
+        <property name="readyToSubmitCompleteValue" valueType="string" defaultValue="OK" optional="true" />
+        <property name="skipBlankLinesInElecSubm" valueType="boolean" defaultValue="true"/>
+        <property name="editChecksSheet" valueType="string"/>
+		<property name="exportXLSPrintArea" valueType="boolean"/>
+        <property name="removeConditionalFormatsOnExport" valueType="boolean" defaultValue="false" optional="true"/>
+        <property name="removeConditionalFormatsOnPrint" valueType="boolean"/>
+		<property name="printSetup" valueType="object" objectType="FreeFormReport:printSetup"/>
+		<property name="zipped" valueType="boolean" defaultValue="true"/>
+		<!-- (backward compatibility) blob includes excel, value cache, cell names  -->
+		<property name="blob" optional="true" valueType="string"/>
+		<property name="spreadsheet" optional="true" valueType="object" objectType="FreeFormReport:spreadsheet"/>
+        <property name="parameterValuesForPreview" valueType="table" optional="true" rowTypes="Task:parameterValue"/>
+		<property name="cache" optional="true" valueType="string"/>
+		<property name="asofDateCell" valueType="string"/>
+		<property name="followAllXrefs" valueType="boolean"/>
+		<property name="saveCachedValues" valueType="boolean"/>
+		<property name="optimization" valueType="table" optional="true" rowType="FreeFormReport:cache"/>
+        <property name="adjustmentRestriction" valueType = "string" choices="NONE, SHEET, CELL, COM" optional="true"/>
+        <property name="unicodeContents" valueType = "boolean" optional="true"/>
+        <property name="submissionFileEncoding" valueType = "string" optional="true" defaultValue="UTF-8" canBeEmpty="false"/>
+        <property name="checkNonstandardFonts" valueType = "boolean" optional="true"/>
+        <property name="postprocessCode" valueType="string" canBeEmpty="true" optional="true"/>
+        <property name="computeStatistics" valueType="string" canBeEmpty="false" optional="true" choices="NONE, FOR_ALL_COLUMNS, FOR_KEY_COLUMNS" defaultValue="FOR_ALL_COLUMNS"/>
+        <property name="populateData" valueType="string" canBeEmpty="false" optional="true" choices="ALL_NONEMPTY, NAMED_CELLS, NONE" defaultValue="ALL_NONEMPTY"/>
+        <property name="changeDefaultCellDataSize" valueType="boolean" canBeEmpty="true" optional="true" defaultValue="false"/>
+        <property name="cellDataSize" valueType="integer" canBeEmpty="true" optional="true" defaultValue="1000"/>
+        <property name="allowExternalDataPermissions" valueType="boolean" optional="true" defaultValue="false"/>
+    </object>
+	<object type="FreeFormReport:printSetup" version="3">
+		<property name="globalSheet" valueType="object" objectType="FreeFormReport:globalSheet"/>
+		<property name="sheets" valueType="table" rowTypes="FreeFormReport:definiteSheet"/>
+	</object>
+	<object type="FreeFormReport:globalSheet" version="3">
+		<property name="printScale" valueType="double"/>
+		<property name="pageSetup" valueType="object" objectType="PrintSetup:pageSetup"/>
+		<property name="fonts" valueType="table" rowTypes="PrintSetup:font"/>
+		<property name="headers" valueType="table" rowTypes="PrintSetup:header"/>
+	</object>
+	<object type="FreeFormReport:definiteSheet" version="3">
+		<property name="name" valueType="string"/>
+		<property name="viewScale" valueType="double"/>
+		<property name="isPrinted" valueType="boolean"/>
+        <property name="isPrintedAlternate" valueType="boolean" optional="true"/>
+        <property name="schedule" valueType="string" canBeEmpty="true" optional="true"/>
+		<property name="printScale" valueType="double" optional="true"/>
+		<property name="pageSetup" valueType="object" optional="true" objectType="PrintSetup:pageSetup"/>
+		<property name="headers" valueType="table" rowTypes="PrintSetup:header" optional="true"/>
+		<property name="printArea" valueType="object" objectType="FreeFormReport:definiteSheet:printArea" optional="true"/>
+        <property name="alternatePrintArea" valueType="object" objectType="FreeFormReport:definiteSheet:printArea" optional="true"/>
+		<property name="rowPageBreak" valueType="table" rowTypes="FreeFormReport:singleIntValue" optional="true"/>
+        <property name="alternateRowPageBreak" valueType="table" rowTypes="FreeFormReport:singleIntValue" optional="true"/>
+		<property name="colPageBreak" valueType="table" rowTypes="FreeFormReport:singleIntValue" optional="true"/>
+        <property name="alternateColPageBreak" valueType="table" rowTypes="FreeFormReport:singleIntValue" optional="true"/>
+	</object>
+	<object type="FreeFormReport:definiteSheet:printArea" version="3">
+		<property name="startRow" valueType="integer"/>
+		<property name="startCol" valueType="integer"/>
+		<property name="nRows" valueType="integer"/>
+		<property name="nCols" valueType="integer"/>
+	</object>
+	<object type="FreeFormReport:cache" version="4">
+		<property name="model" valueType="url" targetObjectType="DataModel"/>
+		<property name="calcField" valueType="string"/>
+		<property name="aggrFunc" valueType="string" choices="SUM,MIN,MAX,AVG,COUNT,COUNT_DISTINCT,SUM_NULL"/>
+		<property name="modelCell" valueType="string"/>
+		<property name="calcFieldCell" valueType="string"/>
+		<property name="aggrFuncCell" valueType="string"/>
+		<property name="nonOptFields" valueType="table" rowTypes="FreeFormReport:singleStringValue"/>
+		<property name="optFields" valueType="table" rowTypes="FreeFormReport:singleStringValue"/>
+	</object>
+	<!--support objects-->
+	<object type="FreeFormReport:singleIntValue" version="3">
+		<property name="value" valueType="integer"/>
+	</object>
+	<object type="FreeFormReport:singleStringValue" version="3">
+		<property name="value" valueType="string"/>
+	</object>
+	<object type="FreeFormReport:spreadsheet" version="3">
+		<property name="namesConvertAttempted" valueType="boolean"/>
+		<property name="namesEnabled" valueType="boolean"/>
+		<property name="names" optional="true" valueType="table" rowTypes="FreeFormReport:definedName"/>
+		<!--zipped spreadsheet-->
+		<property name="blob" valueType="string"/>
+	</object>
+	<object type="FreeFormReport:definedName" version="3">
+		<property name="name" valueType="string"/>
+		<property name="value" valueType="string"/>
+	</object>
+</metadata>

@@ -1,0 +1,17 @@
+<!-- object passed as parameter to instance management functions -->
+<metadata>
+	<object type="DataSourceInstanceSpec" version="5">
+        <!--these are included for backward compatibility with code that sets them-->
+        <property name="name" valueType="string" optional="true"/>
+        <property name="description" valueType="string" optional="true"/>
+        <property name="objectId" valueType="string" optional="true"/>
+
+        <property name="branchId" valueType="string" optional="true" canBeEmpty="false"/>
+		<property name="underlyingObject" valueType="url" targetObjectType="DataSource"/>
+		<property name="instanceDate" optional="true" valueType="date"/>
+		<property name="instanceKeyValues" optional="true" valueType="table" rowTypes="InstanceObject:instanceKeyValue"/>
+        <property name="isAllInstances" optional="true" valueType="boolean"/>
+        <!--only for external sources. in case if there is no table property set in datasource -->
+        <property name="externalTableName" optional="true" valueType="string"/>
+	</object>
+</metadata>

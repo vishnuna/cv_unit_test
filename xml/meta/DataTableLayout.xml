@@ -1,0 +1,54 @@
+<metadata>
+	<object type="DataTableLayout" extends="ObjectInBranch" version="7">
+		<!-- corresponds to the layout of the table which exists.
+		  can be out-of sync with data source layout -->
+		<property name="layout" valueType="table" rowTypes="DataTableLayout:field"/>
+		<!-- if exists, specifies the list of table columns constituting primary key -->
+		<!-- right now we create an index, not a primary key, on data source key fields.
+          index name is always table_name_i -->
+		<property name="primaryKey" valueType="object" optional="true" objectType="DataTableLayout:index"/>
+		<!-- lists the indices which were actually created and now exist in DB -->
+		<property name="indices" valueType="table" rowTypes="DataTableLayout:index"/>
+        <property name="postTableCreationStatements" valueType="table" rowTypes="DataSource:postTableCreationStatement"/>
+        <!--This will be set to TRUE after statements have been executed, and set to FALSE or removed after instance has been successfully finalized. -->
+        <!--This allows to catch situation where PTCS have been executed for new table, but data still resides in old table on rebuild, -->
+        <!--which means PTCS need to be reexecuted on next rebuild-->
+        <property name="postTableCreationStatementsInvalid" optional="true" valueType="boolean"/>
+    </object>
+	<object type="DataTableLayout:field" extends="ReferencibleSubobject" version="4">
+		<!-- data table field object should have the same (or substantially same) id 
+		  as the data source field object,
+		 to be able to match them for rebuilding of the tables, if data source layout changes -->
+		<!-- column (field) name could be different from the data source field name, especially if the latter is
+		 too long.
+		 This is the actual column name in the DB -->
+		<!-- data type as was specified in data source -->
+		<property name="type" valueType="string" canBeEmpty="false" choices="VARCHAR, INTEGER, FLOAT, DATE, TEXT, UNICODE, UNICODE_TEXT, DB_SPECIFIC"/>
+		<!-- always given - the db-specific type into which the type specified in data source translates.
+			This is the type with which the table column was created -->
+		<property name="dbSpecificType" valueType="string" canBeEmpty="false"/>
+		<!-- if needed -->
+		<property name="size" valueType="integer" optional="true"/>
+		<!-- if needed -->
+		<property name="precision" valueType="integer" optional="true"/>
+		<property name="allowNulls" valueType="boolean"/>
+		<property name="allowDefault" valueType="boolean"/>
+		<!-- if allowDefault==true -->
+		<property name="defaultValue" valueType="string" optional="true" canBeEmpty="false"/>
+		<property name="fieldType" choices="calculatedField, detail, enumerator, countField, modelUsageField, portfolioLevel, portfolioNodePath, portfolioAdditionalField" optional="true" valueType="string"/>
+		<property name="aggregatedFunction" valueType="string"/>
+		<property name="isCountFieldFor" valueType="url" canBeEmpty="true" urlStructure="DataTableLayout[this].layout[*]" targetObjectType="DataTableLayout:field"/>
+        <property name="removeNonNullValuesOnColumnDelete" optional="true" valueType="boolean"/>
+	</object>
+	<object type="DataTableLayout:index" version="4">
+		<!-- index doesn't have an id, we could match them by matching the columns  -->
+		<!-- This is the actual index name in the DB -->
+		<property name="clustered" valueType="boolean"/>
+		<property name="unique" valueType="boolean"/>
+		<property name="partitionedLocal" valueType="boolean"/>
+		<property name="fields" valueType="table" canBeEmpty="false" rowTypes="DataTableLayout:localFieldReference"/>
+	</object>
+	<object type="DataTableLayout:localFieldReference" version="4">
+		<property name="value" valueType="url" urlStructure="DataTableLayout[this].layout[*]" targetObjectType="DataTableLayout:field"/>
+	</object>
+</metadata>

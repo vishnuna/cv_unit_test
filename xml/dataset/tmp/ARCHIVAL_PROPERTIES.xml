@@ -1,0 +1,102 @@
+<data_set_category name="ARCHIVAL_PROPERTIES"
+	description="Archival Properties"
+	windowTitle="Archival Properties"
+	objectType="ArchivalProperties">
+
+    <parameters>
+        <!--archival properties -->        
+        <parameter name="daily" description="Daily" group="Archive" type="Boolean" defaultValue="false" freehand="no"/>
+        <parameter name="weekly" description="Weekly" group="Archive" type="Boolean" defaultValue="false" freehand="no"/>
+        <parameter name="monthly" description="Monthly" group="Archive" type="Boolean" defaultValue="false" freehand="no"/>
+        <parameter name="quarterly" description="Quarterly" group="Archive" type="Boolean" defaultValue="false" freehand="no"/>
+        <parameter name="semiAnnually" description="Semi-Annually" group="Archive" type="Boolean" defaultValue="false" freehand="no"/>
+        <parameter name="annually" description="Annually" group="Archive" type="Boolean" defaultValue="false" freehand="no"/>
+        <parameter name="intraDay" description="Intra-day" group="Archive" type="Boolean" defaultValue="false" freehand="no"/>
+        <parameter name="userDefined" description="User Defined" group="Archive" type="Boolean" defaultValue="false" freehand="no"/>
+        <parameter name="archiveAfter" description="Archive After" group="Archive" type="Integer" defaultValue="50" freehand="no">
+            <if>
+                <param name="userDefined"/>
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="deleteAfter" description="Delete After" group="Archive" type="Integer" defaultValue="100" freehand="no">
+            <if>
+                <param name="userDefined"/>
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+
+        <parameter name="signOffArchiveAfter" description="Sign Off Archive After" group="Archive" type="Integer" defaultValue="50" freehand="no">
+            <if>
+                <param name="userDefined"/>
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+
+    </parameters>
+
+    <loadCode>
+        var properties = <originalAxiom/>.getObject("archivalProperties");
+        param("daily") = properties.getBoolean("daily");
+        param("weekly") = properties.getBoolean("weekly");
+        param("monthly") = properties.getBoolean("monthly");
+        param("quarterly") = properties.getBoolean("quarterly");
+        param("semiAnnually") = properties.getBoolean("semiAnnually");
+        param("annually") = properties.getBoolean("annually");
+        param("intraDay") = properties.getBoolean("intraDay");
+        param("userDefined") = properties.getBoolean("userDefined");
+        <if> properties.propertyIsSet("archiveAfter")
+            <then>
+                param("archiveAfter") = properties.getProperty("archiveAfter");
+            </then>
+        </if>
+        <if> properties.propertyIsSet("deleteAfter")
+            <then>
+                param("deleteAfter") = properties.getProperty("deleteAfter");
+            </then>
+        </if>        
+
+        <if> properties.propertyIsSet("signOffArchiveAfter")
+            <then>
+                param("signOffArchiveAfter") = properties.getProperty("signOffArchiveAfter");
+            </then>
+        </if>
+    </loadCode>
+
+    <saveCode>
+        var properties = <axiomForSave/>.getObject("archivalProperties");
+        properties.setProperty("daily", param("daily"));
+        properties.setProperty("weekly", param("weekly"));
+        properties.setProperty("monthly", param("monthly"));
+        properties.setProperty("quarterly", param("quarterly"));
+        properties.setProperty("semiAnnually", param("semiAnnually"));
+        properties.setProperty("annually", param("annually"));
+        properties.setProperty("intraDay", param("intraDay"));
+        properties.setProperty("userDefined", param("userDefined"));
+        <if>
+            param("userDefined")
+            <then>
+                properties.setProperty("archiveAfter", param("archiveAfter"));
+                properties.setProperty("deleteAfter", param("deleteAfter"));
+                properties.setProperty("signOffArchiveAfter", param("signOffArchiveAfter"));
+            </then>
+        </if>
+    </saveCode>
+
+
+</data_set_category>

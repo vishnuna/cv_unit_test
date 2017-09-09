@@ -1,0 +1,38 @@
+<data_set_category name="MAPPED_REPORT" description="Mapped Report Setup"
+                   windowTitle="Mapped Report Setup" entityName="MappedReport"
+                   icon="report" screenWidth="800" screenHeight="500" objectType="MappedReport"
+                   extends="COMMON_UTILS, DOC_DATA">
+
+    <!--
+        the screen is NOT USED actually.
+    -->
+
+    <parameters>
+
+        <!-- hidden, implied to be used just for storing report full name - we need it when restoring a reference to a report -->
+        <!-- deal is that properties of the incoming <originalAxiom> are not saved automatically in "outcoming" <axiomForSave> -->
+        <parameter name="reportFullName" description="Report Full Name" type="String" length="20" hidden="true" freehand="no"/>
+
+    </parameters>
+
+    <loadCode>
+
+        var mappedReport=<originalAxiom/>;
+
+        param("reportFullName") = mappedReport.getReference("report").getTargetObjectName();
+
+    </loadCode>
+
+    <saveCode>
+
+        function("axiomsl.gui.xbrl.editor.mapped_report.MappedReportDataSetEditor", "saveCodeMethod", <axiomForSave/>, param("reportFullName"));
+
+        var mappedReportForSave = <axiomForSave/>;
+
+    </saveCode>
+
+    <newCode>
+        errorMessage(l('new code'));
+    </newCode>
+
+</data_set_category>

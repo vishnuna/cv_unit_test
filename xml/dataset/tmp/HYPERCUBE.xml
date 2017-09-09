@@ -1,0 +1,406 @@
+<data_set_category name="HYPERCUBE" description="Hypercube Setup"
+                   windowTitle="Hypercube Setup"
+                   entityName="Hypercube"
+                   icon="hypercube"
+                   screenWidth="800" screenHeight="500"
+                   objectType="Hypercube"
+                   extends="COMMON_UTILS, DOC_DATA">
+    <parameters>
+        <parameter name="dimensions" description="Dimensions" type="table" group="Dimensions"
+                   length="7" reorder="false" keyParameter="name" autoSortRows="true"
+                   comparatorClass="axiomsl.gui.xbrl.hypercube.DimensionRowComparator">
+            <onRowAdded>
+                macro("updateModels");
+                dataSet.setName(macro("generateHypercubeName"));
+            </onRowAdded>
+
+            <onRowDeleted>
+                macro("updateModels");
+                dataSet.setName(macro("generateHypercubeName"));
+            </onRowDeleted>
+
+            <confirmAddRow>
+                <if>!macro("isEmpty", addedRow.param("name"))
+                    <then>
+                        var dimName = macro("getName", addedRow.param("name"));
+                        var dimId = editor.createDimensionMappingNameId(dimName);
+                        trace(dimId);
+                        <if>!editor.getAxiomObjectManager().objectExists(dimId, editor.getAxiomEnvironment())
+                            <then>
+                                errorMessage(l("Dimension Mapping '%1' doesn't exist!", dimName));
+                                return false;
+                            </then>
+                        </if>
+                        var resolver = editor.getAxiomObjectManager().getResolver();
+                        <if>resolver.getObjectEntry(resolver.resolve(dimId)).isInvalid()
+                            <then>
+                                errorMessage(l("Dimension Mapping '%1' is invalid!", dimName));
+                                return false;
+                            </then>
+                        </if>
+                    </then>
+                </if>
+            </confirmAddRow>
+
+
+            <parameter name="name" description="Dimension" type="string" isDataSet="DimensionMapping">
+                <readOnly/>
+
+                <onParameterChange>
+                    macro("updateModels");
+                    dataSet.setName(macro("generateHypercubeName"));
+                </onParameterChange>
+
+                <validation>
+                    <if>macro("isEmpty", newValue)
+                        <then>
+                            return l("Dimension Mapping name is empty!");
+                        </then>
+                    </if>
+
+                    var dimName = macro("getName", newValue);
+                    var dimId = editor.createDimensionMappingNameId(dimName);
+                    trace(dimId);
+                    <if>!editor.getAxiomObjectManager().objectExists(dimId, editor.getAxiomEnvironment())
+                        <then>
+                            return l("Dimension Mapping '%1' doesn't exist!", dimName);
+                        </then>
+                    </if>
+                    var resolver = editor.getAxiomObjectManager().getResolver();
+                    <if>resolver.getObjectEntry(resolver.resolve(dimId)).isInvalid()
+                        <then>
+                            return l("Dimension Mapping '%1' is invalid!", dimName);
+                        </then>
+                    </if>
+                </validation>
+
+                <verifyForSave>
+                    <if>currentParameter.getParameterValue() == ""
+                        <then>
+                            errorMessage(l("%1 cannot be empty", currentParameter.getDescription(true)));
+                            false
+                        </then>
+                        <else>
+                            <if>currentParameter.getParameterValue().indexOf("!!!") &gt;= 0
+                                <then>
+                                    errorMessage(l("Dimension Mapping '%1' is invalid",
+                                    currentParameter.getParameterValue()));
+                                    false
+                                </then>
+                            </if>
+                        </else>
+                    </if>
+                </verifyForSave>
+            </parameter>
+
+            <parameter name="description" description="Description" type="string">
+                <readOnly/>
+
+                <equals>
+                    <if>param("name") == ""
+                        <then>""</then>
+                        <else>
+                            var dimId = editor.createDimensionMappingNameId(param("name"));
+                            editor.getRemoteProxy().getObjectDescription("DimensionMapping", dimId.getName(),
+                            dimId.getBranchId());
+                        </else>
+                    </if>
+                </equals>
+            </parameter>
+        </parameter>
+
+        <parameter name="measures" description="Measures" type="table" group="Measures"
+                   length="7" reorder="false" keyParameter="name" autoSortRows="true"
+                   comparatorClass="axiomsl.gui.xbrl.hypercube.MeasureRowComparator">
+            <onRowAdded>
+                macro("updateModels");
+                dataSet.setName(macro("generateHypercubeName"));
+            </onRowAdded>
+
+            <onRowDeleted>
+                macro("updateModels");
+                dataSet.setName(macro("generateHypercubeName"));
+            </onRowDeleted>
+
+            <parameter name="name" description="Measure" type="string" isDataSet="MeasureMapping">
+                <readOnly/>
+
+                <validation>
+                    <if>macro("isEmpty", newValue)
+                        <then>
+                            return l("Measure Mapping name is empty!");
+                        </then>
+                    </if>
+
+                    var measureName = macro("getName", newValue);
+                    var measureId = editor.createMeasureMappingNameId(measureName);
+                    <if>!editor.getAxiomObjectManager().objectExists(measureId, editor.getAxiomEnvironment())
+                        <then>
+                            return l("Measure Mapping '%1' doesn't exist!", measureName);
+                        </then>
+                    </if>
+                    var resolver = editor.getAxiomObjectManager().getResolver();
+                    <if>resolver.getObjectEntry(resolver.resolve(measureId)).isInvalid()
+                        <then>
+                            return l("Measure Mapping '%1' is invalid!", measureName);
+                        </then>
+                    </if>
+                </validation>
+
+                <verifyForSave>
+                    <if>currentParameter.getParameterValue() == ""
+                        <then>
+                            errorMessage(l("%1 cannot be empty", currentParameter.getDescription(true)));
+                            false
+                        </then>
+                        <else>
+                            <if>currentParameter.getParameterValue().indexOf("!!!") &gt;= 0
+                                <then>
+                                    errorMessage(l("Measure Mapping '%1' is invalid",
+                                    currentParameter.getParameterValue()));
+                                    false
+                                </then>
+                            </if>
+                        </else>
+                    </if>
+                </verifyForSave>
+            </parameter>
+
+            <parameter name="description" description="Description" type="string">
+                <readOnly/>
+
+                <equals>
+                    <if>param("name") == ""
+                        <then>""</then>
+                        <else>
+                            var measureId = editor.createMeasureMappingNameId(param("name"));
+                            editor.getRemoteProxy().getObjectDescription("MeasureMapping", measureId.getName(),
+                            editor.getBranchId());
+                        </else>
+                    </if>
+                </equals>
+            </parameter>
+
+            <confirmAddRow>
+                <if>!macro("isEmpty", addedRow.param("name"))
+                    <then>
+                        var measureName = macro("getName", addedRow.param("name"));
+                        var measureId = editor.createMeasureMappingNameId(measureName);
+                        <if>!editor.getAxiomObjectManager().objectExists(measureId,editor.getAxiomEnvironment())
+                            <then>
+                                errorMessage(l("Measure Mapping '%1' doesn't exist!", measureName));
+                                return false;
+                            </then>
+                        </if>
+                        var resolver = editor.getAxiomObjectManager().getResolver();
+                        <if>resolver.getObjectEntry(resolver.resolve(measureId)).isInvalid()
+                            <then>
+                                errorMessage(l("Measure Mapping '%1' is invalid!", measureName));
+                                return false;
+                            </then>
+                        </if>
+                    </then>
+                </if>
+            </confirmAddRow>
+        </parameter>
+
+        <parameter name="models" description="Data Models" type="table" length="7" group="Models" allowAddRemove="false"
+                   reorder="false">
+            <readOnly/>
+
+            <parameter name="name" description="Data Model" type="string" isDataSet="DataModel">
+                <readOnly/>
+            </parameter>
+            <parameter name="description" description="Description" type="string">
+                <readOnly/>
+            </parameter>
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        var hypercube =<originalAxiom/>;
+        var route = dataSet.getRouteFromCurrentBranch();
+
+        var dimensions = hypercube.getTable("dimensions");
+        var dimensionList = list();
+        <for>var i = 0
+            <comma/>
+            i &lt; dimensions.size()
+            <comma/>
+            i++
+            <do>
+                var dimensionRef = dimensions.get(i).getReference("value");
+                var row = tableRow();
+
+                row.param("name") = route.getNameRoute() +  dimensionRef.getTargetObjectNativeName();
+                <try>
+                    row.param("description") = editor.getRemoteProxy().getObjectDescription("DimensionMapping", dimensionRef.getTargetObjectNativeName(), hypercube.getBranchId());
+                    <catch>var e</catch>
+                    row.param("description")="";
+                    trace(e.getMessage());
+                </try>
+                param("dimensions").add(row);
+                dimensionList.add(row.param("name"));
+            </do>
+        </for>
+
+        var measures = hypercube.getTable("measures");
+        var measureList = list();
+
+        <for>var i = 0
+            <comma/>
+            i &lt; measures.size()
+            <comma/>
+            i++
+            <do>
+                var measureRef = measures.get(i).getReference("value");
+                var row = tableRow();
+
+                row.param("name") = route.getNameRoute() + measureRef.getTargetObjectNativeName();
+                <try>
+                    row.param("description") = editor.getRemoteProxy().getObjectDescription("MeasureMapping", measureRef.getTargetObjectNativeName(), hypercube.getBranchId());
+                    <catch>var e</catch>
+                    row.param("description")="";
+                    trace(e.getMessage());
+                </try>
+
+                param("measures").add(row);
+                measureList.add(row.param("name"));
+            </do>
+        </for>
+
+        macro("setModels", dimensionList, measureList);
+
+        editor.sortRowsInUI(param("dimensions"), new("axiomsl.gui.xbrl.hypercube.DimensionRowComparator", editor));
+        editor.sortRowsInUI(param("measures"), new("axiomsl.gui.xbrl.hypercube.MeasureRowComparator", editor));
+
+        var newName = macro("generateHypercubeName");
+        <if>!newName.equals(dataSet.getName())
+            <then>
+                dataSet.setName(newName);
+                dataSet.dataChanged();
+            </then>
+        </if>
+    </loadCode>
+
+    <saveCode>
+        var hypercube =<axiomForSave/>;
+        var dimensionTable = hypercube.getTable("dimensions");
+        var dimensionParam = param("dimensions");
+        var dimensionComparator = new("axiomsl.gui.xbrl.hypercube.DimensionOWPComparator", editor);
+        <for>var i = 0
+            <comma/>
+            i &lt; dimensionParam.size()
+            <comma/>
+            i++
+            <do>
+                var row = hypercube.createObjectPropertyValue("DimensionMapping:reference");
+                var dimensionName = dimensionParam.get(i).param("name");
+                var dimId = editor.createDimensionMappingNameId(dimensionName);
+                row.setProperty("value", row.createReferencePropertyValue("DimensionMapping", dimId.getName()));
+
+                dimensionTable.addRowToSortedTable(row, dimensionComparator);
+            </do>
+        </for>
+
+        var measureTable = hypercube.getTable("measures");
+        var measureParam = param("measures");
+        <for>var i = 0
+            <comma/>
+            i &lt; measureParam.size()
+            <comma/>
+            i++
+            <do>
+                var row = measureTable.addRow("MeasureMapping:reference");
+                var measureName = measureParam.get(i).param("name");
+                var measureId = editor.createMeasureMappingNameId(measureName);
+                row.setProperty("value", row.createReferencePropertyValue("MeasureMapping", measureId.getName()));
+            </do>
+        </for>
+    </saveCode>
+
+    <macros>
+        <macro name="updateModels">
+            var dimensionParam = param("dimensions");
+            var dimensionList = list();
+            var measureList = list();
+
+            <if>dimensionParam.size() != 0
+                <then>
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; dimensionParam.size()
+                        <comma/>
+                        i++
+                        <do>
+                            var row = dimensionParam.get(i);
+                            dimensionList.add(row.param("name"));
+                        </do>
+                    </for>
+                </then>
+                <else>
+                    var measureParam = param("measures");
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; measureParam.size()
+                        <comma/>
+                        i++
+                        <do>
+                            var row = measureParam.get(i);
+                            measureList.add(row.param("name"));
+                        </do>
+                    </for>
+                </else>
+            </if>
+
+            macro("setModels", dimensionList, measureList);
+        </macro>
+
+        <macro name="generateHypercubeName">
+            var dimensionParam = param("dimensions");
+            <if>dimensionParam.size() == 0
+                <then>
+                    ;class("axiomsl.xbrl.XBRLUtils").HYPERCUBE_NO_DIMENSIONS_ID
+                </then>
+                <else>
+                    var hcName = "";
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; dimensionParam.size()
+                        <comma/>
+                        i++
+                        <do>
+                            <if>i == 0
+                                <then>
+                                    hcName = dimensionParam.get(i).param("name");
+                                </then>
+                                <else>
+                                    hcName = hcName + class("axiomsl.xbrl.HypercubeListAccessor").DIMENSION_NAME_DELIMITER + dimensionParam.get(i).param("name");
+                                </else>
+                            </if>
+                        </do>
+                    </for>
+                    ;hcName
+                </else>
+            </if>
+        </macro>
+
+        <macro name="setModels" arguments="dimensions, measures">
+            var models = editor.getDataModels(<dimensions/>, <measures/>);
+            var modelRows = list();
+            <for>var i = 0
+                <comma/>
+                i &lt; models.size()
+                <comma/>
+                i++
+                <do>
+                    var row = tableRow();
+                    row.param("name") = models.get(i).getName();
+                    row.param("description") = models.get(i).getDescription();
+                    modelRows.add(row);
+                </do>
+            </for>
+            param("models") = modelRows;
+        </macro>
+    </macros>
+</data_set_category>

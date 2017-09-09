@@ -1,0 +1,1280 @@
+<data_set_category name="PORTFOLIO"
+                   description="Portfolio Setup"
+                   windowTitle="Portfolio Setup"
+                   entityName="Portfolio"
+                   icon="portfolio"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="Portfolio"
+                   extends="ARCHIVAL_PROPERTIES, COMMON_UTILS, DOC_DATA, FREEZE_PROPERTIES">
+
+    <parameters>
+        <parameter name="showSubPortfolios" description="Show Sub-Portfolios" type="boolean" defaultValue="false" hidden="true"/>
+        <parameter name="rootSubPortfolioID" description="Root Sub-Portfolio ID" type="String" defaultValue="" hidden="true"/>
+
+        <parameter name="models" description="Models" type="table" length="7" group="Models" keyParameter="name">
+            <parameter name="name" description="Model Name" lookupInPlace="yes" type="String" length="20" isDataSet="DataModel" wrapOnReport="true">
+
+                <onParameterChange>
+                    dataSet.modelReselected(oldValue, newValue);
+                    editor.getPanel("axiomsl.gui.portfolio.setup.PortfolioStructurePanel").refreshModels();
+                </onParameterChange>
+
+                <validation>
+                    macro("checkModelExists");
+                    macro("checkUniqueness", list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+
+            <confirmAddRow>
+                macro("checkModelExistsOnConfirm");
+                macro("checkUniquenessOnConfirm", list());
+            </confirmAddRow>
+
+            <parameter name="description" description="Model Description" noSerialization="yes" type="String" wrapOnReport="true">
+                <readonly/>
+                <equals>
+                    <if> <param name="name"/> == ""
+                        <then>""</then>
+                        <else>
+                            editor.getRemoteProxy().getModelDescription(param("name"), editor.getBranchId());
+                        </else>
+                    </if>
+                </equals>
+            </parameter>
+
+            <onRowAdded>
+                var modelName = addedRow.param("name");
+                dataSet.modelAdded(modelName); <!-- can be empty-->
+                editor.getPanel("axiomsl.gui.portfolio.setup.PortfolioStructurePanel").refreshModels();
+            </onRowAdded>
+
+            <onRowDeleted>
+                var modelName = deletedRow.param("name");
+                dataSet.modelRemoved(modelName);
+                editor.getPanel("axiomsl.gui.portfolio.setup.PortfolioStructurePanel").refreshModels();
+            </onRowDeleted>
+
+        </parameter>
+
+        <!-- auxiliary parameters for managing node moving in sequence tree -->
+        <parameter name="movingNodes" type="table" hidden="true">
+            <parameter name="movingNodeID" type="string" hidden="true" defaultValue=""/>
+            <parameter name="movingNodeName" type="string" hidden="true" defaultValue=""/>
+            <parameter name="movingNodeParentID" type="string" hidden="true" defaultValue=""/>
+        </parameter>
+        <parameter name="loading" type="boolean" hidden="true" defaultValue="false"/>
+
+        <!-- sub-portfolio sequence tree -->
+        <parameter name="sequence" description="Sub-Portfolio Parameters" group="Sub-Portfolio Parameters" type="tree"
+                   rootNodeType="sequenceRoot">
+            <if>!param("showSubPortfolios")
+                <then>
+                    <removed/>
+                </then>
+                <else>
+                    <enabled/>
+                </else>
+            </if>
+
+            <nodeType name="sequenceRoot" description="Portfolio Sequence" renameAllowed="false" deleteAllowed="false"
+                      hasChildren="true" childrenAreFixed="false" childrenTypes="Portfolio:subPortfolio"/>
+            <nodeType name="Portfolio:subPortfolio" description="Sub Portfolio" renameAllowed="true" deleteAllowed="true" hasChildren="false">
+                <macro name="subPortfolioNode"/>
+            </nodeType>
+
+            <onNodeAdded>
+                <if> !addedNode.param("portfolioRootNode").isDummy()
+                    <then>
+                        <if> addedNode.parent().childCount() > 1
+                            <then>
+                                editor.getPanel("axiomsl.gui.portfolio.setup.PortfolioStructurePanel").addSubPortfolio(addedNode.param("portfolioRootNode"), addedNode.getName(), addedNodeIndex);
+                            </then>
+                        </if>
+                    </then>
+                    <else>
+                        <if> addedNode.parent().childCount() > 1
+                            <then>
+                                editor.getPanel("axiomsl.gui.portfolio.setup.PortfolioStructurePanel").addSubPortfolio(addedNode.getName(), addedNodeIndex);
+                            </then>
+                            <else>
+                                addedNode.param("portfolioRootNode") = dataSet.getPortfolioNodes().get(addedNodeIndex);
+                            </else>
+                        </if>
+                    </else>
+                </if>
+
+                <!--Disable multi dimensional functionality, issue AXIOM-5378-->
+                <if> addedNode.parent().childCount() > 1
+                    <then>
+                        <!--param("showSubPortfolios") = true;-->
+                        param("showSubPortfolios") = false;
+                    </then>
+                </if>
+
+                var isMovingNodeToSameParent = false;
+                <for>var j = 0 <comma/> j &lt; param("movingNodes").size() <comma/> j++
+                    <do>
+                        var movingNodeParentID = param("movingNodes").get(j).param("movingNodeParentID");
+                        <if> param("movingNodes").get(j).param("movingNodeID") == addedNode.getID()
+                            and param("movingNodes").get(j).param("movingNodeName") == addedNode.getName()
+                            and (movingNodeParentID == addedNode.parent().getID() or (addedNode.parent().getID() == null and movingNodeParentID == ""))
+                            <then>
+                                isMovingNodeToSameParent = true;
+                                param("movingNodes").remove(j);
+                                break;
+                            </then>
+                        </if>
+                    </do>
+                </for>
+
+                <if> !param("loading") and !isMovingNodeToSameParent and addedNode.type() == "Portfolio:subPortfolio"
+                    <then>
+                        var additionalFields = addedNode.param("additionalFields");
+                        <for>var i = 0 <comma/> i &lt; additionalFields.size() <comma/> i++
+                            <do>
+                                additionalFields.get(i).setID(function("axiomsl.util.UUID", "randomUUID").toString());
+                            </do>
+                        </for>
+                        var levels = addedNode.param("levels");
+                        <for>var i = 0 <comma/> i &lt; levels.size() <comma/> i++
+                            <do>
+                                levels.get(i).setID(function("axiomsl.util.UUID", "randomUUID").toString());
+                            </do>
+                        </for>
+                    </then>
+                </if>
+            </onNodeAdded>
+
+            <onNodeDeleted>
+                editor.getPanel("axiomsl.gui.portfolio.setup.PortfolioStructurePanel").deleteSubPortfolio(deletedNodeIndex);
+
+                var row = tableRow();
+                row.param("movingNodeID") = deletedNode.getID();
+                row.param("movingNodeName") = deletedNode.getName();
+                row.param("movingNodeParentID") = deletedNode.parent().getID();
+                param("movingNodes").add(row);
+            </onNodeDeleted>
+
+            <onNodeRenamed>
+                editor.getPanel("axiomsl.gui.portfolio.setup.PortfolioStructurePanel").renameSubPortfolio(renamedNode.getName(), renamedNodeIndex);
+            </onNodeRenamed>
+
+            <allowDeleteNode>
+                return deletingNode.parent().childCount() &gt; 1;
+            </allowDeleteNode>
+        </parameter>
+
+        <parameter name="levels" description="Levels" type="table" keyParameter="name" group="Levels" length="7" compareByID="true">
+            <macro name="levelsParameter" arguments="false">
+                false
+            </macro>
+
+            <onParameterChange>
+                editor.getPanel("axiomsl.gui.portfolio.setup.PortfolioStructurePanel").refreshActions()
+            </onParameterChange>
+
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("additionalFields")));
+            </confirmAddRow>
+        </parameter>
+        <parameter name="additionalFields" description="Additional Fields" type="table" keyParameter="name"
+                   group="Additional Fields" length="7" tableTransposed="true" compareByID="true">
+            <macro name="additionalFieldsParameter" arguments="false">
+                false
+            </macro>
+
+            <onParameterChange>
+                editor.getPanel("axiomsl.gui.portfolio.setup.PortfolioStructurePanel").refreshActions()
+            </onParameterChange>
+
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("levels")));
+            </confirmAddRow>
+        </parameter>
+
+        <parameter name="validations" description="Adjustment Validations" type="table" length="7" group="Adjustment Validations" keyParameter="field">
+            <parameter name="field" description="Field Name" type="String" length="20">
+                <attribute name="lookupFromValues"> l("Field") <comma/>
+                    var levels = dataSet.getLevels(null, false);
+                    var res = list();
+                    <for>var i = 0 <comma/> i &lt; levels.size() <comma/> i ++
+                        <do>
+                            var level = levels.get(i);
+                            res.add(ndo(level.get(0), level.get(1)));
+                        </do>
+                    </for>
+
+                    var additionalFields = dataSet.getAdditionalColumns(null);
+                    <for>var i = 0 <comma/> i &lt; additionalFields.size() <comma/> i ++
+                        <do>
+                            var additionalField = additionalFields.get(i);
+                            res.add(ndo(additionalField.getParameterValue("name"), additionalField.getParameterValue("description")));
+                        </do>
+                    </for>
+                    res
+                </attribute>
+            </parameter>
+            <parameter name="type" description="Validation Type" type="String" group="Adjustment Validations" length="20" defaultValue="ON_EDIT_ONLY">
+                choices(<asDescription>
+                ndo("ON_EDIT_ONLY", l("On edit only")), ndo("ON_SAVE_ONLY", l("On save only")), ndo("ON_EDIT_AND_SAVE", l("On edit and save")),ndo("ON_DELETE_ONLY", l("On delete only"))
+            </asDescription>)
+                <default>
+                    'ON_EDIT_ONLY'
+                </default>
+            </parameter>
+            <parameter name="expression" description="Validation Expression" type="String" wrapOnReport="true">
+                <attribute name="lookupAppend">true</attribute>
+                <attribute name="lookupFromValues">l("Expression")<comma/>
+                    trace("validations: expression lookup");
+                    var fields = l("Fields");
+                    macro("lookupFromValuesList"),
+                    macro("levelsAndAdditionalFieldsLookup"),
+                    macro("instanceDateKeysUnionFromModelsVariables", false, true, false),
+                    macro("axiomExpressionLanguage"),
+                    macro("userDefinedFunctions")
+                </attribute>
+            </parameter>
+        </parameter>
+
+        <parameter name="dbSourceForResults" description="DB Source"
+                   group="Parameters" type="String" defaultValue="" length="20">
+            <choices>
+                <!--<asDescription>-->
+                var sources = editor.getRemoteProxy().lookupObjects("DBSource");
+                <!--</asDescription>-->
+            </choices>
+            <default>
+                macro("getDefaultDBSource");
+            </default>
+        </parameter>
+
+        <macro name="storageTypeParameter"/>
+
+        <parameter name="producingIsRoot" description="Producing Model Is Root For Resulting Model" group="Parameters" type="Boolean"
+                   defaultValue="false"/>
+
+        <parameter name="portfolioResultAlias" description="Custom Portfolio Result Alias" group="Parameters"
+                   type="String"
+                   defaultValue="" length="20">
+        </parameter>
+        <parameter name="fourEyesCheck" description="Four Eyes Check" group="Parameters" type="Boolean"
+                   defaultValue="false"/>
+        <parameter name="ignoreErrorsInAggregatedConditoinPlacement" description="Ignore Errors In Aggregated Condition Placement" group="Parameters" type="Boolean" defaultValue="false"/>
+
+        <macro name="executionAlgorithmParameter" arguments="false"/>
+        <macro name="allowMultipleNodesPerRecordParameter" arguments="false"/>
+
+        <parameter name="makeAsOfDateColumnNullable" description="Make As Of Date column nullable" group="Parameters" type="Boolean" defaultValue="false"/>
+
+        <parameter name="instanceRebuildRestriction" description="Resulting Data Source Instance Rebuild Restrictions" type="String"
+                   group="Parameters" defaultValue="AlterFullRebuild">
+            choices(<asDescription>
+            ndo('AlterFullRebuild', l('Alter, Full Rebuild')),
+            ndo('AlterOnly' , l('Alter Only' )),
+            ndo('FullRebuildOnly' , l('Full Rebuild Only' ))
+        </asDescription>)
+        </parameter>
+        <parameter name="help_info_hint" description="" type="Component" group="Performance Options" noSerialization="yes">
+            <attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+            <attribute name="text">l("Performance options for database-intensive tasks")</attribute>
+            <attribute name="color">macro("LIGHT_GRAY")</attribute>
+            <attribute name="horizontalAlignment">"LEFT"</attribute>
+        </parameter>
+        <parameter name="overrideDBSourceParallelSettings" description="Override DBSource Parallel Settings" group="Performance Options" type="boolean" defaultValue="false"/>
+        <parameter name="executeEnableParallelismStatement" description="Execute Enable-Parallelism Statement" group="Performance Options" type="boolean" defaultValue="false">
+            <if>param("overrideDBSourceParallelSettings")
+                <then><enabled/></then><else><disabled/></else>
+            </if>
+        </parameter>
+        <parameter name="includeParallelHintsInsert" description="Include Parallel Hints for Insert" group="Performance Options" type="boolean" defaultValue="false">
+            <if>param("overrideDBSourceParallelSettings")
+                <then><enabled/></then><else><disabled/></else>
+            </if>
+        </parameter>
+        <parameter name="includeParallelHintsSelect" description="Include Parallel Hints for Select" group="Performance Options" type="boolean" defaultValue="false">
+            <if>param("overrideDBSourceParallelSettings")
+                <then><enabled/></then><else><disabled/></else>
+            </if>
+        </parameter>
+        <parameter name="includeParallelHintsDelete" description="Include Parallel Hints for Delete" group="Performance Options" type="boolean" defaultValue="false">
+            <if>param("overrideDBSourceParallelSettings")
+                <then><enabled/></then><else><disabled/></else>
+            </if>
+        </parameter>
+        <parameter name="includeParallelHintsUpdate" description="Include Parallel Hints for Update" group="Performance Options" type="boolean" defaultValue="false">
+            <if>param("overrideDBSourceParallelSettings")
+                <then><enabled/></then><else><disabled/></else>
+            </if>
+        </parameter>
+        <parameter name="overrideDBSourceParallelDegree" description="Override DBSource Parallel Degree" group="Performance Options" type="boolean" defaultValue="false">
+            <if>param("overrideDBSourceParallelSettings")
+                <then><enabled/></then><else><disabled/></else>
+            </if>
+        </parameter>
+        <parameter name="parallelDegree" description="PARALLEL Degree" group="Performance Options" type="Integer" defaultValue="0" length="10">
+            <if>param("overrideDBSourceParallelSettings") &amp;&amp; param("overrideDBSourceParallelDegree")
+                <then><enabled/></then><else><disabled/></else>
+            </if>
+        </parameter>
+        <parameter name="requiresAllModels" description="Requires all models for execution" group="Models" type="Boolean" optional="true" defaultValue="true"/>
+        <!--Additional Indices (begin)-->
+        <parameter name="additionalIndices" description="Additional Indexes" type="tree" group="Indexes" rootNodeType="rootIndexNode">
+
+            <nodeType name="rootIndexNode" description="Additional Indexes" renameAllowed="false" deleteAllowed="false"
+                      hasChildren="true" childrenAreFixed="false" childrenTypes="Portfolio:index">
+            </nodeType>
+
+            <nodeType name="Portfolio:index" description="Index" renameAllowed="true" deleteAllowed="true" hasChildren="false"
+                      childrenAreFixed="false">
+                <parameter name="fields" description="Index Fields" type="table" keyParameter="colName">
+                    <parameter name="colName" description="Field Name" type="String" length="10">
+                        <readonly/>
+                        <!--only chosen from lookup -->
+                        <attribute name="lookupFromValues">l("Field")
+                            <comma/>
+                            dataSet.getPortfolioNodes().get(0).lookupFieldsInResultingSource(true)
+                        </attribute>
+                    </parameter>
+                </parameter>
+                <parameter name="clustered" description="Clustered" type="Boolean"/>
+                <parameter name="unique" description="Unique" type="Boolean"/>
+            </nodeType>
+
+        </parameter>
+        <parameter name="createIndexesOnStreamColumns" description="Create indexes on stream columns" group="Indexes" type="Boolean"
+                   defaultValue="false">
+        </parameter>
+
+        <parameter name="parameters" description="Variable Definitions" type="table" length="4" keyParameter="name" group="Variables">
+            <parameter name="name" description="Variable Name" type="String" freehand="no">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniqueness", list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="description" description="Description" type="String" freehand="no"/>
+            <parameter name="dataType" description="Type" type="String" freehand="no">
+                choices(<asDescription>
+                ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE"))
+            </asDescription>)
+                <default>
+                    'VARCHAR'
+                </default>
+            </parameter>
+            <!--<parameter name="lookupFormula" description="Lookup Expression" type="String" wrapOnReport="true" freehand="yes"/>-->
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirm", list());
+            </confirmAddRow>
+        </parameter>
+        <!--Additional Indices (end)-->
+
+        <parameter name="computeStatistics" description="Compute Statistics On Results" type="String" group="Parameters" length="20">
+            choices(<asDescription>
+            ndo("NONE", l("NONE")), ndo("FOR_ALL_COLUMNS", l("FOR_ALL_COLUMNS")), ndo("FOR_KEY_COLUMNS", l("FOR_KEY_COLUMNS"))
+        </asDescription>)
+            <default>
+                'FOR_ALL_COLUMNS'
+            </default>
+        </parameter>
+        <parameter name="changeDefault_ALL_PORTF_COL_size" description="Override size of ALL_PORTF_COL column" type="boolean" defaultValue="false" group="Parameters">
+            <if>
+                <param name="executionAlgorithm"/>!="long_queries"
+                <then>
+                    <removed/>
+                </then>
+                <else>
+                    <enabled/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="ALL_PORTF_COL_size" description="ALL_PORTF_COL column size"  type="integer" defaultValue="512" group="Parameters" length="20">
+            <if>
+                <param name="executionAlgorithm"/> == "long_queries"  &amp;&amp;     <param name="changeDefault_ALL_PORTF_COL_size"/>  == true
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+            <verifyForSave>
+                macro("isPositive");
+            </verifyForSave>
+        </parameter>
+        <parameter name="executeDataModelsInParallel" description="Execute Data Models In Parallel" group="Parameters" type="Boolean" optional="true" defaultValue="false"/>
+        <parameter name="allowExternalDataPermissions" description="Allow External Data Permissions" group="Parameters" type="Boolean" optional="true" defaultValue="true"/>
+    </parameters>
+
+    <loadCode>
+        param("loading") = true;
+        var portfolio = <originalAxiom/>;
+
+        var accessor = new("axiomsl.accessors.PortfolioAccessor", portfolio);
+        var route = dataSet.getRouteFromCurrentBranch();
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor, route);
+
+        var templates = array("forward(models.dataModel, name)",
+        "table2tree(sequence)",
+        "table2expression(additionalFields.additionalConstraintForJoin)",
+        "default(requiresAllModels)",
+        "default(parameters)",
+        "default(createIndexesOnStreamColumns)",
+        "default(allowMultipleNodesPerRecord)",
+        "default(producingIsRoot)",
+        "default(fourEyesCheck)",
+        "default(ignoreErrorsInAggregatedConditoinPlacement)",
+        "default(additionalFields.allowNullsFixed)",
+        "default(additionalFields.title)",
+        "default(makeAsOfDateColumnNullable)",
+        "default(instanceRebuildRestriction)",
+        "default(computeStatistics)",
+        "default(allowExternalDataPermissions)",
+        "default(executeDataModelsInParallel)",
+        "default(executeEnableParallelismStatement)",
+        "default(includeParallelHintsInsert)",
+        "default(includeParallelHintsSelect)",
+        "default(includeParallelHintsDelete)",
+        "default(includeParallelHintsUpdate)",
+        "default(parallelDegree)",
+        <!-- '*' at the end means object-level correspondence-->
+        "forward(additionalIndices.fields.*, colName)",
+        "table2tree(additionalIndices)",
+        <!--element of fields table is an object, which is converted by parser to a string (single field expression not prefixed with $) -->
+        "object2expression(additionalIndices.fields.*)"
+        );
+
+        var params1 = array("parameters",
+        "models",
+        "dbSourceForResults",
+        "storageType",
+        "portfolioResultAlias",
+        "requiresAllModels",
+        "additionalIndices",
+        "createIndexesOnStreamColumns",
+        "producingIsRoot",
+        "fourEyesCheck",
+        "ignoreErrorsInAggregatedConditoinPlacement",
+        "makeAsOfDateColumnNullable",
+        "instanceRebuildRestriction",
+        "computeStatistics",
+        "allowExternalDataPermissions",
+        "executeDataModelsInParallel",
+        "executeEnableParallelismStatement",
+        "includeParallelHintsInsert",
+        "includeParallelHintsSelect",
+        "includeParallelHintsDelete",
+        "includeParallelHintsUpdate",
+        "parallelDegree"
+        );
+
+        var exclude = array("models.instanceSelectionRule", "additionalFields.instanceSelectionRule", "additionalFields.showTotal", "parameters.lookupFormula");
+
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(portfolio, currentParameters, params1, exclude, templates, parser, route);
+
+        <!-- parallel hints -->
+        param("overrideDBSourceParallelSettings") = portfolio.propertyIsSet("executeEnableParallelismStatement");
+        param("overrideDBSourceParallelDegree") = portfolio.propertyIsSet("parallelDegree");
+
+        param("validations"); <!--deserializing-->
+        <if>portfolio.propertyIsSet("validations")
+            <then>
+                var validationTable = portfolio.getTable("validations");
+                <for>var i = 0
+                    <comma/>
+                    i &lt; validationTable.size()
+                    <comma/>
+                    i ++
+                    <do>
+                        var row = param("validations").addLine();
+                        var validation = validationTable.get(i);
+                        row.param("expression") = validation.getString("expression");
+                        row.param("field") = validation.getObject("field").getReference("value").getTargetObject().getString("name");
+                        row.param("type") = validation.getOptionalValue("type","ON_EDIT_ONLY");
+                    </do>
+                </for>
+            </then>
+        </if>
+
+        param("movingNodes");
+        var portfolioObject = class("axiomsl.server.object_framework.wrappers.PortfolioObject").wrap(portfolio);
+
+        var sequenceTable;
+        <if> !portfolio.propertyIsSet("sequence")
+            <then>
+                sequenceTable = portfolio.createTablePropertyValue();
+            </then>
+            <else>
+                sequenceTable = portfolio.getTable("sequence")
+            </else>
+        </if>
+
+        <!--Disable multi dimensional functionality, issue AXIOM-5378-->
+        <!--param("showSubPortfolios") = portfolioObject.isMDPortfolio();-->
+        param("showSubPortfolios") = false;
+
+        var size = portfolioObject.getSubPortfolioSize();
+        var k = 0;
+        <for>var i = 0 <comma/> i &lt; size <comma/> i ++
+            <do>
+                var subPortfolio = portfolioObject.getSubPortfolio(i);
+                var node;
+                <if> param("showSubPortfolios")
+                    <then>
+                        node = param("sequence").createChild("Portfolio:subPortfolio", subPortfolio.getString("name"));
+                        node.setID(portfolioObject.getSubPortfolioId(i));
+                        node.param("portfolioRootNode") = new("axiomsl.gui.portfolio.setup.PortfolioNode");
+                    </then>
+                </if>
+
+                <if>i == 0
+                    <then>
+                        param("rootSubPortfolioID") = portfolioObject.getSubPortfolioId(i);
+                    </then>
+                </if>
+
+                params1 = array("levels", "additionalFields", "executionAlgorithm", "allowMultipleNodesPerRecord");
+                exclude = array("hierarchy", "additionalFields.instanceSelectionRule");
+                parser.setContext(subPortfolio);
+                matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+                matcher.match(subPortfolio, if(param("showSubPortfolios"), node, currentParameters), params1, exclude, templates, parser, route);
+
+                <if> param("showSubPortfolios")
+                    <then>
+                        node.addToParent();
+                    </then>
+                </if>
+
+                var additionalFieldsTable = subPortfolio.getTable("additionalFields");
+                var additionalFieldsParam;
+                <if> param("showSubPortfolios")
+                    <then>
+                        additionalFieldsParam = node.param("additionalFields");
+                    </then>
+                    <else>
+                        additionalFieldsParam = param("additionalFields");
+                    </else>
+                </if>
+
+                <for>var j = 0
+                    <comma/>
+                    j &lt; additionalFieldsTable.size()
+                    <comma/>
+                    j ++
+                    <do>
+                        var additionalField = additionalFieldsTable.get(j);
+
+                        var additionalFieldRow = additionalFieldsParam.get(j);
+                        <if> additionalField.propertyIsSet("showTotal")
+                            <then>
+                                additionalFieldRow.param("showTotal") = additionalField.getProperty("showTotal");
+                            </then>
+                            <else>
+                                <if> additionalField.getProperty("type") == "FLOAT"
+                                    <then>
+                                        additionalFieldRow.param("showTotal") = true;
+                                    </then>
+                                    <else>
+                                        <if>additionalField.getProperty("type") == "INTEGER"
+                                            <then>
+                                                additionalFieldRow.param("showTotal") = false;
+                                            </then>
+                                        </if>
+                                    </else>
+                                </if>
+                            </else>
+                        </if>
+
+                        <if> additionalFieldsParam.get(j).param("lookupSource") != '' and additionalFieldsParam.get(j).param("addLookupSourceToModel")
+                            <then>
+                                <if>additionalFieldsTable.get(j).propertyIsSet("instanceSelectionRule")
+                                    <then>
+                                        additionalFieldsParam.get(j).param("instanceSelectionRule")=additionalFieldsTable.get(j).getProperty("instanceSelectionRule").getProperty("instanceDateRule").getString("type");
+                                    </then>
+                                    <else>
+                                        additionalFieldsParam.get(j).param("instanceSelectionRule")="EQUAL";
+                                    </else>
+                                </if>
+                            </then>
+                        </if>
+                    </do>
+                </for>
+            </do>
+        </for>
+        <if><originalAxiom/>.propertyIsSet("allPortfColColumnSize")
+            <then>
+                param("changeDefault_ALL_PORTF_COL_size") = true;
+                param("ALL_PORTF_COL_size") = <originalAxiom/>.getInteger("allPortfColColumnSize");
+            </then>
+            <else>
+                param("changeDefault_ALL_PORTF_COL_size") = false;
+            </else>
+        </if>
+        param("loading") = false;
+    </loadCode>
+
+    <saveCode>
+        macro("verifyFourEyesCheck");
+        var portfolioForSave =<axiomForSave/>;
+        var accessor = new("axiomsl.accessors.PortfolioAccessor", portfolioForSave);
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", route, accessor);
+
+        var templates = array("forward(models.dataModel, name)",
+        "table2expression(additionalFields.additionalConstraintForJoin)",
+        "forward(additionalIndices.fields.*, colName)",
+        "table2tree(additionalIndices)",
+        "table2tree(sequence)",
+        "object2expression(additionalIndices.fields.*)",
+        "dictionaryReference(additionalFields.codeField, lookupSource, layout)",
+        "dictionaryReference(additionalFields.descriptionField, lookupSource, layout)"
+        );
+
+        <if> !portfolioForSave.propertyIsSet("sequence")
+            <then>
+                portfolioForSave.setProperty("sequence", portfolioForSave.createTablePropertyValue());
+            </then>
+        </if>
+
+        var sequence = portfolioForSave.getTable("sequence");
+
+        <if> param("showSubPortfolios")
+            <then>
+                var sequenceTree = param("sequence");
+                <for>var i = 0 <comma/> i &lt; sequenceTree.childCount() <comma/> i++
+                    <do>
+                        var node = sequenceTree.child(i);
+                        var row = sequence.addRow("Portfolio:subPortfolio");
+                        <if>node.getName() == "&lt;New Portfolio&gt;"
+                            <then>
+                                row.setProperty("name", portfolioForSave.getName());
+                            </then>
+                            <else>
+                                row.setProperty("name", node.getName());
+                            </else>
+                        </if>
+                        row.setProperty("id", node.getID());
+
+                        var params1 = array("levels", "additionalFields", "executionAlgorithm", "allowMultipleNodesPerRecord");
+                        parser.setContext(row);
+                        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+                        matcher.match(row, node, params1, array("hierarchy"), templates, parser, route);
+
+                        macro("saveAdditionalFieldsInstanceRule", row.getTable("additionalFields"), node.param("additionalFields"));
+                    </do>
+                </for>
+                portfolioForSave.setProperty("executionAlgorithm", "optimized_for_few_aggregations");
+                portfolioForSave.setProperty("hierarchy",portfolioForSave.createTreePropertyValue("Portfolio:rootnode"));
+                portfolioForSave.setProperty("additionalFields",portfolioForSave.createTablePropertyValue());
+                portfolioForSave.setProperty("levels",portfolioForSave.createTablePropertyValue());
+            </then>
+            <else>
+                var params1 = array("levels", "additionalFields", "executionAlgorithm", "allowMultipleNodesPerRecord");
+                parser.setContext(portfolioForSave);
+                var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+                matcher.match(portfolioForSave, currentParameters, params1, array("hierarchy"), templates, parser, route);
+
+                macro("saveAdditionalFieldsInstanceRule", portfolioForSave.getTable("additionalFields"), param("additionalFields"));
+            </else>
+        </if>
+
+        var params1 = array("parameters",
+        "models",
+        "dbSourceForResults",
+        "storageType",
+        "portfolioResultAlias",
+        "requiresAllModels",
+        "additionalIndices",
+        "createIndexesOnStreamColumns",
+        "producingIsRoot",
+        "fourEyesCheck",
+        "ignoreErrorsInAggregatedConditoinPlacement",
+        "makeAsOfDateColumnNullable",
+        "instanceRebuildRestriction",
+        "computeStatistics",
+        "allowExternalDataPermissions",
+        "executeDataModelsInParallel"
+        );
+        parser.setContext(null);
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(portfolioForSave, currentParameters, params1,
+        <!--exclude (only list properties of subobjects):-->
+        array("models.instanceSelectionRule", "parameters.lookupFormula"),
+        templates, parser, route);
+
+        <!-- parallel hints -->
+        <if> param("overrideDBSourceParallelSettings")
+            <then>
+                portfolioForSave.setProperty("executeEnableParallelismStatement",param("executeEnableParallelismStatement"));
+                portfolioForSave.setProperty("includeParallelHintsInsert",param("includeParallelHintsInsert"));
+                portfolioForSave.setProperty("includeParallelHintsSelect",param("includeParallelHintsSelect"));
+                portfolioForSave.setProperty("includeParallelHintsDelete",param("includeParallelHintsDelete"));
+                portfolioForSave.setProperty("includeParallelHintsUpdate",param("includeParallelHintsUpdate"));
+                <if> param("overrideDBSourceParallelDegree")
+                    <then>
+                        portfolioForSave.setProperty("parallelDegree",param("parallelDegree"));
+                    </then>
+                </if>
+            </then>
+        </if>
+
+        var validationSource = param("validations");
+        <if>validationSource.size() &gt; 0
+            <then>
+                var validationDest = portfolioForSave.createTablePropertyValue();
+                portfolioForSave.setProperty("validations",validationDest);
+                <for>var i = 0
+                    <comma/>
+                    i &lt; validationSource.size()
+                    <comma/>
+                    i ++
+                    <do>
+                        var sourceRow = validationSource.get(i);
+                        var destRow = validationDest.addRow("Portfolio:validation");
+                        destRow.setProperty("field", accessor.convertValidationExpressionToReference(sourceRow.param("field")));
+                        destRow.setProperty("expression",sourceRow.param("expression"));
+                        destRow.setProperty("type",sourceRow.param("type"));
+                    </do>
+                </for>
+            </then>
+        </if>
+
+        <if> param("changeDefault_ALL_PORTF_COL_size")==true
+            <then>
+                portfolioForSave.setProperty("allPortfColColumnSize", param("ALL_PORTF_COL_size"));
+            </then>
+        </if>
+
+    </saveCode>
+
+    <macros>
+        <macro name="saveAdditionalFieldsInstanceRule" arguments="additionalFieldsTable, additionalFields">
+            var additionalFieldsTable = <additionalFieldsTable/>;
+            var additionalFields = <additionalFields/>;
+            <for>var k = 0
+                <comma/>
+                k &lt; additionalFields.size()
+                <comma/>
+                k ++
+                <do>
+                    var additionalField = additionalFields.get(k);
+                    var additionalFieldRow = additionalFieldsTable.get(k);
+                    <if>additionalField.param("lookupSource")==''|| !additionalField.param("addLookupSourceToModel") ||
+                        additionalField.param("addLookupSourceToModel")==null
+                        <then>
+                            <if>additionalFieldRow.propertyIsSet("instanceSelectionRule")
+                                <then>
+                                    additionalFieldRow.removeProperty("instanceSelectionRule");
+                                </then>
+                            </if>
+                        </then>
+                        <else>
+                            var instanceSelection = additionalFieldRow.getProperty("instanceSelectionRule");
+                            var instanceDateRule=instanceSelection.getProperty("instanceDateRule");
+                            instanceDateRule.setProperty("type", additionalField.param("instanceSelectionRule"));
+                            var instanceKeyRules=instanceSelection.createTablePropertyValue();
+                            instanceSelection.setProperty("instanceKeyRules",instanceKeyRules);
+                        </else>
+                    </if>
+                </do>
+            </for>
+        </macro>
+
+        <macro name="showSubPortfolioParameter" arguments="inTree">
+            <if>
+                <inTree/>
+                <then>
+                    <if>param("showSubPortfolios")
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <if>param("showSubPortfolios")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </else>
+            </if>
+
+        </macro>
+
+        <macro name="levelsParameter" arguments="inTree">
+            <!-- setup for dynamical parameters of portfolio levels -->
+            <if>
+                <inTree/>
+                <then>
+                    <if>param("showSubPortfolios")
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <if>param("showSubPortfolios")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </else>
+            </if>
+
+            <parameter name="name" description="Level Name" type="String">
+                <validation>
+                    macro("validateColumnName");
+                    <if>
+                        <inTree/>
+                        <then>
+                            var parentNode = currentNode.parent();
+                            <for> var c = 0 <comma/> c &lt; parentNode.childCount() <comma/> c++
+                                <do>
+                                    macro("checkUniquenessIgnoreCase",
+                                    list(parentNode.child(c).param("additionalFields")));
+                                    macro("checkUniquenessIgnoreCase", list(parentNode.child(c).param("levels")));
+                                </do>
+                            </for>
+                        </then>
+                        <else>
+                            macro("checkUniquenessIgnoreCase", list(param("additionalFields")));
+                        </else>
+                    </if>
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+
+            <parameter name="description" description="Description" type="String" wrapOnReport="true"/>
+
+            <parameter name="defaultValue" description="Default Value" type="String"/>
+
+        </macro>
+
+        <macro name="additionalFieldsParameter" arguments="inTree">
+            <!-- setup for dynamical parameters of portfolio additional columns -->
+            <if>
+                <inTree/>
+                <then>
+                    <if>param("showSubPortfolios")
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <if>param("showSubPortfolios")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </else>
+            </if>
+
+            <parameter name="name" description="Additional Field Name" type="String">
+                <validation>
+                    macro("validateColumnName");
+
+                    <if>
+                        <inTree/>
+                        <then>
+                            var parentNode = currentNode.parent();
+                            <for>var c = 0 <comma/> c &lt; parentNode.childCount() <comma/> c++
+                                <do>
+                                    macro("checkUniquenessIgnoreCase",
+                                    list(parentNode.child(c).param("additionalFields")));
+                                    macro("checkUniquenessIgnoreCase", list(parentNode.child(c).param("levels")));
+                                </do>
+                            </for>
+                        </then>
+                        <else>
+                            macro("checkUniquenessIgnoreCase", list(param("levels")));
+                        </else>
+                    </if>
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+
+            <parameter name="description" description="Description" type="String"/>
+
+            <parameter name="title" description="Title" type="String" defaultValue=""/>
+            <parameter name="type" description="Type" type="String">
+                choices(
+                <asDescription>
+                    <!--todo: UNICODE-->
+                    ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")),
+                    ndo("DATE",
+                    l("DATE")), ndo("TEXT", l("TEXT"))
+                </asDescription>
+                )
+                <default>
+                    'VARCHAR'
+                </default>
+            </parameter>
+
+            <parameter name="size" description="Size" type="Integer">
+                <if>
+                    <param name="type"/>
+                    not in ("VARCHAR", "UNICODE")
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        <default>20</default>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="allowNullsFixed" description="Allow Nulls" type="Boolean" defaultValue="true"/>
+            <parameter name="allowNulls" description="Allow Nulls" type="Boolean" hidden="true"/>
+
+            <parameter name="defaultValue" description="Default Value" type="String">
+                <attribute name="lookupAppend">true</attribute>
+                <attribute name="lookupFromValues"> l("Value") <comma/>
+                    var namedList = new("axiomsl.util.ui.NamedList", "SQL Macros", l("SQL Macros"), macro("getSqlPatterns").toArray());
+                    var result = new("java.util.Vector");
+                    result.add(namedList)
+                    ;result
+                </attribute>
+
+                <equals> <!-- updates whenever the fieldType is changed -->
+                    <case>
+                        <param name="type"/>
+                        in ('VARCHAR', 'TEXT', 'UNICODE', 'UNICODE_TEXT')
+                        <then>
+                            <string>''</string>
+                        </then>
+
+                        <param name="type"/>
+                        == 'INTEGER'
+                        <then>
+                            '0'
+                        </then>
+
+                        <param name="type"/>
+                        == 'FLOAT'
+                        <then>
+                            '0.0'
+                        </then>
+
+                        <param name="type"/>
+                        == 'DATE'
+                        <then>
+                            <string>{ts '1990-01-01 00:00:00'}</string>
+                        </then>
+                    </case>
+                </equals>
+            </parameter>
+
+            <parameter name="showTotal" description="Show Subtotal" type="Boolean">
+                <if>
+                    param("type") in ("FLOAT", "INTEGER")
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <disabled/>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="lookupSource" description="Lookup Source" type="String" isDataSet="DataSource"
+                       canClearDataSet="true"/>
+
+            <parameter name="codeField" description="Value Field" type="String">
+                <if>
+                    <param name="lookupSource"/>
+                    == ''
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        <if>param("lookupSource").indexOf("!!!") &lt; 0
+                            <then>
+                                <choices>
+                                    editor.getRemoteProxy().lookupFieldsInDataSource(<param name="lookupSource"/>,
+                                    editor.getBranchId());
+                                </choices>
+                            </then>
+                        </if>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="descriptionField" description="Description Field" type="String">
+                <if>
+                    <param name="lookupSource"/>
+                    == ''
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        <if>param("lookupSource").indexOf("!!!") &lt; 0
+                            <then>
+                                <choices>
+                                    editor.getRemoteProxy().lookupFieldsInDataSource(<param name="lookupSource"/>,
+                                    editor.getBranchId());
+                                </choices>
+                            </then>
+                        </if>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="addLookupSourceToModel" description="Add Lookup Source to Model" type="Boolean">
+                <if>
+                    <param name="lookupSource"/>
+                    == ''
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="additionalConstraintForJoin" description="Optional Join Constraint" type="String">
+                <if>
+                    <param name="lookupSource"/>
+                    == '' || !
+                    <param name="addLookupSourceToModel"/>
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                    </else>
+                </if>
+                <attribute name="lookupAppend">true</attribute>
+                <attribute name="lookupFromValues">l("Field")
+                    <comma/>
+                    var fields = list();
+                    fields.addAll(dataSet.getPortfolioNodes().get(0).lookupFieldsInResultingSource(false));
+
+                    var addFields = param("additionalFields");
+                    var index = macro("getEntityIndex", <currentParameters/>.getID(), addFields);
+                    <for>var i = 0 <comma/> i &lt; index <comma/> i ++
+                        <do>
+                            var addField = addFields.get(i);
+                            fields.add(ndo("PORTFOLIO."+addField.param("name"), addField.param("description")));
+                        </do>
+                    </for>
+
+                    fields.addAll(editor.getRemoteProxy().lookupFieldsInDataSource(param("lookupSource"), editor.getBranchId()));
+
+                    <!--add $ to fields-->
+                    <for>var i = 0 <comma/> i &lt; fields.size() <comma/> i ++
+                        <do>
+                            var field = fields.get(i);
+                            field.setName("$" + field.getName());
+                        </do>
+                    </for>
+
+                    macro("expressionLookup", fields);
+                </attribute>
+            </parameter>
+
+            <parameter name="relationshipToParent" description="Relationship to Parent" type="String">
+                <!-- matching of values is done using constants in ModelPropertiesDialog -->
+                <if>
+                    <param name="lookupSource"/>
+                    == '' || !
+                    <param name="addLookupSourceToModel"/>
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        macro("relationshipTypes");
+                    </else>
+                </if>
+            </parameter>
+            <parameter name="instanceSelectionRule" description="Instance Date Selection Rule" type="String">
+                <if>
+                    param("lookupSource")== '' || !param("addLookupSourceToModel")
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        choices(asDescription(list(ndo("EQUAL", l("EQUAL")), ndo("LATEST",l("LATEST")))))
+                    </else>
+                </if>
+            </parameter>
+        </macro>
+
+        <macro name="executionAlgorithmParameter" arguments="inTree">
+            <!-- setup for dynamical parameters of portfolio additional columns -->
+            <parameter name="executionAlgorithm" description="Execution Algorithm" group="Parameters" type="String" defaultValue="optimized_for_few_aggregations" length="40">
+                <if>
+                    <inTree/>
+                    <then>
+                        <if>param("showSubPortfolios")
+                            <then>
+                                <enabled/>
+                                <macro name="executionAlgorithmChoices"/>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+                    </then>
+                    <else>
+                        <if>param("showSubPortfolios")
+                            <then>
+                                <removed/>
+                            </then>
+                            <else>
+                                <enabled/>
+                                <macro name="executionAlgorithmChoices"/>
+                            </else>
+                        </if>
+                    </else>
+                </if>
+            </parameter>
+        </macro>
+
+        <macro name="allowMultipleNodesPerRecordParameter" arguments="inTree">
+            <parameter name="allowMultipleNodesPerRecord" description="Allow Multiple Nodes Per Record" length="40" group="Parameters" type="Boolean" defaultValue="false">
+                <if>
+                    <inTree/>
+                    <then>
+                        <if>param("showSubPortfolios")
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <removed/>
+                            </else>
+                        </if>
+                    </then>
+                    <else>
+                        <if>param("showSubPortfolios")
+                            <then>
+                                <removed/>
+                            </then>
+                            <else>
+                                <enabled/>
+                            </else>
+                        </if>
+                    </else>
+                </if>
+            </parameter>
+        </macro>
+
+        <macro name="subPortfolioNode">
+            <parameter name="portfolioRootNode" type="axiomsl.gui.portfolio.setup.PortfolioNode" hidden="true" noSerialization="yes"/>
+            <parameter name="levels" description="Levels" type="table" keyParameter="name" group="Levels and Additional Fields" length="4" compareByID="true">
+                <macro name="levelsParameter" arguments="true">
+                    true
+                </macro>
+
+                <onParameterChange>
+                    editor.getPanel("axiomsl.gui.portfolio.setup.PortfolioStructurePanel").refreshActions()
+                </onParameterChange>
+
+                <confirmAddRow>
+                    var parentNode = currentNode.parent();
+                    <for> var c = 0 <comma/> c &lt; parentNode.childCount() <comma/> c++
+                        <do>
+                            macro("checkUniquenessOnConfirmIgnoreCase", list(parentNode.child(c).param("additionalFields")));
+                            macro("checkUniquenessOnConfirmIgnoreCase", list(parentNode.child(c).param("levels")));
+                        </do>
+                    </for>
+                </confirmAddRow>
+            </parameter>
+            <parameter name="additionalFields" description="Additional Fields" type="table" keyParameter="name" group="Levels and Additional Fields" length="4" tableTransposed="true" compareByID="true">
+                <macro name="additionalFieldsParameter" arguments="true">
+                    true
+                </macro>
+
+                <onParameterChange>
+                    editor.getPanel("axiomsl.gui.portfolio.setup.PortfolioStructurePanel").refreshActions()
+                </onParameterChange>
+
+                <confirmAddRow>
+                    var parentNode = currentNode.parent();
+                    <for>var c = 0 <comma/> c &lt; parentNode.childCount() <comma/> c++
+                        <do>
+                            macro("checkUniquenessOnConfirmIgnoreCase",
+                            list(parentNode.child(c).param("additionalFields")));
+                            macro("checkUniquenessOnConfirmIgnoreCase",
+                            list(parentNode.child(c).param("levels")));
+                        </do>
+                    </for>
+                </confirmAddRow>
+            </parameter>
+            <macro name="executionAlgorithmParameter" arguments="true"/>
+            <macro name="allowMultipleNodesPerRecordParameter" arguments="true"/>
+        </macro>
+
+        <macro name="executionAlgorithmChoices">
+            <choices>
+                ndo("optimized_for_few_aggregations",l("Optimized for few aggregations"))
+                <comma/>
+                ndo("optimized_for_many_aggregations",l("Optimized for many aggregations"))
+                <comma/>
+                ndo("optimized_for_no_aggregations",l("Optimized for no aggregations"))
+                <comma/>
+                ndo("optimized_for_no_aggregations_and_simple_actions",l("Optimized for no aggregations and simple actions"))
+                <comma/>
+                ndo("long_queries",l("Long queries"))
+            </choices>
+        </macro>
+
+        <macro name="levelsAndAdditionalFieldsLookup">
+            var levels = dataSet.getLevels(null, false);
+            var res = list();
+            <for>var i = 0 <comma/> i &lt; levels.size() <comma/> i ++
+                <do>
+                    var level = levels.get(i);
+                    res.add(ndo("$" + level.get(0), level.get(1)));
+                </do>
+            </for>
+
+            var additionalFields = dataSet.getAdditionalColumns(null);
+            <for>var i = 0 <comma/> i &lt; additionalFields.size() <comma/> i ++
+                <do>
+                    var additionalField = additionalFields.get(i);
+                    res.add(ndo("$" + additionalField.getParameterValue("name"), additionalField.getParameterValue("description")));
+                </do>
+            </for>
+
+            var namedList = new("axiomsl.util.ui.NamedList", "fields", l("Fields"), res.toArray());
+            namedList.setColumnTitles(array(l("Name").toString(), l("Description").toString()));
+            ;namedList
+        </macro>
+    </macros>
+</data_set_category>

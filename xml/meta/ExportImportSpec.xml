@@ -1,0 +1,75 @@
+<metadata>
+	<object type="ExportImportSpec" version="11">
+		<property name="steps" valueType="table" rowTypes="ExportImportSpec:exportSpec, ExportImportSpec:importSpec, ExportImportSpec:deleteSpec, ExportImportSpec:deleteFile"/>
+		<property name="name" valueType="string" canBeEmpty="false"/>
+	</object>
+	<object type="ExportImportSpec:exportSpec" version="3">
+		<property name="fileName" valueType="string"/>
+		<property name="connectString" valueType="string"/>
+		<property name="components" valueType="table" rowTypes="ExportImportSpec:exportComponent"/>
+		<property name="isBranchExport" valueType="boolean" optional="true"/>
+		<property name="withComponents" valueType="boolean" optional="true"/>
+		<property name="withDependencies" valueType="boolean" optional="true"/>
+		<property name="withInstances" valueType="boolean" optional="true"/>
+		<property name="withResultingInstances" valueType="boolean" optional="true"/>
+		<property name="onlyValidObjects" valueType="boolean" optional="true"/>
+		<property name="targetSystemVersion" valueType="string" optional="true"/>
+	</object>
+
+	<object type="ExportImportSpec:importSpec" version="5">
+		<property name="fileName" valueType="string"/>
+		<property name="connectString" valueType="string"/>
+		<property name="targetProjectName" valueType="string" optional="true"/>
+		<property name="targetBranchName" valueType="string" optional="true"/>
+        <property name="overwriteByName" valueType="boolean"  optional="true"/>   <!--?-->
+		<property name="matchExternalReferencesByName" valueType="boolean" optional="true"/>
+		<property name="deleteUnknownProperties" valueType="boolean" optional="true"/>
+		<property name="allowImportInvalid" valueType="boolean" optional="true"/>
+		<property name="dbSourceMap" valueType="table" rowTypes="ExportImportSpec:dbSourceMapEntry" optional="true"/>
+		<property name="dependencies" valueType="table" rowTypes="ExportImportSpec:dependency" optional="true"/>
+		<property name="groupMap" valueType="table" rowTypes="ExportImportSpec:groupMapEntry" optional="true"/>
+	</object>
+
+	<object type="ExportImportSpec:deleteSpec" version="2">
+		<property name="connectString" valueType="string"/>
+		<property name="components" valueType="table" rowTypes="ExportImportSpec:deleteComponent"/>
+	</object>
+
+	<object type="ExportImportSpec:deleteFile" version="1">
+		<property name="files" valueType="table" rowTypes="ExportImportSpec:file"/>
+	</object>
+    
+	<object type="ExportImportSpec:file" version="1">
+		<property name="filePath" valueType="string"/>
+	</object>
+	<object type="ExportImportSpec:exportComponent" version="1">
+		<property name="projectName" valueType="string" optional="true"/>
+		<property name="branchName" valueType="string" optional="true"/>
+		<property name="objectType" valueType="string" optional="true"/>
+		<property name="objectName" valueType="string" optional="true"/>
+	</object>
+	<object type="ExportImportSpec:deleteComponent" version="2">
+		<property name="projectName" valueType="string"/>
+		<property name="branchName" valueType="string"/>
+		<property name="objectType" valueType="string" optional="true"/>
+		<property name="objectName" valueType="string" optional="true"/>
+	</object>
+	<object type="ExportImportSpec:dbSourceMapEntry" version="1">
+		<property name="sourceDBSourceName" valueType="string"/>
+		<property name="targetDBSourceName" valueType="string"/>
+	</object>
+	<object type="ExportImportSpec:dependency" version="3">
+		<property name="projectName" valueType="string"/>
+		<property name="projectBranch" valueType="string"/>
+		<property name="alias" valueType="string"/>
+		<property name="targetProject" valueType="string"/>
+		<property name="targetBranch" valueType="string"/>
+		<property name="targetType" valueType="string" choices="SYSTEM, ARCHIVE"/>
+	</object>
+	<object type="ExportImportSpec:groupMapEntry" version="1">
+		<!-- like "project_name" or "project_name/branch_name"-->
+		<property name="objectPath" valueType="string"/>
+		<!-- like "groupNode1/groupNode2/groupNode3"-->
+		<property name="groupNodePath" valueType="string"/>
+	</object>
+</metadata>

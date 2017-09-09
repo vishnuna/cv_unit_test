@@ -1,0 +1,109 @@
+Type:	DataSource
+Name:	test_fields
+Desc:	Test Fields
+Object ID:	7f5ef73b-757f-4ffa-83d9-cb5cf259fc1d
+Branch ID:	68b7506a-69d3-4255-9a4b-a03c53614e96
+
+ROOT CHILDREN
+Enum	Name	Value	ValueType	Text
+1	name	test_fields	string	None
+2	description	Test Fields	string	None
+3	objectId	7f5ef73b-757f-4ffa-83d9-cb5cf259fc1d	string	None
+4	branchId	68b7506a-69d3-4255-9a4b-a03c53614e96	string	None
+5	hosting	INTERNAL	string	None
+6	dbSource	None	url	DBSource["ORACLE"{4e6e5b36-b98d-45ad-b5a5-a13c97df8b8f}]
+7	loader	None	url	DataSourceLoader["load_file"{load_file}]
+8	defaultVisibilityInModel	true	boolean	None
+9	dataStructure	FLAT	string	None
+10	layout	None	table	
+11	keyFields	None	table	
+12	index	None	table	
+13	createIndexOnKeyFields	true	boolean	None
+14	indexOnKeyFieldsClustered	true	boolean	None
+15	storageType	PERMANENT	string	None
+16	internalSourceTablePrefix	test_fields_	string	None
+17	loaderConfigFields	None	table	
+18	loaderActions	None	table	None
+19	postTableCreationStatements	None	table	None
+20	postAdjustmentTableCreationStatements	None	table	None
+21	dataLoadVariables	None	table	None
+22	computeStatistics	NONE	string	None
+23	reapplyAdjustmentsAfterDataLoad	false	boolean	None
+24	archivalProperties	None	object	
+25	validations	None	table	None
+26	delimiter	\t	string	None
+27	optionallyEnclosedBy	'	string	None
+28	skipRows	0	integer	None
+29	newlineConversion	dos	string	None
+30	targetEncoding	UTF8	string	None
+31	convertEncoding	false	boolean	None
+32	trailingNullCols	true	boolean	None
+33	columnHeadersFromFile	false	boolean	None
+34	loaderControlFile		string	None
+35	parameterIsNotAFile	false	boolean	None
+36	codeWillCreateFile	false	boolean	None
+37	loaderPreprocessCode		string	None
+38	fourEyesCheck	false	boolean	None
+39	readOnlyAdjustment	false	boolean	None
+40	keepTableContent	false	boolean	None
+41	loadSheetName	Sheet1	string	None
+42	maxErrors	2147483647	integer	None
+43	doNotFailIfRejected	false	boolean	None
+44	freezeLevel	1	integer	None
+45	instanceRebuildRestriction	AlterFullRebuild	string	None
+
+TABLES
+Table Name	layout
+name	description	id	title	type	size	allowNulls	allowDefault	isAutoUniqueId	defaultValue	syntheticContent	lookupSource	parentFields	aggregatedFunction	isCountFieldFor	producingMap	displayFormat	showSubtotal	isHidden	
+varchar_	Varchar	ff1f8342-0476-4102-9ae2-3789d7bdd2ec		VARCHAR	10	true	true	false	''	None	None	None		None	None		false	false	
+name	description	id	title	type	allowNulls	allowDefault	defaultValue	syntheticContent	lookupSource	parentFields	aggregatedFunction	isCountFieldFor	producingMap	displayFormat	showSubtotal	isHidden	
+Integer_	Integer	b4a2cd8b-097b-4274-81f3-1f0b1f49bd76		INTEGER	true	true	0	None	None	None		None	None	#0	true	false	
+name	description	id	title	type	allowNulls	allowDefault	defaultValue	syntheticContent	lookupSource	parentFields	aggregatedFunction	isCountFieldFor	producingMap	displayFormat	showSubtotal	isHidden	
+float_	float	ac44f056-2034-4351-8631-5d8f0b6ef2d5		FLOAT	true	true	0.0	None	None	None		None	None	#,##0.00;(#,##0.00)	false	false	
+name	description	id	title	type	allowNulls	allowDefault	defaultValue	syntheticContent	lookupSource	parentFields	aggregatedFunction	isCountFieldFor	producingMap	displayFormat	showSubtotal	isHidden	
+date_	Date	e2ca749f-2e89-4b6c-a8e1-fdbca5e51edd		DATE	true	true	{ts '1990-01-01 00:00:00'}	None	None	None		None	None	dd-MMM-yyyy	false	false	
+name	description	id	title	type	allowNulls	allowDefault	defaultValue	syntheticContent	lookupSource	parentFields	aggregatedFunction	isCountFieldFor	producingMap	displayFormat	showSubtotal	isHidden	
+TEXT_	Text	60fd4f42-7c42-47e5-8dd6-99907cdd9d72		TEXT	false	true	''	None	None	None		None	None		false	false	
+name	description	id	title	type	size	allowNulls	allowDefault	defaultValue	syntheticContent	lookupSource	parentFields	aggregatedFunction	isCountFieldFor	producingMap	displayFormat	showSubtotal	isHidden	
+unicode_	Unicode	f1a3ecf8-1d7d-44f8-ad1c-49252d7ec38f		UNICODE	11	false	true	''	None	None	None		None	None		false	true	
+name	description	id	title	type	allowNulls	allowDefault	defaultValue	syntheticContent	lookupSource	parentFields	aggregatedFunction	isCountFieldFor	producingMap	displayFormat	showSubtotal	isHidden	
+unicode_text_	Unicode text	5a899d57-d2a7-4d16-925b-0582e25a3047		UNICODE_TEXT	false	true	''	None	None	None		None	None		false	true	
+
+Table Name	keyFields
+value	
+None	
+
+Table Name	index
+clustered	unique	fields	
+false	true	None	
+
+Table Name	loaderConfigFields
+sourceField	origColumn	format	
+None	1		
+sourceField	origColumn	format	
+None	2		
+sourceField	origColumn	format	
+None	3		
+sourceField	origColumn	format	
+None	4		
+sourceField	origColumn	format	
+None	5		
+sourceField	origColumn	format	
+None	6		
+sourceField	origColumn	format	
+None	7		
+
+Table Name	loaderActions
+
+Table Name	postTableCreationStatements
+
+Table Name	postAdjustmentTableCreationStatements
+
+Table Name	dataLoadVariables
+
+Table Name	archivalProperties
+daily	weekly	monthly	quarterly	semiAnnually	annually	intraDay	userDefined	
+false	false	false	false	false	false	false	false	
+
+Table Name	validations
+

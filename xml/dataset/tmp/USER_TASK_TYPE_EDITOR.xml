@@ -1,0 +1,367 @@
+<data_set_category name="USER_TASK_TYPE_EDITOR"
+                   description="BPM Task Type Editor"
+                   windowTitle="BPM Task Type Editor Setup"
+                   entityName="BPM Task Type"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="UserTaskType"
+                   extends="COMMON_UTILS">
+
+    <parameters>
+        <parameter name="userTaskType" description="BPM Task Type" type="tree" group="BPM Task Type"
+                   rootNodeType="UserTaskTypeEditor:userTaskType">
+
+            <nodeType name="UserTaskTypeEditor:userTaskType" description="BPM Task Type Parameters"
+                      renameAllowed="false" deleteAllowed="false" hasChildren="true"
+                      childrenAreFixed="false" childrenTypes="UserTaskTypeEditor:parameter"
+                      pasteAsAllowed="false">
+
+                <parameter name="processName" description="Process Name" type="string" group="Details">
+                    <verifyForSave>
+                        <if>macro("isEmpty", param("processName"))
+                            <then>
+                                errorMessage(l("Cannot save the User Task Type.").concat(" ").concat(l("'%1' cannot be empty.",l("Process Name"))));
+                                ;false
+                            </then>
+                            <else>
+                                ;true
+                            </else>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+                <parameter name="userTaskName" description="BPM Task Name" type="string" group="Details">
+                    <verifyForSave>
+                        <if>macro("isEmpty", param("userTaskName"))
+                            <then>
+                                errorMessage(l("Cannot save the User Task Type.").concat(" ").concat(l("'%1' cannot be empty.",l("User Task Name"))));
+                                ;false
+                            </then>
+                            <else>
+                                ;true
+                            </else>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="UserTaskTypeEditor:parameter" description="BPM Task Type Parameter"
+                      renameAllowed="true" deleteAllowed="true" hasChildren="false"
+                      childrenAreFixed="false" pasteAsAllowed="false">
+
+                <parameter name="id" description="Parameter ID" type="string" group="Lookup Source" hidden="true"/>
+
+                <parameter name="project" description="Project" type="string" group="Lookup Source" isDataSet="Project">
+                    <onParameterChange>
+                        <if>newValue != oldValue
+                            <then>
+                                macro("clearStringParameter", "branch");
+                            </then>
+                        </if>
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="branch" description="Branch" type="string" group="Lookup Source" isDataSet="Branch">
+                    <attribute name="projectName">
+                        <!-- for branch lookup -->
+                        <param name="project"/>
+                    </attribute>
+
+                    <if>editor.getRemoteProxy().isObjectExists("Project", param("project"), null)
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <disabled/>
+                        </else>
+                    </if>
+
+                    <onParameterChange>
+                        <if>newValue != oldValue
+                            <then>
+                                macro("clearStringParameter", "dataSource");
+                            </then>
+                        </if>
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="dataSource" description="Data Source" group="Lookup Source" type="String" isDataSet="DataSource">
+                    <attribute name="projectName">
+                        <!-- for global lookup -->
+                        <param name="project"/>
+                    </attribute>
+                    <attribute name="branchName">
+                        <!-- for global lookup -->
+                        <param name="branch"/>
+                    </attribute>
+
+                    <if>editor.getRemoteProxy().isObjectExists("Branch", param("project") + "!" + param("branch"), null)
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <disabled/>
+                        </else>
+                    </if>
+
+                    <verifyForSave>
+                        var paramValue = currentParameter.getParameterValue();
+                        <if>macro("isEmpty", paramValue)
+                        <then>
+                            ;true
+                        </then>
+                        <else>
+                            <if>macro("checkDataSourceExists", param("project"), param("branch"), paramValue)
+                                <then>
+                                    <if>macro("isEmpty", param("codeField"))
+                                        <then>
+                                            errorMessage(l("Cannot save the User Task Type.").concat(" ").concat(l("Please specify both Data source and Code field (in '%1').", currentNode.getName())));
+                                            ;false
+                                        </then>
+                                        <else>
+                                            <!-- Also verifies Code field, since they must be specified together -->
+                                            <if>macro("checkFieldExists", param("project"), param("branch"), paramValue, param("codeField"))
+                                                <then>
+                                                    ;true
+                                                </then>
+                                                <else>
+                                                    errorMessage(l("Cannot save the User Task Type.").concat(" ").concat(l("Field '%1' was not found.", param("codeField"))));
+                                                    ;false
+                                                </else>
+                                            </if>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    errorMessage(l("Cannot save the User Task Type.").concat(l("Data source '%1' was not found.", currentParameter.getParameterValue())));
+                                    ;false
+                                </else>
+                            </if>
+                        </else>
+                        </if>
+                    </verifyForSave>
+
+                    <onParameterChange>
+                        <if>newValue != oldValue
+                            <then>
+                                macro("clearStringParameter", "codeField");
+                                macro("clearStringParameter", "descriptionField");
+                            </then>
+                        </if>
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="codeField" description="Code Field" group="Lookup Source" type="String">
+                    <if>macro("checkDataSourceExists", param("project"), param("branch"), param("dataSource"))
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <disabled/>
+                        </else>
+                    </if>
+
+                    <attribute name="lookupFromValues">l("Code Field")
+                        <comma/>
+                        var resolver = editor.getAxiomObjectManager().getResolver();
+                        var branchId = resolver.resolve(editor.createNameId("Branch", param("project") + "!" + param("branch")));
+                        editor.getRemoteProxy().lookupFieldsInDataSource(param("dataSource"), branchId.getDbId());
+                    </attribute>
+                </parameter>
+
+                <parameter name="descriptionField" description="Description Field" group="Lookup Source" type="String">
+                    <attribute name="lookupFromValues">l("Description Field")
+                        <comma/>
+                        var resolver = editor.getAxiomObjectManager().getResolver();
+                        var branchId = resolver.resolve(editor.createNameId("Branch", param("project") + "!" + param("branch")));
+                        editor.getRemoteProxy().lookupFieldsInDataSource(param("dataSource"), branchId.getDbId());
+                    </attribute>
+
+                    <if>macro("checkDataSourceExists", param("project"), param("branch"), param("dataSource"))
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <disabled/>
+                        </else>
+                    </if>
+
+                    <verifyForSave>
+                        <if>macro("isEmpty", currentParameter.getParameterValue())
+                            or macro("checkFieldExists", param("project"), param("branch"), param("dataSource"), currentParameter.getParameterValue())
+                            <then>
+                                ;true
+                            </then>
+                            <else>
+                                errorMessage(l("Cannot save the User Task Type.").concat(" ").concat(l("Field '%1' was not found.", currentParameter.getParameterValue())));
+                                ;false
+                            </else>
+                        </if>
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+        </parameter>
+    </parameters>
+
+    <saveCode>
+        var userTaskType = <axiomForSave/>;
+        var userTaskTypeNode = param("userTaskType");
+
+        <!-- userTaskType simple parameters -->
+        userTaskType.setProperty("processName", userTaskTypeNode.param("processName"));
+        userTaskType.setProperty("userTaskName", userTaskTypeNode.param("userTaskName"));
+
+        <!-- userTaskType complex parameters -->
+        var parameters = userTaskType.getTable("parameters");
+        <for>var i = 0 <comma/> i &lt; userTaskTypeNode.childCount() <comma/> i++
+            <do>
+                var parameterNode = userTaskTypeNode.child(i);
+                var parameter = parameters.addRow("UserTaskType:parameter");
+                parameter.setProperty("name", parameterNode.getName());
+                <if>macro("isEmpty", parameter.getProperty("id"))
+                    <then>
+                        var generatedId = function("axiomsl.util.UUID", "randomUUID").toString();
+                        parameterNode.param("id") = generatedId;
+                        parameter.setProperty("id", generatedId);
+                    </then>
+                </if>
+                parameter.setProperty("id", parameterNode.param("id"));
+
+                var objectReferenceClass = "axiomsl.server.object_framework.ObjectReferenceImpl";
+                var routeToObjectClass  = "axiomsl.server.object_framework.RouteToObject";
+
+                var dataSource =
+                    macro("locateDataSource", parameterNode.param("project"), parameterNode.param("branch"), parameterNode.param("dataSource"));
+                <if>dataSource != null
+                    <then>
+                        var routeToDataSource = function(routeToObjectClass, "createDirectRoute", dataSource);
+                        var dataSourceReference = new(objectReferenceClass, userTaskType, routeToDataSource, dataSource);
+                        parameter.setProperty("lookupSource", dataSourceReference);
+
+                        macro("saveField", dataSource, parameter, parameterNode, "codeField", "lookupCodeField");
+                        macro("saveField", dataSource, parameter, parameterNode, "descriptionField", "lookupDescriptionField");
+                    </then>
+                </if>
+            </do>
+        </for>
+    </saveCode>
+
+    <loadCode>
+        var userTaskType = <originalAxiom/>;
+
+        <!-- userTaskType simple parameters -->
+        var userTaskTypeNode = param("userTaskType");
+        userTaskTypeNode.param("processName") = userTaskType.getProperty("processName");
+        userTaskTypeNode.param("userTaskName") = userTaskType.getProperty("userTaskName");
+
+        <!-- userTaskType complex parameters -->
+        var parameters = userTaskType.getTable("parameters");
+        <for>var i = 0 <comma/> i &lt; parameters.size() <comma/> i++
+            <do>
+                var parameter = parameters.get(i);
+                var parameterNode =
+                    userTaskTypeNode.createChild("UserTaskTypeEditor:parameter", parameter.getProperty("name"));
+
+                parameterNode.param("id") = parameter.getProperty("id");
+
+                <if>parameter.propertyIsSet("lookupSource")
+                    <then>
+                        var dataSource = parameter.getReference("lookupSource").getTargetObject();
+                        var branch = editor.locateObjectById("Branch", dataSource.getBranchId());
+                        var project = editor.locateObjectById("Project", branch.getProperty("projectId"));
+
+                        parameterNode.param("project") = project.getName();
+                        parameterNode.param("branch") = branch.getName();
+                        parameterNode.param("dataSource") = dataSource.getName();
+
+                        macro("loadField", parameter, parameterNode, "codeField", "lookupCodeField")
+                        macro("loadField", parameter, parameterNode, "descriptionField", "lookupDescriptionField")
+                    </then>
+                    <else>
+                        parameterNode.param("project") = "";
+                        parameterNode.param("branch") = "";
+                        parameterNode.param("dataSource") = "";
+                    </else>
+                </if>
+                parameterNode.addToParent();
+            </do>
+        </for>
+    </loadCode>
+
+    <!-- MACROS -->
+
+    <macros>
+        <macro name="clearStringParameter" arguments="parameterName">
+            <if>!macro("isEmpty", param(<parameterName/>))
+                <then>
+                    param(<parameterName/>) = "";
+                </then>
+            </if>
+        </macro>
+
+        <macro name="locateDataSource" arguments="projectName, branchName, dataSourceName">
+            var objectIDClass = "axiomsl.server.object_framework.ObjectID";
+            <if>macro("isEmpty", <projectName/>) or macro("isEmpty", <branchName/>)
+                <then>
+                    ;null
+                </then>
+                <else>
+                    var extendedBranchName =<projectName/> + "!" + <branchName/>;
+                    var branchNameId = function(objectIDClass, "createNameId", "Branch", null, extendedBranchName);
+                    var branch = editor.locateIfExists(branchNameId);
+                    <if>branch != null
+                        <then>
+                            var branchId = branch.getId();
+                            var dataSourceId =
+                            function(objectIDClass, "createNameId", "DataSource", branchId, <dataSourceName/>);
+                            ;editor.locateIfExists(dataSourceId);
+                        </then>
+                    </if>
+                </else>
+            </if>
+        </macro>
+
+        <macro name="checkDataSourceExists" arguments="projectName, branchName, dataSourceName">
+            ;macro("locateDataSource", <projectName/>, <branchName/>, <dataSourceName/>) != null
+        </macro>
+
+        <macro name="checkFieldExists" arguments="projectName, branchName, dataSourceName, fieldName">
+            var dataSource = macro("locateDataSource", <projectName/>, <branchName/>, <dataSourceName/>);
+            <if>dataSource != null and dataSource.getProperty("layout").locateIfExists(<fieldName/>) != null
+                <then>
+                    ;true
+                </then>
+                <else>
+                    ;false
+                </else>
+            </if>
+        </macro>
+
+        <macro name="saveField" arguments="dataSource, parameter, parameterNode, uiFieldName, axiomFieldName">
+            var fieldValue = <parameterNode/>.param(<uiFieldName/>);
+            <if>!macro("isEmpty", fieldValue)
+                <then>
+                    var fieldObject = <dataSource/>.getProperty("layout").locateIfExists(fieldValue);
+                    <if>fieldObject != null
+                        <then>
+                            var fieldReference = new("axiomsl.server.object_framework.ObjectReferenceImpl",
+                                userTaskType, routeToDataSource, array(dataSource, "layout", fieldObject));
+                            <parameter/>.setProperty(<axiomFieldName/>, fieldReference);
+                        </then>
+                    </if>
+                </then>
+            </if>
+        </macro>
+
+        <macro name="loadField" arguments="parameter, parameterNode, uiFieldName, axiomFieldName">
+            <if>parameter.propertyIsSet(<axiomFieldName/>)
+                <then>
+                    var field = parameter.getProperty(<axiomFieldName/>).getTargetObject();
+                    <parameterNode/>.param(<uiFieldName/>) = field.getProperty("name");
+                </then>
+                <else>
+                    <parameterNode/>.param(<uiFieldName/>) = "";
+                </else>
+            </if>
+        </macro>
+    </macros>
+</data_set_category>

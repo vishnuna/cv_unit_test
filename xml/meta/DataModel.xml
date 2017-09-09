@@ -1,0 +1,89 @@
+<metadata>
+	<!-- 
+	  Rules for properties definition:
+	  
+	  "optional" property means property can be omitted altogether
+	     (this is used when property appears only for certain value of another (parent) property).
+	     
+	  "canBeEmpty" property means value can be specified as an empty string (value=""),
+	    or value attribute can be omitted with no character content inside property element (means same thing).
+	    
+	  The reason behind an empty property is when property value is optional, but property itself is not
+	  (property serves as both an indicator of a value being set, and if it is, the value itself)
+	  For example, lookup source for a data source field - can be empty (meaning no lookup), or can be nonempty
+	  containing a reference to lookup data source.
+	  Or, a start/end date for a date interval can be optional meaning no restriction on upper/lower end of the
+	  interval.
+	  
+	  for strings and tables, canBeEmpty is true by default
+	  for others- false
+	  The only type which doesn't support empty values is tree (and probably, boolean). 
+	  
+	  For strings, empty property is the same as empty string value
+	  For tables, same as empty table
+	  
+	  For numbers and dates, empty property value is kept internally as a typed null object.
+	  untyped getProperty() function and getDate() will return null.
+	  primitive-typed getInteger()/getDouble() will throw an exception, however propertyIsEmpty() function
+	  can be used to check for emptiness.
+	  setProperty(name, Object) will not accept a null argument, but setProperty(name, Date/Integer/Double) will.
+	  setProperty(name, primitive) will only set nonempty property values.
+	  To set an empty value for numeric property, use for example setProperty(name, (Integer)null).
+	  
+	  For urls/references, we'll do the same as for numbers and dates. getReference() will return null,
+	  and setProperty(name, ObjectReference) can be used to set an empty reference value.
+	  
+	  
+	  "choices" property lists all allowed values of a string property. If in addition to given choices,
+	  an empty value is allowed, use canBeEmpty="true" (or false, if not). Choices should not contain empty 
+	  values, and all values should not contain any spaces.
+	  Choices are separated with commas and/or spaces.
+	 -->
+    <!--todo: make it extend DocData, when we can allow metadata increase-->
+	<object type="DataModel" extends="ObjectInBranch, DocData" version="6">
+		<property name="isPermanent" valueType="boolean" defaultValue="false" essential="true"/> <!-- must be true if root source is permanent -->
+		<property name="instanceKeys" valueType="table" rowTypes="InstanceKey" optional="true" essential="all"/>
+		<property name="hierarchy" valueType="tree" rootNodeType="DataModel:node" essential="all"/>
+        <property name="streamKeys" valueType="table" rowTypes="DataModel:streamKey" essential="all"/>
+        <property name="freezeLevel" valueType="integer" defaultValue="1" optional="true" essential="true"/>
+        <property name="performJoinOnAllStreamColumns" valueType="boolean" optional="true" defaultValue="false" essential="true"/>
+        <property name="mustInheritSourceIKs" valueType="boolean" optional="true" defaultValue="true" essential="true"/>
+    </object>
+	<objectNode type="DataModel:node" extends="ReferencibleSubobject" version="3">
+		<property name="dataSource" valueType="url" targetObjectType="DataSource"/>
+		<property name="relationshipToParent" valueType="string" choices="ONE_TO_ONE,ONE_OR_ZERO_TO_ONE,MANY_OR_ZERO_TO_ONE,MANY_TO_ONE,FULL_OUTER_JOIN" defaultValue="ONE_TO_ONE"/>
+		<property name="mandatoryInJoin" valueType="boolean" defaultValue="false"/>
+		<property name="additionalConstraint" valueType="table" rowTypes="SQLPattern,SQLExpressionPart, SQLConstant, SQLFormula, DataModel:localFieldReference"/>
+        <property name="additionalJoinExpression" valueType="table" rowTypes="SQLPattern,SQLExpressionPart, SQLConstant, SQLFormula, DataModel:localFieldReference"/>
+        <property name="instanceSelectionRule" valueType="object" objectType="InstanceSelectionRule" />
+		<property name="join" valueType="table" rowTypes="DataModel:node:join"/>
+		<children childrenTypes="DataModel:node"/>
+	</objectNode>
+	<object type="DataModel:node:join" version="3">
+		<property name="sourceField" valueType="url" targetObjectType="DataSource:field"/>
+		<property name="parentField" valueType="url" targetObjectType="DataSource:field"/>
+	</object>
+	<object type="DataModel:reference" version="3">
+		<property name="value" valueType="url" targetObjectType="DataModel"/>
+	</object>
+	<object type="DataModel:fieldReference" version="3">
+		<property name="value" valueType="url" urlStructure="DataModel[*].hierarchy[*].dataSource.layout[*]" targetObjectType="DataSource:field"/>
+	</object>
+	<object type="DataModel:localFieldReference" version="3">
+		<property name="value" valueType="url" urlStructure="DataModel[this].hierarchy[*].dataSource.layout[*]" targetObjectType="DataSource:field"/>
+	</object>
+	<!-- this object provides a per-data-model mapping to a data model field,
+		i.e. a multi-map -->
+	<object type="DataModel:fieldMap" version="3">
+		<!-- the map will contain several field references, one for each data model
+		  the data model identification (name or reference etc.) will be contained in field reference url,
+		  so there is no need for extra property identifying the data model -->
+		<property name="map" valueType="table" canBeEmpty="false" rowTypes="DataModel:fieldReference"/>
+	</object>
+    <object type="DataModel:streamKey" version="5">
+        <property name="streamKeyName" valueType="string"/>
+        <property name="streamKeyColumn" valueType="object" objectType="DataModel:localFieldReference"/>
+        <!--these additional columns are used for mapping purposes only-->
+        <property name="additionalStreamColumns" valueType="table" rowTypes="DataModel:localFieldReference"/>
+    </object>
+</metadata>

@@ -1,0 +1,230 @@
+<data_set_category name="DASHBOARD_MAPPING"
+                   description="Dashboard Mapping Editor"
+                   windowTitle="Dashboard Mapping Editor Setup"
+                   entityName="Dashboard Mapping"
+                   icon="dashboard"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="DashboardMapping"
+                   singleDataSet="DashboardMapping"
+                   fixedNameMode="true"
+                   extends="COMMON_UTILS">
+
+    <parameters>
+        <parameter name="dashboardMapping" description="Dashboard Mapping" type="tree" group="Lookup Dashboard"
+                   rootNodeType="DashboardMappingEditor:dashboardMapping">
+
+            <nodeType name="DashboardMappingEditor:dashboardMapping" description="Dashboard Mapping"
+                      renameAllowed="false" deleteAllowed="false" hasChildren="true"
+                      childrenAreFixed="false" childrenTypes="DashboardMappingEditor:parameter"
+                      pasteAsAllowed="false">
+
+            </nodeType>
+            <nodeType name="DashboardMappingEditor:parameter" description="Dashboard Mapping Parameter"
+                      renameAllowed="true" deleteAllowed="true" hasChildren="false"
+                      childrenAreFixed="false" pasteAsAllowed="false">
+                <parameter name="id" description="Parameter ID" type="string" group="Lookup Dashboard" hidden="true"/>
+                <parameter name="project" description="Project" type="string" group="Lookup Dashboard" isDataSet="Project">
+                    <onParameterChange>
+                        <if>newValue != oldValue
+                            <then>
+                                macro("clearStringParameter", "branch");
+                            </then>
+                        </if>
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="branch" description="Branch" type="string" group="Lookup Dashboard" isDataSet="Branch">
+                    <attribute name="projectName">
+                        <!-- for branch lookup -->
+                        <param name="project"/>
+                    </attribute>
+
+                    <if>editor.getRemoteProxy().isObjectExists("Project", param("project"), null)
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <disabled/>
+                        </else>
+                    </if>
+
+                    <onParameterChange>
+                        <if>newValue != oldValue
+                            <then>
+                                macro("clearStringParameter", "dashboard");
+                            </then>
+                        </if>
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="dashboard" description="Dashboard" group="Lookup Dashboard" type="String" isDataSet="Dashboard">
+                    <attribute name="projectName">
+                        <!-- for global lookup -->
+                        <param name="project"/>
+                    </attribute>
+                    <attribute name="branchName">
+                        <!-- for global lookup -->
+                        <param name="branch"/>
+                    </attribute>
+
+                    <if>editor.getRemoteProxy().isObjectExists("Branch", param("project") + "!" + param("branch"), null)
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <disabled/>
+                        </else>
+                    </if>
+
+                    <verifyForSave>
+                        var paramValue = currentParameter.getParameterValue();
+                        <if>macro("isEmpty", paramValue)
+                            <then>
+                                ;true
+                            </then>
+                            <else>
+                                ;
+                            </else>
+                        </if>
+                    </verifyForSave>
+
+                    <onParameterChange>
+                        <if>newValue != oldValue
+                            <then>
+
+                            </then>
+                        </if>
+                    </onParameterChange>
+                </parameter>
+                <parameter name="dashboardName" description="Dashboard Name" group="Lookup Dashboard" type="String">
+                    <validation>
+                        <if>macro("isEmpty", newValue)
+                            <then>
+                                ;l("Title cannot be empty")
+                            </then>
+                            <else>
+                                ;null
+                            </else>
+                        </if>
+                    </validation>
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+                </parameter>
+            </nodeType>
+
+        </parameter>
+    </parameters>
+
+    <saveCode>
+        var dashboardMapping = <axiomForSave/>;
+        var dashboardMappingNode = param("dashboardMapping");
+         <!-- dashboardMapping simple parameters -->
+        var objectReferenceClass = "axiomsl.server.object_framework.ObjectReferenceImpl";
+        var routeToObjectClass  = "axiomsl.server.object_framework.RouteToObject";
+
+        var parameters = dashboardMapping.getTable("parameters");
+        <for>var i = 0 <comma/> i &lt; dashboardMappingNode.childCount() <comma/> i++
+            <do>
+                var parameterNode = dashboardMappingNode.child(i);
+                var parameter = parameters.addRow("DashboardMapping:parameter");
+                parameter.setProperty("name", parameterNode.getName());
+                <if>macro("isEmpty", parameterNode.param("id"))
+                    <then>
+                        var generatedId = function("axiomsl.util.UUID", "randomUUID").toString();
+                        parameterNode.param("id") = generatedId;
+                        parameter.setProperty("id", generatedId);
+                    </then>
+                </if>
+                parameter.setProperty("id", parameterNode.param("id"));
+
+                var dashboard = macro("locateDashboard", parameterNode.param("project"), parameterNode.param("branch"), parameterNode.param("dashboard"));
+                <if>dashboard != null
+                    <then>
+                        var dashboardReference = new(objectReferenceClass, dashboardMapping, function(routeToObjectClass, "createDirectRoute", dashboard), dashboard);
+                        parameter.setProperty("dashboard", dashboardReference);
+                        parameter.setProperty("dashboardName", parameterNode.param("dashboardName"));
+                    </then>
+                </if>
+            </do>
+        </for>
+    </saveCode>
+
+    <loadCode>
+        var dashboardMapping = <originalAxiom/>;
+        <!-- dashboardMapping simple parameters -->
+        var dashboardMappingNode = param("dashboardMapping");
+        <!-- dashboardMapping complex parameters -->
+        var parameters = dashboardMapping.getTable("parameters");
+        <for>var i = 0 <comma/> i &lt; parameters.size() <comma/> i++
+            <do>
+                var parameter = parameters.get(i);
+                var parameterNode = dashboardMappingNode.createChild("DashboardMappingEditor:parameter", parameter.getProperty("name"));
+
+                parameterNode.param("id") = parameter.getProperty("id");
+
+                <if>parameter.propertyIsSet("dashboard")
+                    <then>
+                        var dashboard = parameter.getReference("dashboard");
+                        trace(dashboard.toString());
+                        var branch = editor.locateObjectById("Branch", dashboard.getTargetObjectDbID().getBranchId());
+                        var project = editor.locateObjectById("Project", branch.getProperty("projectId"));
+
+                        parameterNode.param("project") = project.getName();
+                        parameterNode.param("branch") = branch.getName();
+                        parameterNode.param("dashboard") = dashboard.getTargetObjectNativeName();
+                        parameterNode.param("dashboardName") = parameter.getOptionalString("dashboardName");
+
+                    </then>
+                    <else>
+                        parameterNode.param("project") = "";
+                        parameterNode.param("branch") = "";
+                        parameterNode.param("dashboard") = "";
+                        parameterNode.param("dashboardName") = "";
+                    </else>
+                </if>
+                parameterNode.addToParent();
+            </do>
+        </for>
+
+    </loadCode>
+
+    <!-- MACROS -->
+
+    <macros>
+        <macro name="clearStringParameter" arguments="parameterName">
+            <if>!macro("isEmpty", param(<parameterName/>))
+                <then>
+                    param(<parameterName/>) = "";
+                </then>
+            </if>
+        </macro>
+
+        <macro name="locateDashboard" arguments="projectName, branchName, dashboardName">
+            var objectIDClass = "axiomsl.server.object_framework.ObjectID";
+            <if>macro("isEmpty", <projectName/>) or macro("isEmpty", <branchName/>)
+                <then>
+                    ;null
+                </then>
+                <else>
+                    var extendedBranchName =<projectName/> + "!" + <branchName/>;
+                    var branchNameId = function(objectIDClass, "createNameId", "Branch", null, extendedBranchName);
+                    var branch = editor.locateIfExists(branchNameId);
+                    <if>branch != null
+                        <then>
+                            var branchId = branch.getId();
+                            var objectId =
+                            function(objectIDClass, "createNameId", "Dashboard", branchId, <dashboardName/>);
+                            ;editor.locateIfExists(objectId);
+                        </then>
+                    </if>
+                </else>
+            </if>
+        </macro>
+
+        <macro name="checkDataSourceExists" arguments="projectName, branchName, dataSourceName">
+            ;macro("locateDataSource", <projectName/>, <branchName/>, <dataSourceName/>) != null
+        </macro>
+    </macros>
+</data_set_category>

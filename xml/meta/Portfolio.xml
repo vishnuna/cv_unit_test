@@ -1,0 +1,148 @@
+<metadata>
+	<object type="Portfolio" extends="ModelBasedTask" version="12">
+		<property name="detailSet" valueType="url" canBeEmpty="true" targetObjectType="DetailSet"/>
+        <!-- dbSource is where the data tables for portfolio results will be stored -->
+        <property name="dbSourceForResults" valueType="url" targetObjectType="DBSource"/>
+		<property name="storageType" valueType="string" canBeEmpty="false" choices="PERMANENT, CONTINUOUS, CONTINUOUS_PARTITION, SEGMENTED"/>
+		<property name="additionalIndices" valueType="table" rowTypes="Portfolio:index"/>
+        <property name="createIndexesOnStreamColumns" valueType="boolean" optional="true" defaultValue="false"/>
+		<property name="archivalProperties" valueType="object" objectType="ArchivalProperties"/>
+		<property name="portfolioResultAlias" valueType="string" canBeEmpty="true" optional="true" defaultValue=""/>
+        <property name="fourEyesCheck" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="validations" valueType="table" optional="true" rowTypes="Portfolio:validation"/>
+        <property name="producingIsRoot" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="sequence" valueType="table" rowTypes="Portfolio:subPortfolio" optional="true"/>
+        <property name="ignoreErrorsInAggregatedConditoinPlacement" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="makeAsOfDateColumnNullable" valueType="boolean" defaultValue="true"/>
+        <property name="computeStatistics" valueType="string" canBeEmpty="false" optional="true" choices="NONE, FOR_ALL_COLUMNS, FOR_KEY_COLUMNS" defaultValue="FOR_ALL_COLUMNS"/>
+        <property name="allowMultipleNodesPerRecord" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="allPortfColColumnSize" valueType="integer" canBeEmpty="true" optional="true" defaultValue="512"/>
+        <property name="executionAlgorithm" valueType="string" canBeEmpty="false"/>
+        <property name="levels" valueType="table" rowTypes="Portfolio:level"/>
+        <property name="additionalFields" valueType="table" rowTypes="Portfolio:additionalField"/>
+        <property name="hierarchy" valueType="tree" rootNodeType="Portfolio:rootnode"/>
+        <property name="instanceRebuildRestriction" valueType="string" choices="AlterFullRebuild, AlterOnly, FullRebuildOnly" defaultValue="AlterFullRebuild" optional="true"/>
+        <property name="allowExternalDataPermissions" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="executeDataModelsInParallel" valueType="boolean" optional="true" defaultValue="false"/>
+        <!-- parallel hints -->
+        <property name="executeEnableParallelismStatement" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="includeParallelHintsInsert" valueType="boolean" optional="true"/>
+        <property name="includeParallelHintsSelect" valueType="boolean" optional="true"/>
+        <property name="includeParallelHintsDelete" valueType="boolean" optional="true"/>
+        <property name="includeParallelHintsUpdate" valueType="boolean" optional="true"/>
+        <property name="parallelDegree" valueType="integer" optional="true" defaultValue="0"/>
+    </object>
+    <!--Sub - portfolio-->
+    <object type="Portfolio:subPortfolio" extends="ReferencibleSubobject,DocData" version="1">
+        <property name="allowMultipleNodesPerRecord" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="executionAlgorithm" valueType="string" canBeEmpty="false"/>
+        <property name="levels" valueType="table" rowTypes="Portfolio:level"/>
+        <property name="additionalFields" valueType="table" rowTypes="Portfolio:additionalField"/>
+        <property name="hierarchy" valueType="tree" rootNodeType="Portfolio:rootnode"/>
+    </object>
+	<object type="Portfolio:additionalField" extends="ReferencibleSubobject" version="7">
+        <property name="title" valueType="string" optional="true"/>
+        <!--todo: UNICODE support in execution (all_col)-->
+        <property name="type" valueType="string" canBeEmpty="false" choices="VARCHAR, INTEGER, FLOAT, DATE, TEXT"/>
+		<!-- only for varchar -->
+		<property name="size" valueType="integer" optional="true"/>
+        <property name="allowNulls" valueType="boolean" defaultValue="true"/>
+        <!--allowNulls is now defunct, but we keep it here for backwards compatibility because we don't allow adding properties on downgrade -->
+        <property name="allowNullsFixed" valueType="boolean" defaultValue="true"/>
+		<!-- allowDefault is always on -->
+		<property name="defaultValue" valueType="string" canBeEmpty="false"/>
+        <property name="showTotal" valueType="boolean" defaultValue="false" optional="true"/>
+		<property name="lookupSource" valueType="url" canBeEmpty="true" targetObjectType="DataSource"/>
+		<!-- if lookupSource is not empty, these 2 below must be fields from lookup source
+           (according to the same rules as used for data source validation) -->
+		<property name="codeField" valueType="url" optional="true" targetObjectType="DataSource:field"/>
+		<property name="descriptionField" valueType="url" optional="true" targetObjectType="DataSource:field"/>
+		<!-- this indicates whether the lookup source for additional field must be added to resulting
+            portfolio model -->
+		<property name="addLookupSourceToModel" optional="true" valueType="boolean"/>
+		<!-- if addLookupSourceToModel == true, this specifies the value to be put into additionalConstraint
+              property for the data model node being added.
+              This is an expression, containing references to root source keys from input model (as multimaps),
+              and references to portfolio levels/additional fields -->
+		<property name="additionalConstraintForJoin" optional="true" valueType="table" rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, Portfolio:localLevelReference, Portfolio:localAdditionalFieldReference, DataModel:fieldMap, DataSource:fieldReference"/>
+		<property name="relationshipToParent" optional="true" valueType="string" choices="ONE_TO_ONE,ONE_OR_ZERO_TO_ONE,MANY_OR_ZERO_TO_ONE,MANY_TO_ONE,FULL_OUTER_JOIN" defaultValue="ONE_TO_ONE"/>
+        <property name="instanceSelectionRule" optional="true" valueType="object" objectType="InstanceSelectionRule" />        
+	</object>
+	<objectNode type="Portfolio:node" version="7" extends="ReferencibleSubobject,DocData">
+		<!-- to validate condition, must check that all fields referenced in condition are from the input data model,
+           and validate the data types of the fields against one another (in multimap) and against the values in condition.
+           -->
+		<property name="condition" valueType="tree" rootNodeType="Condition"/>
+        <property name="expandedConditions" valueType="object" objectType="Portfolio:expandedConditions" optional="true"/>
+		<property name="actions" valueType="table" rowTypes="Portfolio:node:actionUpdatePortfolioSource, Portfolio:node:actionUpdateInputSource, Portfolio:node:actionAlert"/>
+		<property name="modelRemoved" valueType="table" rowTypes="DataModel:reference"/>
+		<children childrenTypes="Portfolio:node"/>
+	</objectNode>
+	<objectNode type="Portfolio:rootnode" version="7">
+		<!--without id, descr and removed models, name is empty -->
+		<property name="condition" valueType="tree" rootNodeType="Condition"/>
+        <property name="expandedConditions" valueType="object" objectType="Portfolio:expandedConditions" optional="true"/>
+		<property name="actions" valueType="table" rowTypes="Portfolio:node:actionUpdatePortfolioSource, Portfolio:node:actionUpdateInputSource, Portfolio:node:actionAlert"/>
+		<children childrenTypes="Portfolio:node"/>
+	</objectNode>
+	<!-- we have different portfolio action objects for different types of action, because they have different
+	   structure -->
+	<object type="Portfolio:node:actionUpdatePortfolioSource" version="5">
+		<property name="actionType" valueType="string" canBeEmpty="false" choices="SET, UPDATE" defaultValue="SET"/>
+		<!-- for destinationType == PORTFOLIO, destinationField must be a level or additional field, for TRANSACTION - a field from root source of the input model -->
+		<property name="destinationField" valueType="url" urlStructure="Portfolio[this].levels[*],Portfolio[this].sequence[*].levels[*], Portfolio[this].additionalFields[*], Portfolio[this].sequence[*].additionalFields[*]"/>
+		<!-- elements of source expression are levels and additional fields of this portfolio, plus multi-maps for fields from input data model-->
+		<property name="sourceExpression" valueType="table" canBeEmpty="false" rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, Portfolio:localLevelReference, Portfolio:localAdditionalFieldReference, DataModel:fieldMap"/>
+		<!-- compared to the old functionality, we got rid of the notion of source condition, because
+           what it did (in Oracle) was setting the value to null when condition was not met.
+           that can be done by using a case-when expression as a sourceExpression.
+
+           what used to be destination condition is now the only condition which means "apply the action only if
+           condition is met"
+           -->
+        <!--no source fields are allowed in condition-->
+        <property name="actionCondition" valueType="table" rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, Portfolio:localLevelReference, Portfolio:localAdditionalFieldReference"/>
+	</object>
+	<object type="Portfolio:node:actionUpdateInputSource" version="5">
+		<property name="actionType" valueType="string" canBeEmpty="false" choices="SET, UPDATE" defaultValue="SET"/>
+		<!-- for action updating the input source, the destination field must be
+            a field from root source of the input model (one per each input model), hence we have a multi-map here -->
+		<property name="destinationField" valueType="object" objectType="DataModel:fieldMap"/>
+		<!-- elements of source expression are levels and additional fields of this portfolio, plus multi-maps for fields from input data model-->
+		<property name="sourceExpression" valueType="table" canBeEmpty="false" rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, Portfolio:localLevelReference, Portfolio:localAdditionalFieldReference, DataModel:fieldMap"/>
+		<property name="actionCondition" valueType="table" rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, Portfolio:localLevelReference, Portfolio:localAdditionalFieldReference, DataModel:fieldMap"/>
+	</object>
+	<object type="Portfolio:node:actionAlert" version="5">
+		<!-- this action type is reserved for the future functionality-->
+		<property name="alertType" valueType="string" canBeEmpty="false"/>
+		<property name="alertToplic" valueType="string"/>
+		<property name="alertMessage" valueType="string"/>
+	</object>
+	<object type="Portfolio:level" extends="ReferencibleSubobject" version="5">
+		<property name="defaultValue" valueType="string"/>
+		<!-- default value is interpreted as a string value (to be enclosed in quotes) -->
+	</object>
+	<object type="Portfolio:index" version="5">
+		<property name="clustered" valueType="boolean"/>
+		<property name="unique" valueType="boolean"/>
+		<!-- an index built on resulting portfolio data source can contain portfolio levels, additional fields,
+           and key fields from root source of the input model (a multi-map per model) -->
+		<property name="fields" valueType="table" canBeEmpty="false" rowTypes="Portfolio:localLevelReference, Portfolio:localAdditionalFieldReference, DataModel:fieldMap"/>
+	</object>
+	<object type="Portfolio:localLevelReference" version="5">
+		<property name="value" valueType="url" urlStructure="Portfolio[this].levels[*], Portfolio[this].sequence[*].levels[*]" targetObjectType="Portfolio:level"/>
+	</object>
+	<object type="Portfolio:localAdditionalFieldReference" version="5">
+		<property name="value" valueType="url" urlStructure="Portfolio[this].additionalFields[*], Portfolio[this].sequence[*].additionalFields[*]" targetObjectType="Portfolio:additionalField"/>
+	</object>
+    <object type="Portfolio:validation" version="7">
+        <property name="field" valueType="object"
+                  objectType="Portfolio:localLevelReference,Portfolio:localAdditionalFieldReference"/>
+        <property name="type" valueType="string" canBeEmpty="false" choices="ON_EDIT_ONLY, ON_SAVE_ONLY, ON_EDIT_AND_SAVE, ON_DELETE_ONLY" defaultValue="ON_EDIT_ONLY" optional="true"/>
+        <property name="expression" valueType="string"/>
+    </object>
+    <object type="Portfolio:expandedConditions" version="1">
+        <property name="dataModel" valueType="url" targetObjectType="DataModel"/>
+        <property name="includeInherited" valueType="boolean" defaultValue="false"/>
+    </object>
+</metadata>

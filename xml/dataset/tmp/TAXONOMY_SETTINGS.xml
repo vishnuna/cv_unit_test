@@ -1,0 +1,62 @@
+<data_set_category name="TAXONOMY_SETTINGS" description="Taxonomy Settings" windowTitle="Taxonomy Settings"
+                   entityName="Taxonomy Settings" icon="measure" screenWidth="800" screenHeight="500"
+                   objectType="TaxonomySettings" singleDataSet="TaxonomySettings" fixedNameMode="true" extends="COMMON_UTILS, DOC_DATA">
+    <parameters>
+        <parameter name="dbSource" description="DB Source" type="String" group="General" length="20">
+            <choices>
+                var sources = editor.getRemoteProxy().lookupObjects("DBSource");
+                sources
+            </choices>
+            <default>
+                macro("getDefaultDBSource");
+            </default>
+        </parameter>
+        <parameter name="storageType" description="Storage Type" type="String" group="General" length="20">
+            choices(
+            <asDescription>
+                ndo("CONTINUOUS", l("CONTINUOUS")), ndo("CONTINUOUS_PARTITION",
+                l("CONTINUOUS_PARTITION")), ndo("SEGMENTED", l("SEGMENTED"))
+            </asDescription>
+            )
+        </parameter>
+        <parameter name="maximumHypercubeName" description="Maximum Hypercube Name" type="Integer" group="General"/>
+        <parameter name="maxSkeletonContextNameLength" description="Maximum Skeleton Context Name" type="Integer" group="General"/>
+        <parameter name="maxOrdinateCodeLength" description="Maximum Ordinate Code Length" type="Integer" group="General"/>
+        <parameter name="enableHypercubeOptimization" description="Hypercubes only calculate values used in Reports" type="Boolean" group="General"/>
+        <parameter name="maxReportZAxesInModel" description="Maximum number of Z axes on reports used for querying coordinates" type="Integer" group="General"/>
+
+        <parameter name="separator" description="" type="Component" noSerialization="yes" group="General">
+            <attribute name="componentClass">"javax.swing.JSeparator"</attribute>
+        </parameter>
+        <parameter name="deleteNotUsed" description="Delete Dimensions and Measures not used in standard reports" type="Boolean" group="General" defaultValue="false" noSerialization="yes"/>
+
+        <parameter name="updateMemberUsage" description="Update member usage" type="Component" noSerialization="yes" group="General">
+            <attribute name="componentClass">"axiomsl.gui.taxonomy_settings.UpdateMemberUsageButton"</attribute>
+            <attribute name="targetParam">"deleteNotUsed"</attribute>
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        param("dbSource") =<originalAxiom/>.getReference("dbSourceForResults").getTargetObjectNativeName();
+        param("storageType") =<originalAxiom/>.getString("storageType");
+        param("maximumHypercubeName") =<originalAxiom/>.getInteger("maximumHypercubeName");
+        param("maxSkeletonContextNameLength") =<originalAxiom/>.getInteger("maxSkeletonContextNameLength");
+        param("enableHypercubeOptimization") =<originalAxiom/>.getBoolean("enableHypercubeOptimization");
+        param("maxReportZAxesInModel") =<originalAxiom/>.getInteger("maxReportZAxesInModel");
+        param("maxOrdinateCodeLength") = <originalAxiom/>.getInteger("maxOrdinateCodeLength");
+    </loadCode>
+
+    <saveCode>
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+
+        <axiomForSave/>.setProperty("dbSourceForResults",<axiomForSave/>.createReferencePropertyValue("DBSource",
+        param("dbSource")));
+        <axiomForSave/>.setProperty("storageType", param("storageType"));
+        <axiomForSave/>.setProperty("maximumHypercubeName", param("maximumHypercubeName"));
+        <axiomForSave/>.setProperty("maxSkeletonContextNameLength", param("maxSkeletonContextNameLength"));
+        <axiomForSave/>.setProperty("enableHypercubeOptimization", param("enableHypercubeOptimization"));
+        <axiomForSave/>.setProperty("maxReportZAxesInModel", param("maxReportZAxesInModel"));
+        <axiomForSave/>.setProperty("maxOrdinateCodeLength", param("maxOrdinateCodeLength"));
+    </saveCode>
+
+</data_set_category>

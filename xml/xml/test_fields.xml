@@ -1,0 +1,293 @@
+<object stamp="9824d5bf-7f52-4081-af75-1f3e8c431efb_1504794884673" type="DataSource" version="18">
+	<property name="name" value="test_fields" valueType="string"/>
+	<property name="description" value="Test Fields" valueType="string"/>
+	<property name="objectId" value="7f5ef73b-757f-4ffa-83d9-cb5cf259fc1d" valueType="string"/>
+	<property name="branchId" value="68b7506a-69d3-4255-9a4b-a03c53614e96" valueType="string"/>
+	<property name="comment" value="Test Documentation..." valueType="string"/>
+	<property name="hosting" value="INTERNAL" valueType="string"/>
+	<property name="dbSource" valueType="url">DBSource["ORACLE"{4e6e5b36-b98d-45ad-b5a5-a13c97df8b8f}]</property>
+	<property name="loader" valueType="url">DataSourceLoader["load_file"{load_file}]</property>
+	<property name="defaultVisibilityInModel" value="true" valueType="boolean"/>
+	<property name="dataStructure" value="FLAT" valueType="string"/>
+	<property name="layout" valueType="table">
+		<object type="DataSource:field" version="5">
+			<property name="name" value="varchar_" valueType="string"/>
+			<property name="description" value="Varchar" valueType="string"/>
+			<property name="id" value="ff1f8342-0476-4102-9ae2-3789d7bdd2ec" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="VARCHAR" valueType="string"/>
+			<property name="size" value="10" valueType="integer"/>
+			<property name="allowNulls" value="true" valueType="boolean"/>
+			<property name="allowDefault" value="true" valueType="boolean"/>
+			<property name="isAutoUniqueId" value="false" valueType="boolean"/>
+			<property name="defaultValue" value="''" valueType="string"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="Integer_" valueType="string"/>
+			<property name="description" value="Integer" valueType="string"/>
+			<property name="id" value="b4a2cd8b-097b-4274-81f3-1f0b1f49bd76" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="INTEGER" valueType="string"/>
+			<property name="dataPermissionJoinSource" valueType="url">DataSource["test_fields2"{86a97d8f-ea44-4048-a9da-88fef58cbddf}]</property>
+			<property name="dataPermissionJoinField" valueType="url">DataSource["test_fields2"{86a97d8f-ea44-4048-a9da-88fef58cbddf}].layout["varchar_"{ff1f8342-0476-4102-9ae2-3789d7bdd2ec}]</property>
+			<property name="allowNulls" value="true" valueType="boolean"/>
+			<property name="allowDefault" value="true" valueType="boolean"/>
+			<property name="defaultValue" value="0" valueType="string"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url">DataSource["test_fields2"{86a97d8f-ea44-4048-a9da-88fef58cbddf}]</property>
+			<property name="codeField" valueType="url">DataSource["test_fields2"{86a97d8f-ea44-4048-a9da-88fef58cbddf}].layout["Integer_"{b4a2cd8b-097b-4274-81f3-1f0b1f49bd76}]</property>
+			<property name="descriptionField" valueType="url">DataSource["test_fields2"{86a97d8f-ea44-4048-a9da-88fef58cbddf}].layout["Integer_"{b4a2cd8b-097b-4274-81f3-1f0b1f49bd76}]</property>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="#0" valueType="string"/>
+			<property name="showSubtotal" value="true" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="float_" valueType="string"/>
+			<property name="description" value="float" valueType="string"/>
+			<property name="id" value="ac44f056-2034-4351-8631-5d8f0b6ef2d5" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="FLOAT" valueType="string"/>
+			<property name="allowNulls" value="true" valueType="boolean"/>
+			<property name="allowDefault" value="true" valueType="boolean"/>
+			<property name="defaultValue" value="0.0" valueType="string"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="#,##0.00;(#,##0.00)" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="date_" valueType="string"/>
+			<property name="description" value="Date" valueType="string"/>
+			<property name="id" value="e2ca749f-2e89-4b6c-a8e1-fdbca5e51edd" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="DATE" valueType="string"/>
+			<property name="allowNulls" value="true" valueType="boolean"/>
+			<property name="allowDefault" value="true" valueType="boolean"/>
+			<property name="defaultValue" value="{ts '1990-01-01 00:00:00'}" valueType="string"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="dd-MMM-yyyy" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="TEXT_" valueType="string"/>
+			<property name="description" value="Text" valueType="string"/>
+			<property name="id" value="60fd4f42-7c42-47e5-8dd6-99907cdd9d72" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="TEXT" valueType="string"/>
+			<property name="allowNulls" value="false" valueType="boolean"/>
+			<property name="allowDefault" value="true" valueType="boolean"/>
+			<property name="defaultValue" value="''" valueType="string"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="unicode_" valueType="string"/>
+			<property name="description" value="Unicode" valueType="string"/>
+			<property name="id" value="f1a3ecf8-1d7d-44f8-ad1c-49252d7ec38f" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="UNICODE" valueType="string"/>
+			<property name="size" value="11" valueType="integer"/>
+			<property name="allowNulls" value="false" valueType="boolean"/>
+			<property name="allowDefault" value="true" valueType="boolean"/>
+			<property name="defaultValue" value="''" valueType="string"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="true" valueType="boolean"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="unicode_text_" valueType="string"/>
+			<property name="description" value="Unicode text" valueType="string"/>
+			<property name="id" value="5a899d57-d2a7-4d16-925b-0582e25a3047" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="UNICODE_TEXT" valueType="string"/>
+			<property name="allowNulls" value="false" valueType="boolean"/>
+			<property name="allowDefault" value="true" valueType="boolean"/>
+			<property name="defaultValue" value="''" valueType="string"/>
+			<property name="syntheticContent" valueType="table">
+				<object type="SQLConstant" version="2">
+					<property name="name" value="table_name" valueType="string"/>
+				</object>
+			</property>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="true" valueType="boolean"/>
+		</object>
+	</property>
+	<property name="keyFields" valueType="table">
+		<object type="DataSource:localFieldReference" version="3">
+			<property name="value" valueType="url">DataSource[this].layout["varchar_"{ff1f8342-0476-4102-9ae2-3789d7bdd2ec}]</property>
+		</object>
+		<object type="DataSource:localFieldReference" version="3">
+			<property name="value" valueType="url">DataSource[this].layout["unicode_"{f1a3ecf8-1d7d-44f8-ad1c-49252d7ec38f}]</property>
+		</object>
+	</property>
+	<property name="index" valueType="table">
+		<object type="DataSource:index" version="3">
+			<property name="clustered" value="false" valueType="boolean"/>
+			<property name="unique" value="true" valueType="boolean"/>
+			<property name="fields" valueType="table">
+				<object type="DataSource:localFieldReference" version="3">
+					<property name="value" valueType="url">DataSource[this].layout["varchar_"{ff1f8342-0476-4102-9ae2-3789d7bdd2ec}]</property>
+				</object>
+				<object type="DataSource:localFieldReference" version="3">
+					<property name="value" valueType="url">DataSource[this].layout["Integer_"{b4a2cd8b-097b-4274-81f3-1f0b1f49bd76}]</property>
+				</object>
+			</property>
+		</object>
+		<object type="DataSource:index" version="3">
+			<property name="clustered" value="true" valueType="boolean"/>
+			<property name="unique" value="false" valueType="boolean"/>
+			<property name="fields" valueType="table">
+				<object type="DataSource:localFieldReference" version="3">
+					<property name="value" valueType="url">DataSource[this].layout["float_"{ac44f056-2034-4351-8631-5d8f0b6ef2d5}]</property>
+				</object>
+			</property>
+		</object>
+	</property>
+	<property name="createIndexOnKeyFields" value="true" valueType="boolean"/>
+	<property name="indexOnKeyFieldsClustered" value="true" valueType="boolean"/>
+	<property name="storageType" value="PERMANENT" valueType="string"/>
+	<property name="internalSourceTablePrefix" value="test_fields_" valueType="string"/>
+	<property name="loaderConfigFields" valueType="table">
+		<object type="DataSource:loaderConfigField" version="3">
+			<property name="sourceField" valueType="url">DataSource[this].layout["varchar_"{ff1f8342-0476-4102-9ae2-3789d7bdd2ec}]</property>
+			<property name="origColumn" value="1" valueType="string"/>
+			<property name="format" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:loaderConfigField" version="3">
+			<property name="sourceField" valueType="url">DataSource[this].layout["Integer_"{b4a2cd8b-097b-4274-81f3-1f0b1f49bd76}]</property>
+			<property name="origColumn" value="2" valueType="string"/>
+			<property name="format" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:loaderConfigField" version="3">
+			<property name="sourceField" valueType="url">DataSource[this].layout["date_"{e2ca749f-2e89-4b6c-a8e1-fdbca5e51edd}]</property>
+			<property name="origColumn" value="3" valueType="string"/>
+			<property name="format" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:loaderConfigField" version="3">
+			<property name="sourceField" valueType="url">DataSource[this].layout["TEXT_"{60fd4f42-7c42-47e5-8dd6-99907cdd9d72}]</property>
+			<property name="origColumn" value="4" valueType="string"/>
+			<property name="format" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:loaderConfigField" version="3">
+			<property name="sourceField" valueType="url">DataSource[this].layout["unicode_"{f1a3ecf8-1d7d-44f8-ad1c-49252d7ec38f}]</property>
+			<property name="origColumn" value="5" valueType="string"/>
+			<property name="format" value="" valueType="string"/>
+		</object>
+	</property>
+	<property name="loaderActions" valueType="table">
+		<object type="LoaderAction:actionStatement" version="4">
+			<property name="id" value="a4df731b-360c-499d-af96-8e29c2e0914f" valueType="string"/>
+			<property name="statement" valueType="table">
+				<object type="SQLExpressionPart" version="2">
+					<property name="value" value="&lt;!--test-->" valueType="string"/>
+				</object>
+			</property>
+		</object>
+	</property>
+	<property name="postTableCreationStatements" valueType="table">
+		<object type="DataSource:postTableCreationStatement" version="3">
+			<property name="name" value="New_Statement_001" valueType="string"/>
+			<property name="statement" value="'test post table data table'" valueType="string"/>
+			<property name="canBeReexecuted" value="false" valueType="boolean"/>
+		</object>
+	</property>
+	<property name="postAdjustmentTableCreationStatements" valueType="table">
+		<object type="DataSource:postTableCreationStatement" version="3">
+			<property name="name" value="New_Statement_001" valueType="string"/>
+			<property name="statement" value="'test post table adj table'" valueType="string"/>
+			<property name="canBeReexecuted" value="false" valueType="boolean"/>
+		</object>
+	</property>
+	<property name="dataLoadVariables" valueType="table">
+		<object type="WorkFlow:parameter" version="2">
+			<property name="name" value="var" valueType="string"/>
+			<property name="description" value="Variable Desc" valueType="string"/>
+			<property name="dataType" value="VARCHAR" valueType="string"/>
+			<property name="lookupFormula" value="" valueType="string"/>
+		</object>
+	</property>
+	<property name="computeStatistics" value="NONE" valueType="string"/>
+	<property name="reapplyAdjustmentsAfterDataLoad" value="false" valueType="boolean"/>
+	<property name="archivalProperties" valueType="object">
+		<object type="ArchivalProperties" version="2">
+			<property name="daily" value="false" valueType="boolean"/>
+			<property name="weekly" value="false" valueType="boolean"/>
+			<property name="monthly" value="false" valueType="boolean"/>
+			<property name="quarterly" value="false" valueType="boolean"/>
+			<property name="semiAnnually" value="false" valueType="boolean"/>
+			<property name="annually" value="false" valueType="boolean"/>
+			<property name="intraDay" value="false" valueType="boolean"/>
+			<property name="userDefined" value="false" valueType="boolean"/>
+		</object>
+	</property>
+	<property name="validations" valueType="table">
+		<object type="DataSource:validation" version="3">
+			<property name="field" valueType="url">DataSource[this].layout["varchar_"{ff1f8342-0476-4102-9ae2-3789d7bdd2ec}]</property>
+			<property name="type" value="ON_EDIT_ONLY" valueType="string"/>
+			<property name="expression" value="'validate'" valueType="string"/>
+		</object>
+	</property>
+	<property name="delimiter" value="\t" valueType="string"/>
+	<property name="optionallyEnclosedBy" value="'" valueType="string"/>
+	<property name="skipRows" value="0" valueType="integer"/>
+	<property name="newlineConversion" value="dos" valueType="string"/>
+	<property name="targetEncoding" value="UTF8" valueType="string"/>
+	<property name="convertEncoding" value="false" valueType="boolean"/>
+	<property name="trailingNullCols" value="true" valueType="boolean"/>
+	<property name="columnHeadersFromFile" value="false" valueType="boolean"/>
+	<property name="loaderControlFile" value="'control format file'" valueType="string"/>
+	<property name="parameterIsNotAFile" value="false" valueType="boolean"/>
+	<property name="codeWillCreateFile" value="false" valueType="boolean"/>
+	<property name="loaderPreprocessCode" value="" valueType="string"/>
+	<property name="fourEyesCheck" value="false" valueType="boolean"/>
+	<property name="readOnlyAdjustment" value="false" valueType="boolean"/>
+	<property name="keepTableContent" value="false" valueType="boolean"/>
+	<property name="loadSheetName" value="Sheet1" valueType="string"/>
+	<property name="maxErrors" value="2147483647" valueType="integer"/>
+	<property name="doNotFailIfRejected" value="false" valueType="boolean"/>
+	<property name="freezeLevel" value="1" valueType="integer"/>
+	<property name="instanceRebuildRestriction" value="AlterFullRebuild" valueType="string"/>
+</object>

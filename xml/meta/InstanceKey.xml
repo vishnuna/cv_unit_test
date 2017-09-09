@@ -1,0 +1,17 @@
+<metadata>
+	<object type="InstanceKey" version="2">
+		<property name="name" valueType="string" canBeEmpty="false" essential="true"/>
+		<property name="description" valueType="string" essential="true"/>
+		<property name="type" valueType="string" canBeEmpty="false" choices="VARCHAR, INTEGER, FLOAT, DATE" defaultValue="VARCHAR" essential="true"/>
+        <!--only for VARCHAR-->
+        <property name="size" valueType="integer" optional="true" essential="true"/>
+        <property name="defaultInstanceKeyValueFormula" valueType="string" optional="true" essential="true"/>
+        <property name="permissions" valueType="table" rowTypes="InstanceKey:streamDataPermission" optional="true" essential="true"/>
+    </object>
+    <object type="InstanceKey:streamDataPermission" version="1">
+		<property name="name" valueType="string" canBeEmpty="false"/>
+		<property name="dataPermissionEntity" optional="true" valueType="url" targetObjectType="DataPermissionEntity"/>
+        <property name="dataPermissionJoinSource" valueType="url" optional="true" targetObjectType="DataSource"/>
+        <property name="dataPermissionJoinField" valueType="url" optional="true" targetObjectType="DataSource:field"/>
+	</object>
+</metadata>

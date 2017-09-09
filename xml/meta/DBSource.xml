@@ -1,0 +1,55 @@
+<metadata>
+	<!-- this object specifies a db connection (minus the logon credentials, which are specified in db group -->
+	<!-- the name of the system source (formerly AXIOM_CORE_SOURCE) will be SYSTEM.
+	  the system dbSource will be automatically updated upon server start (if db connection succeeds and
+	   tables can be read) with settings specified for server start-up. 
+	   The login credentials are stored in DBUserGroup, so those will not be updated. If they are
+	   wrong, datasource-level operations will fail, but system will still use the system connection
+	   (setup at start-up) and will be able to function. -->
+	<!-- connection settings can possibly be encrypted -->
+	<object type="DBSource" extends="GlobalObject,DocData" version="7">
+		<property name="dbType" valueType="string" canBeEmpty="false"/>
+        <property name="defaultCharSet" valueType="string"/>
+        <property name="trusted" valueType="boolean" defaultValue="false" optional="true"/>
+		<!-- host/port are used to establish jdbc connection -->
+		<property name="host" valueType="string" canBeEmpty="false" optional="true"/>
+		<property name="port" valueType="integer" optional="true" defaultValue="0"/>
+		<!-- serviceName property is used only for oracle (for jdbc wire connection) -->
+		<property name="serviceName" valueType="string" optional="true" canBeEmpty="false"/>
+		<!-- serverName property:
+			for sybase/mssql: specifies the server name to be given to BCP
+			for oracle: tns name given to SQLLDR (or, in case, can be used for non-wire connections)
+		 -->
+		<property name="serverName" valueType="string" optional="true"/>
+		<!-- for oracle, schema name, for mssql/sybase - owner name
+		  all tables in this db source are referred expicitly by schema name, to prevent 
+		  ambiguity. Tables will only be visible within db source if they have the schema specified here -->
+		<property name="schema" valueType="string" optional="true"/>
+		<!-- for oracle, catalog will not be used. for mssql/sybase this is the database name -->
+		<property name="catalog" valueType="string" optional="true"/>
+		<!--for database links-->
+		<property name="dbLink" valueType="string" optional="true"/>
+        <!--for DB2-->
+        <property name="compressTables" valueType="boolean" optional="true"/>
+        <property name="notLogged" valueType="boolean" optional="true"/>
+        <property name="logSqlId" valueType="boolean" optional="true"/>
+        <property name="tempDir" valueType="string" optional="true"/>
+        <property name="logDirLocation" valueType="string" optional="true"/>
+        <!--for oracle-->
+		<property name="useDirectLoad" valueType="boolean" optional="true"/>
+		<property name="parallelDegree" valueType="integer" optional="true" defaultValue="0"/>
+		<property name="estimatePercent" valueType="integer" optional="true" defaultValue="0"/>
+		<property name="grants" valueType="table" rowTypes="DBSource:grant" optional="true"/>
+        <property name="compositeKeySize" valueType="integer" defaultValue="255" optional="true"/>
+        <!-- parallel hints -->
+        <property name="executeEnableParallelismStatement" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="includeParallelHintsInsert" valueType="boolean" optional="true"/>
+        <property name="includeParallelHintsSelect" valueType="boolean" optional="true"/>
+        <property name="includeParallelHintsDelete" valueType="boolean" optional="true"/>
+        <property name="includeParallelHintsUpdate" valueType="boolean" optional="true"/>
+	</object>
+	<object type="DBSource:grant" version="1">
+		<property name="role" valueType="string"/>
+		<property name="rights" valueType="string"/>
+	</object>
+</metadata>

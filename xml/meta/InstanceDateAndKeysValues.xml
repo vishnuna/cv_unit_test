@@ -1,0 +1,8 @@
+<metadata>
+    <object type="InstanceDateAndKeysValues" version="1">
+        <!--for permanent instance, the date and keys will be absent-->
+        <property name="instanceDate" valueType="date" optional="true"/>
+        <property name="instanceKeyValues" valueType="table" optional="true" rowTypes="InstanceObject:instanceKeyValue"/>
+        <property name="isAllInstances" optional="true" valueType="boolean"/>
+    </object>
+</metadata>

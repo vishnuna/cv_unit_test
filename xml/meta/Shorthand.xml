@@ -1,0 +1,18 @@
+<metadata>
+    <object type="Shorthand" extends="ObjectInBranch, DocData" version="6" upgraderClass="axiomsl.metadata_upgraders.ShorthandUpgrader">
+        <property name="models" valueType="table" rowTypes="DataModel:reference" essential="all"/>
+        <!--models are essential because validation of shorthand-dependent objects is using them-->
+        
+        <!--common condition-->
+        <property name="condition" valueType="tree" rootNodeType="Condition"/>
+        <!--overrides only-->
+        <!--todo: essential?-->
+        <property name="modelConditionOverrides" valueType="table" rowTypes="Shorthand:modelCondition"/>
+	</object>
+    <object type="Shorthand:modelCondition" version="2">
+        <!--<property name="model" valueType="object" objectType="DataModel:reference" canBeEmpty="false"/>-->
+        <property name="name" valueType="string" canBeEmpty="false"/>
+        <property name="models" valueType="table" rowTypes="DataModel:reference" canBeEmpty="false"/>
+        <property name="condition" valueType="tree" rootNodeType="Condition"/>
+    </object>
+</metadata>

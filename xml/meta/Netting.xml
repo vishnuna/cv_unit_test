@@ -1,0 +1,81 @@
+<metadata>
+    <object type="Netting" extends="ModelBasedTask" version="3">
+        <property name="details" valueType="table" rowTypes="Netting:detail"/>
+        <!--the first of the calc fields is the driver of the matching rules. Additional calc fields net in the same way as the first calc field-->
+        <!--e.g. The first one is amount in local currency, second one - amount in USD
+        It will only work properly when secondary calc fields are fractions of the first one-->
+        <property name="calcFields" valueType="table" rowTypes="Netting:calcField"/>
+        <property name="sorting" valueType="table" rowTypes="Netting:sortingField" optional="true"/>
+        <property name="removeNettedRecords" valueType="boolean" defaultValue="false"/>
+        <property name="prepareJournal" valueType="boolean" optional="true"/>
+        <property name="mappings" valueType="table" rowTypes="Netting:mapping"/>
+        <property name="storageType" valueType="string" canBeEmpty="false" choices="CONTINUOUS, CONTINUOUS_PARTITION, SEGMENTED, PERMANENT"/>
+        <property name="dbSourceForResults" valueType="url" targetObjectType="DBSource"/>
+        <property name="archivalProperties" valueType="object" objectType="ArchivalProperties"/>
+        <!--condition is based on Netting:detail's, those which are not an exact match.
+         Copies 1 and 2 of each detail are used.
+         Condition will contain Netting:numberedLocalDetailReference's-->
+        <!--TODO: datatypes of fields for ConditionTree must be taken from mapping - a feedback, like in TabularReport -->
+        <property name="condition" valueType="tree" rootNodeType="Condition"/>
+        <property name="makeAsOfDateColumnNullable" valueType="boolean" defaultValue="true"/>
+        <property name="computeStatistics" valueType="string" canBeEmpty="false" optional="true" choices="NONE, FOR_ALL_COLUMNS, FOR_KEY_COLUMNS" defaultValue="FOR_ALL_COLUMNS"/>
+        <!--parameter which specifies how many decimal digits get written into the file, by default 3. Too high precision may lead to phantom values close to 0, such as 2.3E-11 -->
+        <property name="doublePrecisionInFile" valueType="integer" optional="true" defaultValue="3"/>
+        <property name="instanceRebuildRestriction" valueType="string" choices="AlterFullRebuild, AlterOnly, FullRebuildOnly" defaultValue="AlterFullRebuild" optional="true"/>
+        <property name="allowExternalDataPermissions" valueType="boolean" optional="true" defaultValue="false"/>
+    </object>
+    <object type="Netting:detail" extends="ReferencibleSubobject" version="2">
+        <!--isExactMatch = whether the field value should match exactly for the netting to occur -->
+        <property name="isExactMatch" valueType="boolean"/>
+        <!--if not an exact match, then a tie-down for this field must be specified in condition-->
+    </object>
+    <object type="Netting:calcField" extends="ReferencibleSubobject" version="2">
+    </object>
+
+    <object type="Netting:sortingField" extends="ReferencibleSubobject" version="3">
+        <property name="order"         valueType="string" choices="Ascending, Descending"   defaultValue="Descending"/>
+        <property name="applicableTo"  valueType="string" choices="All, Positive, Negative" defaultValue="All"/>
+    </object>
+
+    <object type="Netting:mapping" version="2">
+        <!-- validation: mapping must be set for all fields and all models
+            mapping for calc fields with formulas should not be set
+            datatype of mapped expressions must be consistent across models
+            -->
+        <property name="field" valueType="object"
+                  objectType="Netting:localDetailReference,Netting:localCalcFieldReference, Netting:localSortingFieldReference"/>
+        <property name="fieldMapping" valueType="table" rowType="Netting:fieldMapping" canBeEmpty="false"/>
+    </object>
+    <object type="Netting:fieldMapping" version="2">
+        <property name="model" valueType="object" objectType="DataModel:reference" canBeEmpty="false"/>
+        <property name="expression" valueType="table" rowType="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, DataModel:fieldReference"
+                  canBeEmpty="false"/>
+        <!-- valueType, valueSize, valueNullable will be there only when expression does not contain a single filed reference (else type/size is taken from the field)
+			valueSize only for VARCHAR
+		    For aux fields type information is not used.
+		-->
+        <property name="valueSize" valueType="integer" optional="true"/>
+        <property name="valueNullable" valueType="boolean" optional="true"/>
+        <property name="valueType" canBeEmpty="false" valueType="string" optional="true"
+                  choices="VARCHAR, INTEGER, FLOAT, DATE, UNICODE" defaultValue="FLOAT"/>
+    </object>
+    <object type="Netting:localDetailReference" version="1">
+        <property name="value" valueType="url" urlStructure="Netting[this].details[*]"
+                  targetObjectType="Netting:detail"/>
+    </object>
+    <object type="Netting:localCalcFieldReference" version="1">
+        <property name="value" valueType="url" urlStructure="Netting[this].calcFields[*]"
+                  targetObjectType="Netting:calcField"/>
+    </object>
+
+    <object type="Netting:localSortingFieldReference" version="1">
+        <property name="value" valueType="url" urlStructure="Netting[this].sorting[*]"
+                  targetObjectType="Netting:sortingField"/>
+    </object>
+
+    <object type="Netting:numberedLocalDetailReference" extends="Netting:localDetailReference" version="1">
+        <!--to be used as a field in condition-->
+        <property name="fieldNumber" valueType="integer"/>
+    </object>
+
+</metadata>

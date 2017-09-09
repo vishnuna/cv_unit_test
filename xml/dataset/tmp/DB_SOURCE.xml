@@ -1,0 +1,290 @@
+<data_set_category name="DB_SOURCE" description="DBSource Setup" windowTitle="DBSource Setup" entityName="DBSource" icon="db_source" screenWidth="600" screenHeight="350" objectType="DBSource" extends="COMMON_UTILS,DOC_DATA">
+	<parameters>
+		<parameter name="isDefault" description="Default" group="Parameters" type="boolean" defaultValue="false">
+			<verifyForSave>
+                macro("verifySystemDefaults");
+		    </verifyForSave>
+		</parameter>
+		<parameter name="dbType" description="DB Type" group="Parameters" type="String" defaultValue="" length="20">
+			<choices>
+                editor.getServerProxy().getDbTypes();
+            </choices>
+		</parameter>
+		<parameter name="defaultCharSet" description="Default CharSet" group="Parameters" type="String" length="20">
+			<if> macro("checkPropertyExists")
+                <then>
+                    choices("", "utf8");
+                </then>
+			</if>
+		</parameter>
+		<parameter name="trusted" description="Use Trusted Authentication" group="Parameters" type="Boolean" defaultValue="false">
+            macro("checkPropertyExists")
+		</parameter>
+		<parameter name="host" description="Host" group="Parameters" type="String" defaultValue="" length="20">
+            macro("checkPropertyExists")
+			<verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+		</parameter>
+		<parameter name="port" description="Port" group="Parameters" type="integer" length="10">
+			<if> macro("checkPropertyExists")
+                <then>
+					<equals>
+                        editor.getServerProxy().getDbProperties(param("dbType")).getDefaultPort()
+                    </equals>
+				</then>
+			</if>
+		</parameter>
+		<parameter name="serviceName" description="Service Name" group="Parameters" type="String" defaultValue="" length="20">
+            macro("checkPropertyExists")
+			<verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+		</parameter>
+		<parameter name="db2DatabaseName" description="Database" group="Parameters" type="String" defaultValue="" length="20">
+            macro("checkPropertyExists")
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+		</parameter>
+		<parameter name="tnsName" description="TNS Name (for SQLLDR)" group="Parameters" type="String" defaultValue="" length="20">
+            macro("checkPropertyExists")
+		</parameter>
+		<parameter name="serverName" description="Server Name (for Bulk Copy Utility)" group="Parameters" type="String" defaultValue="" length="20">
+            macro("checkPropertyExists")
+		</parameter>
+		<parameter name="catalog" description="Database (catalog)" group="Parameters" type="String" defaultValue="" length="20">
+            macro("checkPropertyExists")
+			<verifyForSave>
+				<if> paramIsSet("dbLink") and param("dbLink") == ""
+                <!--sql server allows empty catalog for db link (if it's a link to oracle for example)-->
+					<then>
+                        macro("verifyNonEmpty");
+                    </then>
+				</if>
+			</verifyForSave>
+		</parameter>
+		<parameter name="schema" description="DB Schema (Table Owner)" group="Parameters" type="String" defaultValue="" length="20">
+            macro("checkPropertyExists")
+			<verifyForSave>
+				<!--todo: move this check to .properties file-->
+				<if> param("dbType") != "DB2"
+                    <then>
+                        macro("verifyNonEmpty");
+                    </then>
+				</if>
+			</verifyForSave>
+		</parameter>
+		<parameter name="dbLink" description="Database Link Name" group="Parameters" type="String" defaultValue="" length="20">
+            macro("checkPropertyExists")
+        </parameter>
+		<parameter name="compressTables" description="Compress Tables" group="Parameters" type="Boolean" defaultValue="false">
+            macro("checkPropertyExists")
+        </parameter>
+		<parameter name="notLogged" description="No logging" group="Parameters" type="Boolean" defaultValue="false">
+            macro("checkPropertyExists")
+        </parameter>
+        <parameter name="logSqlId" description="Log SQL ID" group="Parameters" type="Boolean" defaultValue="true">
+            macro("checkPropertyExists")
+        </parameter>
+		<parameter name="tempDir" description="Temporary folder on db server" group="Parameters" type="String" defaultValue="" length="40">
+            macro("checkPropertyExists")
+        </parameter>
+		<parameter name="logDirLocation" description="Axiom log directory path as accessible from db server (needed for Rejected Records file generation)" group="Parameters" type="String" defaultValue="" length="40">
+            macro("checkPropertyExists")
+        </parameter>
+		<parameter name="useDirectLoad" description="Use DIRECT loading" group="Performance Options" type="Boolean" defaultValue="false">
+            macro("checkPropertyExists")
+        </parameter>
+		<parameter name="parallelDegree" description="PARALLEL Degree" group="Performance Options" type="Integer" defaultValue="0">
+            macro("checkPropertyExists")
+        </parameter>
+		<parameter name="estimatePercent" description="Statistics Estimate %" group="Performance Options" type="Integer" defaultValue="0">
+            macro("checkPropertyExists")
+        </parameter>
+        <parameter name="help_info_hint" description="" type="Component" group="Performance Options" noSerialization="yes">
+            <attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+            <attribute name="text">l("Performance options for database-intensive tasks (Portfolio, Aggregation)")</attribute>
+            <attribute name="color">macro("LIGHT_GRAY")</attribute>
+            <attribute name="horizontalAlignment">"LEFT"</attribute>
+            <if> editor.getServerProxy().getDbProperties(param("dbType")).hasUIProperty("executeEnableParallelismStatement")
+                <then><enabled/></then><else><removed/></else>
+            </if>
+        </parameter>
+        <parameter name="executeEnableParallelismStatement" description="Execute Enable-Parallelism Statement" group="Performance Options" type="boolean" defaultValue="false">
+            macro("checkPropertyExists")
+        </parameter>
+        <parameter name="includeParallelHintsInsert" description="Include Parallel Hints for Insert" group="Performance Options" type="boolean" defaultValue="false">
+            macro("checkPropertyExists")
+        </parameter>
+        <parameter name="includeParallelHintsSelect" description="Include Parallel Hints for Select" group="Performance Options" type="boolean" defaultValue="false">
+            macro("checkPropertyExists")
+        </parameter>
+        <parameter name="includeParallelHintsDelete" description="Include Parallel Hints for Delete" group="Performance Options" type="boolean" defaultValue="false">
+            macro("checkPropertyExists")
+        </parameter>
+        <parameter name="includeParallelHintsUpdate" description="Include Parallel Hints for Update" group="Performance Options" type="boolean" defaultValue="false">
+            macro("checkPropertyExists")
+        </parameter>
+        <parameter name="update_grants" type="Component" description="" group="Grants" noSerialization="yes" row="0">
+			<attribute name="componentClass">"axiomsl.gui.dbsource.UpdateGrantsButton"</attribute>
+		</parameter>
+		<parameter name="grants" description="Grants" group="Grants" type="table" allowAddRemove="true" reorder="false" length="50">
+			<parameter name="role" description="Role" type="string" length="20"/>
+			<parameter name="rights" description="Rights" type="string" length="30"/>
+		</parameter>
+        <parameter name="compositeKeySize" description="Composite Key column size for Portfolio and Allocation Execution" group="Additional Parameters" type="Integer" defaultValue="255" optional="true">
+        </parameter>
+	</parameters>
+	<loadCode>
+	var db_source = <originalAxiom/>;
+	<!--dataSetDescription = db_source.getProperty("description");-->
+	var systemDefaults = editor.locateObjectByNameIfExists("SystemDefaults", "SystemDefaults");
+	param("isDefault") = false;
+    <if> systemDefaults != null
+        <then>
+            var properties = systemDefaults.getTable("properties");
+            <for> var i = 0<comma/> i &lt; properties.size() <comma/> i++
+                <do>
+                    var aRow = properties.get(i);
+            <if>
+                param("isDefault")!=true &amp;&amp; aRow.getProperty("name").equals("default_db_source") &amp;&amp; aRow.getProperty("value")!=null &amp;&amp; aRow.getProperty("value").equals(db_source.getProperty("name"))
+                <then>
+                    param("isDefault") = true;
+                </then>
+						</if>
+					</do>
+				</for>
+			</then>
+		</if>
+
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        var dbProperties = editor.getServerProxy().getDbProperties(db_source.getProperty("dbType"));
+        matcher.match(db_source, currentParameters, dbProperties.getPropertiesToSerialize(), null, dbProperties.getMatchingTemplates(), null, null);
+	</loadCode>
+	<saveCode>
+        var db_source_save = <axiomForSave/>;
+
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        var dbProperties = editor.getServerProxy().getDbProperties(param("dbType"));
+        matcher.match(db_source_save, currentParameters, dbProperties.getPropertiesToSerialize(), null, dbProperties.getMatchingTemplates(), null, null);
+	</saveCode>
+
+    <afterSave>
+        var systemDefaults = editor.locateObjectByNameIfExists("SystemDefaults", "SystemDefaults");
+        <if>systemDefaults == null
+            <then>
+                systemDefaults = editor.createObject("SystemDefaults");
+                systemDefaults.setProperty("name", "SystemDefaults");
+                systemDefaults.setProperty("description", "SystemDefaults");
+                systemDefaults.setProperty("objectId", "SystemDefaults");
+            </then>
+            <else>
+                systemDefaults = systemDefaults.cloneObject();
+            </else>
+        </if>
+
+        var aRow = systemDefaults.getTable("properties").locateIfExists("default_db_source");
+        <if>param("isDefault")
+            <then>
+                <if> aRow == null
+                    <then>
+                        aRow = systemDefaults.getTable("properties").addRow("SystemDefaults:property");
+                        aRow.setProperty("name", "default_db_source");
+                    </then>
+                </if>
+                aRow.setProperty("value", dataSetName);
+                editor.saveAxiomObject(systemDefaults, "");
+            </then>
+            <else>
+                <if>aRow != null and aRow.getProperty("value").equals(dataSetName)
+                    <then>
+                        aRow.setProperty("value", "");
+                        editor.saveAxiomObject(systemDefaults, "");
+                    </then>
+                </if>
+            </else>
+        </if>
+    </afterSave>
+	<deleteCode>
+		<!--todo: shouldn't this be done in change handler?-->
+    var systemDefaults = editor.locateObjectByNameIfExists("SystemDefaults", "SystemDefaults");
+    <if> systemDefaults != null
+        <then>
+            systemDefaults = systemDefaults.cloneObject();
+            var properties = systemDefaults.getTable("properties");
+                <for> var i = 0<comma/> i &lt; properties.size() <comma/> i++
+                    <do>
+                        var aRow = properties.get(i);
+                        <if>
+                            aRow.getProperty("name").equals("default_db_source") &amp;&amp; aRow.getProperty("value")!=null &amp;&amp; aRow.getProperty("value").equals(dataSetName)
+                            <then>
+                                aRow.setProperty("value","");
+                                editor.saveAxiomObject(systemDefaults,"");
+                            </then>
+						</if>
+					</do>
+				</for>
+			</then>
+		</if>
+	</deleteCode>
+	<macros>
+		<macro name="checkPropertyExists">
+			<if>
+               editor.getServerProxy().getDbProperties(param("dbType")).hasUIProperty(currentParameterName)
+            <then>
+					<enabled/>
+                true
+            </then>
+				<else>
+					<removed/>
+                false
+            </else>
+			</if>
+		</macro>
+
+        <macro name="verifySystemDefaults">
+            var dbSourceName = saveAsName;
+            var systemDefaults = editor.locateObjectByNameIfExists("SystemDefaults", "SystemDefaults");
+            var aRow;
+            var defaultDbSourceName = null;
+
+            <if> systemDefaults != null
+                <then>
+                    var properties = systemDefaults.getTable("properties");
+                    <for> var i = 0<comma/> i &lt; properties.size() <comma/> i++
+                        <do>
+                            aRow = properties.get(i);
+                            <if>aRow.getProperty("name").equals("default_db_source")
+                                <then>
+                                    defaultDbSourceName = aRow.getProperty("value");
+                                    break;
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+                </then>
+            </if>
+
+            <if> defaultDbSourceName == null or defaultDbSourceName == ""
+                <then>
+                    <if> !param("isDefault")
+                        <then>
+                            param("isDefault") = confirm(l(<string>There is no default db source set in the system. Would you like to use the current one as default?</string>));
+                        </then>
+                    </if>
+                </then>
+                <else>
+                    <if>((defaultDbSourceName.equals(dbSourceName) and !param("isDefault")) or (!defaultDbSourceName.equals(dbSourceName) and param("isDefault")))
+                        and !confirm(l("You are about to change default db source set in the system. Are you sure? Pressing 'No' will cancel the save operation"))
+                        <then>
+                            return false;
+                        </then>
+                    </if>
+                </else>
+            </if>
+
+            return true;
+        </macro>
+	</macros>
+</data_set_category>

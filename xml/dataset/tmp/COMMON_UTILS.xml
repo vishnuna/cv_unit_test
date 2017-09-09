@@ -1,0 +1,2203 @@
+<data_set_category name="COMMON_UTILS" description="Common Utils" windowTitle="" objectType="">
+	<macros>
+		<macro name="isPositiveOrZero">
+			<!--trace(<value/>);-->
+			<if> currentParameter.getParameterValue() &lt; 0
+               <then>
+                   errorMessage(l("%1 should be positive or zero.", currentParameter.getDescription(true)));
+                   return false;
+               </then>
+			</if>
+		</macro>
+		<macro name="isPositive">
+			<!--trace(<value/>);-->
+			<if> currentParameter.getParameterValue() &lt;= 0
+               <then>
+                   errorMessage(l("%1 should be positive.", currentParameter.getDescription(true)));
+                   return false;
+               </then>
+			</if>
+		</macro>
+		<macro name="isPositiveAndLessCurrentValue" arguments="lessValue">
+			<!--trace(<value/>);-->
+            var currentParameterValue = currentParameter.getParameterValue();
+			<if> currentParameterValue &lt;= 0 || currentParameterValue &gt; <lessValue/>
+               <then>
+                   errorMessage(l("%1 should be positive and less or equals %2.", currentParameter.getDescription(true), <lessValue/>));
+                   return false;
+               </then>
+			</if>
+		</macro>
+		<macro name="verifyNonEmpty">
+			<case>
+            currentParameter.getParameterValue() == ""  or (currentParameter.getParameterValue() instanceof "axiomsl.server.object_framework.FreehandPropertyValue" and currentParameter.getParameterValue().getExpression() == "")
+            <then>
+                errorMessage(l("%1 cannot be empty", currentParameter.getDescription(true)));
+                false
+            </then>
+				<!--!(currentParameter.getParameterValue() instanceof "axiomsl.server.object_framework.FreehandPropertyValue") and currentParameter.getParameterValue() instanceof "java.lang.String" and currentParameter.getParameterValue().indexOf("!!!") &gt;= 0-->
+				<!--<then>-->
+				<!--errorMessage(l("%1 '%2' is invalid", currentParameter.getDescription(true), currentParameter.getParameterValue()));-->
+				<!--false-->
+				<!--</then>-->
+				<else>
+                true
+            </else>
+			</case>
+		</macro>
+		<macro name="validateNonEmpty">
+			<if>
+            newValue == ""
+            <then>
+                errorMessage(l("%1 cannot be empty", currentParameter.getDescription(false)));
+                return false;
+            </then>
+			</if>
+		</macro>
+		<macro name="validateXML">
+			<try>
+            class("axiomsl.util.basic.XMLStringParser").parseString("&lt;a&gt;;
+" + newValue + "&lt;/a&gt;", 1, true, null);
+            true
+            <catch> var ex
+            </catch>
+            errorMessage(l("Syntax error in %1: %2", currentParameter.getDescription(false), ex.getCause().getMessage()));
+            false
+        </try>
+		</macro>
+		<macro name="xmlSyntaxHelp">
+            l("%1 Use XML syntax. Avoid unescaped %2, %3, and %4; use %5, %6, and %7 instead.%8Use %9 as the assignment operator (%10 is used for comparison in most contexts)%11","<![CDATA[<html>","<b>&lt;</b>","<b>&gt;</b>","<b>&amp;</b>","<b>&amp;lt;</b>","<b>&amp;gt;</b>","<b>&amp;amp;</b>","<br>","<b>:=</b>","<b>=</b>","</html>]]>")
+    </macro>
+		<macro name="xmlSyntaxHelpNoSingleEquality">
+            l("%1Use XML syntax. Avoid unescaped %2, %3, and %4; use %5, %6, and %7 instead%8","<![CDATA[<html>","<b>&lt;</b>","<b>&gt;</b>","<b>&amp;</b>","<b>&amp;lt;</b>","<b>&amp;gt;</b>","<b>&amp;amp;</b>","</html>]]>")
+    </macro>
+		<macro name="checkModelExists">
+			<if> !macro("isEmpty", newValue)
+            <then>
+                var modelName = macro("getName", newValue);
+                var modelId = editor.createNameId("DataModel", modelName);
+                <if> !editor.getAxiomObjectManager().objectExists(modelId,editor.getAxiomEnvironment())
+                    <then>
+                        return l("Data Model '%1' doesn't exist!", modelName);
+                    </then>
+					</if>
+                var resolver = editor.getAxiomObjectManager().getResolver();
+                <if> resolver.getObjectEntry(resolver.resolve(modelId)).isInvalid()
+                    <then>
+                        return l("Data Model '%1' is invalid!", modelName);
+                    </then>
+					</if>
+				</then>
+			</if>
+		</macro>
+		<macro name="checkModelExistsOnConfirm">
+			<if> !macro("isEmpty", addedRow.param("name"))
+            <then>
+                var modelName = macro("getName", addedRow.param("name"));
+                var modelId = editor.createNameId("DataModel", modelName);
+                <if> !editor.getAxiomObjectManager().objectExists(modelId,editor.getAxiomEnvironment())
+                    <then>
+                        errorMessage(l("Data Model '%1' doesn't exist!", modelName));
+                        return false;
+                    </then>
+					</if>
+                var resolver = editor.getAxiomObjectManager().getResolver();
+                <if> resolver.getObjectEntry(resolver.resolve(modelId)).isInvalid()
+                    <then>
+                        errorMessage(l("Data Model '%1' is invalid!", modelName));
+                        return false;
+                    </then>
+					</if>
+				</then>
+			</if>
+		</macro>
+		<macro name="getDefaultDBSource">
+        return editor.getDefaultDBSourceName();
+    </macro>
+		<macro name="checkUniquenessMixedCase" arguments="otherTables, supportsMixedCaseIdentifiers">
+        macro("checkUniquenessByMixedCase", <otherTables/>, "name", <supportsMixedCaseIdentifiers/>)
+    </macro>
+		<macro name="checkUniqueness" arguments="otherTables">
+        macro("checkUniquenessMixedCase", <otherTables/>, true)
+    </macro>
+		<macro name="checkUniquenessIgnoreCase" arguments="otherTables">
+        macro("checkUniquenessMixedCase", <otherTables/>, false)
+    </macro>
+		<macro name="checkUniquenessByMixedCase" arguments="otherTables, nameParameter, supportsMixedCaseIdentifiers">
+            <if>!macro("isEmpty", newValue)
+                <then>
+                    var oldName = param(<nameParameter/>);
+                    var newName = macro("getName", newValue);
+                    var oldNameUpperCase = class("axiomsl.util.basic.CommonStringUtils").toUpperCase(oldName);
+                    var newNameUpperCase = class("axiomsl.util.basic.CommonStringUtils").toUpperCase(newName);
+                    <if>(
+                        <supportsMixedCaseIdentifiers/> or oldNameUpperCase != newNameUpperCase)
+                        <then>
+                            macro("checkUniquenessByName", newName, currentParameters,<otherTables/>, true,
+                            <nameParameter/>,<supportsMixedCaseIdentifiers/>);
+                        </then>
+                    </if>
+                </then>
+            </if>
+		</macro>
+		<macro name="checkUniquenessBy" arguments="otherTables, nameParameter">
+        macro("checkUniquenessByMixedCase", <otherTables/>, <nameParameter/>, true)
+    </macro>
+    <!--this is used when pasting row-->
+    <macro name="checkUniquenessOnConfirmMixedCase" arguments="otherTables, supportsMixedCaseIdentifiers">
+        macro("checkUniquenessOnConfirmNameParam", <otherTables/>, <supportsMixedCaseIdentifiers/>, "name");
+    </macro>
+    <macro name="checkUniquenessOnConfirmNameParam" arguments="otherTables, supportsMixedCaseIdentifiers, nameParameter">
+        var mes = macro("checkUniquenessByName", addedRow.param(<nameParameter/>), addedRow, <otherTables/>, false, <nameParameter/>, <supportsMixedCaseIdentifiers/>);
+        <if> mes != null
+            <then>
+                errorMessage(mes);
+                return false;
+            </then>
+	    </if>
+    </macro>
+    <macro name="checkUniquenessOnConfirm" arguments="otherTables">
+        macro("checkUniquenessOnConfirmMixedCase", <otherTables/>, true)
+    </macro>
+    <macro name="checkUniquenessOnConfirmIgnoreCase" arguments="otherTables">
+        macro("checkUniquenessOnConfirmMixedCase", <otherTables/>, false)
+    </macro>
+	<macro name="checkUniquenessByName" arguments="modelNameNew, currentRow, tablesToLookIn, shouldReturn, nameParameter, supportsMixedCaseIdentifiers">
+        var newModelName = <modelNameNew/>;
+        var tables = <tablesToLookIn/>; <!-- to handle properly list(..) passed as parameter (to cache its value)-->
+        var mesRes = null;
+        <if> !macro("isEmpty", newModelName)
+            <then>
+                tables.add(0, currentTable);
+                <for> var j = 0 <comma/> j &lt; tables.size() <comma/> j++
+                    <do>
+                        var modelTable = tables.get(j);
+                        <for> var i = 0 <comma/> i &lt; modelTable.size() <comma/> i++
+                            <do>
+                                var row = modelTable.get(i);
+                                var rowName = row.param(<nameParameter/>);
+                                var error = false;
+                                <if>rowName == newModelName
+                                    <then>
+                                        error = true;
+                                    </then>
+										<else>
+											<if>(!<supportsMixedCaseIdentifiers/>)
+                                            <then>
+                                                var newModelNameCaps =
+                                                class("axiomsl.util.basic.CommonStringUtils").toUpperCase(newModelName);
+                                                var rowNameCaps =
+                                                class("axiomsl.util.basic.CommonStringUtils").toUpperCase(rowName);
+                                                <if>(rowNameCaps == newModelNameCaps)
+                                                    <then>
+                                                        error = true;
+                                                    </then>
+													</if>
+												</then>
+											</if>
+										</else>
+									</if>
+									<if>error
+                                    <then>
+                                        var description = <currentRow/>.getParam(<nameParameter/>).getDescription(false);
+                                        mesRes = if(j == 0,
+                                        e("FI0001", "", "%1 '%2' must be unique!", description, newModelName),
+                                        l("%1 '%2' is already included %3!", description, newModelName,
+                                        row.getInListDescription())
+                                        );
+                                        <if>
+												<shouldReturn/>
+												<then>
+													<!--for validation-->
+                                                return mesRes;
+                                            </then>
+												<else>
+													<!--for confirmAddRow-->
+                                                break;
+                                            </else>
+											</if>
+										</then>
+									</if>
+								</do>
+							</for>
+						</do>
+					</for>
+				</then>
+			</if>
+			<!--for confirmAddRow-->
+			<if> !<shouldReturn/>
+				<then>
+                ;mesRes
+            </then>
+			</if>
+		</macro>
+		<macro name="getSupportsMixedCaseIdentifiers" arguments="dbSourceName">
+        return editor.getRemoteProxy().supportsMixedCaseIdentifiers(<dbSourceName/>, editor.getAxiomEnvironment(), editor.getFrame());
+    </macro>
+		<macro name="isEmpty" arguments="arg1">
+			<if>
+				<arg1/> == null || <arg1/> == ""
+            <then>
+                ;true
+            </then>
+				<else>
+                ;false
+            </else>
+			</if>
+		</macro>
+        <macro name="isEmptyOrInvalid" arguments="value">
+            <if> <value/> == null || <value/> == "" || <value/>.indexOf("!!!") &gt;= 0
+                <then>
+                    ;true
+                </then>
+                <else>
+                    ;false
+                </else>
+            </if>
+        </macro>
+		<macro name="getName" arguments="object">
+			<case>
+				<object/> instanceof "java.lang.String"
+                <then>
+					<object/>
+				</then>
+				<object/> instanceof "axiomsl.util.basic.NameDescriptionObject"
+                <then>
+					<object/>.getName()
+                </then>
+				<object/> instanceof "java.util.Vector"
+                <then>
+					<object/>.get(1)
+                </then>
+				<object/> instanceof "[Ljava.lang.String;"
+                <then>
+					<object/>.get(1)
+                </then>
+				<object/> instanceof "axiomsl.util.dynamicparameters.ParameterContext"
+                <then>
+					<object/>.param("name")
+                </then>
+				<object/> instanceof "axiomsl.util.dynamicparameters.ParameterList"
+                <then>
+					<object/>.getParameterValue("name")
+                </then>
+			</case>
+		</macro>
+		<!--macros for local field lookup - for formulas-->
+		<macro name="parametricLookupAddCurrent" arguments="fromTables, skipTable, skipId, skipAfterId">
+        var res2 = macro("parametricLookup", <fromTables/>, <skipTable/>, <skipId/>, <skipAfterId/>, "name", null, null);
+        var table1 = param(<skipTable/>);
+        var addIndex = macro("getEntityIndex", <skipAfterId/>, table1);
+        var field1 = table1.get(addIndex);
+        res2.add(ndo(field1.param("name"), field1.param("description")));
+        res2
+    </macro>
+		<macro name="parametricLookup" arguments="fromTables, skipTable, skipId, skipAfterId, keyParameterName, keyDescriptionTableName, prefix">
+
+        var result = list();
+        var prefix = <prefix/>;
+
+        <for>var j = 0
+            <comma/>
+            j &lt; <fromTables/>.size()
+            <comma/>
+            j ++
+            <do>
+
+                var tableName = <fromTables/>.get(j);
+                var table = param(tableName);
+                <if> table == null
+                    <then>
+                        result = null;
+                        break;
+                    </then>
+                </if>
+                var skipIndex = -1;
+
+                <if>
+						<skipId/> != null and <skipTable/> == tableName
+                    <then>
+                        skipIndex = macro("getEntityIndex", <skipId/>, table);
+                    </then>
+					</if>
+					<if>
+						<skipAfterId/> != null and <skipTable/> == tableName
+                    <then>
+                        skipIndex = macro("getEntityIndex", <skipAfterId/>, table);
+                    </then>
+					</if>
+					<for>var i = 0
+                    <comma/>
+                    i &lt; table.size()
+                    <comma/>
+                    i ++
+                    <do>
+                        var field = table.get(i);
+                        <if> skipIndex != i
+                            <then>
+                                var keyFieldName = field.param(<keyParameterName/>);
+                                <if>
+                                    <keyDescriptionTableName/> == null
+                                <then>
+                                    <if>
+                                        prefix != null
+                                        <then>
+                                            keyFieldName = prefix + keyFieldName;
+                                        </then>
+                                    </if>
+                                    result.add(ndo(keyFieldName, field.param("description")));
+                                </then>
+                                <else>
+                                    var keyDescriptionTable = param(<keyDescriptionTableName/>);
+                                    <for>var k = 0 <comma/>
+                                    k &lt; keyDescriptionTable.size()
+                                    <comma/>
+                                    k ++
+                                    <do>
+                                        <if>
+                                            keyFieldName == keyDescriptionTable.get(k).param("name")
+                                        <then>
+                                            <if>
+                                                prefix != null
+                                                <then>
+                                                    keyFieldName = prefix + keyFieldName;
+                                                </then>
+                                            </if>
+                                            result.add(ndo(keyFieldName, keyDescriptionTable.get(k).param("description")));
+                                            break;
+                                        </then>
+                                        </if>
+                                    </do>
+                                    </for>
+                                </else>
+                                </if>
+                            </then>
+								<else>
+									<if>
+										<skipAfterId/> != null
+                                    <then>
+                                        break;
+                                    </then>
+									</if>
+								</else>
+							</if>
+						</do>
+					</for>
+				</do>
+			</for>
+
+        result
+    </macro>
+        <macro name="validateColumnName">
+        var name = macro("getName", newValue);
+        <case>
+            name == ""
+            <then> return l("%1 cannot be empty", currentParameter.getDescription(false)) </then>
+				<!--toLowerCase(name) != name-->
+				<!--<then> return l("%1 must be lower-case", currentParameter.getDescription(false)) </then>-->
+
+            !isAnIdentifier(name)
+            <then> return l("%1 must be alphanumeric and start with a letter", currentParameter.getDescription(false)) </then>
+			</case>
+		</macro>
+		<macro name="getFormatChoices" arguments="newFormat">
+        var format = <newFormat/>;
+        var list = list();
+
+        <case>
+            format == "FLOAT"
+            <then>
+                list = list("#,##0.00;(#,##0.00)",
+                            "#,##0.00",
+                            "#.##",
+                            "#.####",
+                            "#.######",
+                            "#.########",
+                            "#.##########",
+                            "0.###E-#",
+                            "0.#######E-#",
+                            "0.##########E-#");
+            </then>
+
+            format == "INTEGER"
+            <then>
+                list = list("#0",
+                            "#0;(#0)",
+                            "#,##0",
+                            "#,##0;(#,##0)");
+            </then>
+
+            format == "DATE"
+            <then>
+                list = list("dd-MMM-yyyy",
+                            "dd-MMM-yyyy HH:mm:ss",
+                            "MM/dd/yyyy",
+                            "MM/dd/yyyy HH:mm:ss",
+                            "yyyy-MM-dd HH:mm:ss");
+            </then>
+				<!--for VARCHAR list is disabled-->
+            format in ('VARCHAR', 'TEXT', 'UNICODE', 'UNICODE_TEXT')
+            <then>
+                list = null;
+            </then>
+
+            format == "EMPTY"
+            <then>
+					<!--nothing-->
+				</then>
+
+            format == "ALL"
+            <then>
+                list = list("#,##0.00;(#,##0.00)",
+                            "#,##0.00",
+                            "#.##",
+                            "#.####",
+                            "#.######",
+                            "#.########",
+                            "#.##########",
+                            "0.###E-#",
+                            "0.#######E-#",
+                            "0.##########E-#",
+                            "#0",
+                            "#0;(#0)",
+                            "#,##0",
+                            "#,##0;(#,##0)",
+                            "dd-MMM-yyyy",
+                            "dd-MMM-yyyy HH:mm:ss",
+                            "MM/dd/yyyy",
+                            "MM/dd/yyyy HH:mm:ss",
+                            "yyyy-MM-dd HH:mm:ss");
+            </then>
+			</case>
+        ;list
+    </macro>
+		<macro name="LIGHT_BLUE">
+        "200, 255, 255"
+    </macro>
+		<macro name="LIGHT_GREEN">
+        "200, 255, 200"
+    </macro>
+		<macro name="LIGHT_YELLOW">
+        "255, 255, 200"
+    </macro>
+        <macro name="LIGHT_GRAY">
+            "192, 192, 192"
+    </macro>
+		<macro name="lookupOptCOnstraint" arguments="dataModel,currentNode">
+    	var curSource = editor.locateObjectByName("DataSource", <currentNode/>.param("data_source"));
+        var values = list();
+        <for> var i = 0 <comma/> i &lt; curSource.getTable("layout").size() <comma/> i ++
+            <do>
+                var row = list();
+                row.add("$" + <currentNode/>.name() + "." + curSource.getTable("layout").get(i).getProperty("name"));
+                row.add(curSource.getTable("layout").get(i).getProperty("description"));
+                values.add(row);
+            </do>
+                </for>
+
+        macro("optionalConstraintParents",<dataModel/>,<currentNode/>,values);
+	    ;values
+    </macro>
+		<macro name="relationshipTypes">
+        choices(asDescription(list(
+            ndo("ONE_TO_ONE", l("one -> one")),
+            ndo("MANY_TO_ONE",l("many -> one")),
+            ndo("ONE_OR_ZERO_TO_ONE",l("one or zero -> one (OUTER join)")),
+            ndo("MANY_OR_ZERO_TO_ONE",l("many or zero -> one (OUTER join)")) ,
+            ndo("FULL_OUTER_JOIN",l("FULL OUTER join"))
+            )))
+        <default>'ONE_TO_ONE'</default>
+		</macro>
+		<macro name="dataModelNodeType">
+			<parameter name="isPermanent" description="Is Permanent Model" type="Boolean" defaultValue="false" group="Properties">
+                <attribute name="labelIsBold">true</attribute>
+				<if> currentNode.parent() != null
+                       <then>
+						<removed/>
+					</then>
+					<else>
+						<enabled/>
+					</else>
+				</if>
+		macro("setVisibility",currentNode,"isPermanent");
+            </parameter>
+			<parameter name="data_source" description="Data Source" type="String" length="27" group="Properties" isDataSet="DataSource">
+                <attribute name="labelIsBold">true</attribute>
+				<validation>
+                    macro("validateNonEmpty");
+		    var a_dataSource = editor.locateObjectByNameIfExists("DataSource",newValue);
+		    <if> a_dataSource==null
+		    <then>
+			errorMessage(l('Data source %1 is invalid', newValue));
+			return false;
+		    </then>
+					</if>
+				</validation>
+				<verifyForSave>
+                    macro("verifyNonEmpty");
+		</verifyForSave>
+                <onParameterChange>
+                    <if>currentNode.childCount() != 0
+                        <then>
+					        var col_name = editor.getRemoteProxy().lookupFieldsInDataSource(newValue, editor.getBranchId());
+						    <for> var j = 0 <comma/> j &lt; currentNode.childCount() <comma/> j++
+                                <do>
+                                    var column_for_join = currentNode.child(j).param("column_for_join");
+                                    <for> var i = 0 <comma/> column_for_join != null and i &lt; column_for_join.size() <comma/> i++
+						                <do>
+								            <if> !col_name.contains(NDO(column_for_join.get(i).param("parent_column"), ""))
+									            <then>
+										            column_for_join.remove(i);
+										            i--;
+									            </then>
+									        </if>
+									    </do>
+                                    </for>
+                                </do>
+                            </for>
+                        </then>
+                    </if>
+					<if>currentNode.parent() != null
+			<then>
+				    	var joinColumns = param("column_for_join");
+				 	    var col_name = editor.getRemoteProxy().lookupFieldsInDataSource(newValue, editor.getBranchId());
+						<for> var i = 0 <comma/> i &lt; joinColumns.size() <comma/> i++
+						  <do>
+									<if> !col_name.contains(NDO(joinColumns.get(i).param("source_column"), ""))
+								<then>
+									joinColumns.remove(i);
+									i--;
+								</then>
+									</if>
+								</do>
+							</for>
+						</then>
+					</if>
+				</onParameterChange>
+				macro("setVisibility",currentNode,"data_source");
+			</parameter>
+			<parameter name="relationship" description="Relationship to parent" type="String" length="27" group="Properties">
+                <attribute name="labelToolTip">l("%1If parent node has OUTER join,%2child node should also have OUTER join%3(else parent will be treated as INNER join, due to nature of SQL syntax)%4","<![CDATA[<html>","<br>","<br><br><font size=-1>","</font></html>]]>").toString()</attribute>
+                <attribute name="labelIcon">"icon.help_small"</attribute>
+				<if> currentNode.parent() == null
+				  <then>
+						<removed/>
+					</then>
+					<else>
+						<enabled/>
+                      macro("relationshipTypes")
+				  </else>
+				</if>
+			macro("setVisibility",currentNode,"relationship");
+			</parameter>
+			<parameter name="man_in_join" description="Mandatory in Join" type="Boolean" length="10" group="Properties">
+				<if> currentNode.parent() == null
+				       <then> <removed/>
+				       </then>
+                    <else>
+                        <enabled/>
+                    </else>
+				</if>
+			</parameter>
+			<parameter name="data_constraint" description="Optional constraint" type="String" length="27" group="Properties">
+                <attribute name="multiLine"> 2 </attribute>
+                <attribute name="lineWrap"> true </attribute>
+                <attribute name="labelToolTip">l("%1This becomes the WHERE clause in SQL statement%2(The difference from %3Additional join expression%4 is only in case of OUTER join,%5in that %6Optional constraint%7 causes records to be skipped,%8while %9Additional join expression%10 causes null values)%11","<![CDATA[<html>","<br><br><font size=-1>","<b>","</b>","<br>","<b>","</b>","<br>","<b>","</b>","</font></html>]]>").toString()</attribute>
+                <attribute name="labelIcon">"icon.help_small"</attribute>
+				<attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues"> l("Constraint") <comma/>
+                    var instanceKeysCategory = macro("getInstanceKeys", null, "instanceKeys", "name", null);
+                    new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), macro("lookupOptCOnstraint",param("data_model"),currentNode).toArray())
+                    <if> instanceKeysCategory != null
+                        <then>
+                            instanceKeysCategory
+                        </then>
+                    </if>
+                    ,
+                    macro("sqlMacros"),
+                    macro("axiomExpressionLanguage"),
+                    macro("userDefinedFunctions")
+                </attribute>
+				<if> param("data_source") != null AND param("data_source") != ""
+                    <then>
+						<enabled/>
+					</then>
+					<else>
+						<disabled/>
+					</else>
+				</if>
+                macro("setVisibility",currentNode,"data_constraint");
+			</parameter>
+			<parameter name="add_join" description="Additional join expression" type="String" length="27" group="Properties">
+				<if> currentNode.parent() == null
+                   <then>
+						<removed/>
+					</then>
+					<else>
+                        <if>param("data_source") != null AND param("data_source") != ""
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <disabled/>
+                            </else>
+                        </if>
+					</else>
+				</if>
+
+                <attribute name="multiLine"> 2 </attribute>
+                <attribute name="lineWrap"> true </attribute>
+                <attribute name="labelToolTip">l("%1This becomes the JOIN ... ON clause in SQL statement%2(The difference from %3Optional constraint%4 is only in case of OUTER join,%5in that %6Optional constraint%7 causes records to be skipped,%8while %9Additional join expression%10 causes null values)%11","<![CDATA[<html>","<br><br><font size=-1>","<b>","</b>","<br>","<b>","</b>","<br>","<b>","</b>","</font></html>]]>").toString()</attribute>
+                <attribute name="labelIcon">"icon.help_small"</attribute>
+				<attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues"> l("Expression") <comma/>
+                    var values = list();
+					var curSource = editor.locateObjectByName("DataSource", currentNode.param("data_source"));
+					<for> var i = 0 <comma/> i &lt; curSource.getTable("layout").size() <comma/> i ++
+						<do>
+							var row = list();
+							row.add("$" + currentNode.name() + "." + curSource.getTable("layout").get(i).getProperty("name"));
+							row.add(curSource.getTable("layout").get(i).getProperty("description"));
+							values.add(row);
+						</do>
+					</for>
+                    <!-- prev impl! -->
+                    <!--macro("addJoinExpressionParent",param("data_model"),currentNode,values);-->
+
+                    <!-- AXIOM-3474: add all the nodes from all the parents -->
+                    var modelNode = currentNode;
+                    <for><comma/> modelNode != null and modelNode.type() != "ResultingDataModels:model" and modelNode.parent() != null <comma/>
+                        <do>
+                            macro("addJoinExpressionParent",param("data_model"),modelNode,values);
+                            modelNode = modelNode.parent()
+                        </do>
+                    </for>
+
+                    var instanceKeysCategory = macro("getInstanceKeys", null, "instanceKeys", "name", null);
+                    new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), values.toArray())
+                    <if> instanceKeysCategory != null
+                        <then>
+                            instanceKeysCategory
+                        </then>
+                    </if>
+                    ,
+                    macro("sqlMacros"),
+                    macro("axiomExpressionLanguage"),
+                    macro("userDefinedFunctions")
+				</attribute>
+                macro("setVisibility",currentNode,"add_join");
+			</parameter>
+			<parameter name="column_for_join" description="Join Fields" type="table" keyParameter="source_column" group="Properties">
+                <if>currentNode.parent() == null
+                    <then>
+                        <removed/>
+                    </then>
+                    <else>
+                        <if>param("data_source") != null AND param("data_source") != ""
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <disabled/>
+                            </else>
+                        </if>
+                        macro("setVisibility",currentNode,"column_for_join");
+                    </else>
+                </if>
+
+				<parameter name="source_column" description="Source Field" type="String" length="20" group="Properties">
+					<attribute name="lookupFromValues"> "Source Field" <comma/>
+						editor.getRemoteProxy().lookupFieldsInDataSource(currentNode.param("data_source"), editor.getBranchId())
+					</attribute>
+					<validation>
+                        		macro("validateNonEmpty");
+                    		</validation>
+					<verifyForSave>
+                        		macro("verifyNonEmpty");
+                    		</verifyForSave>
+				macro("setVisibility",currentNode,"source_column");
+				</parameter>
+				<parameter name="parent_column" description="Parent Field" type="String" length="20" group="Properties" defaultValue="">
+					<attribute name="lookupFromValues"> "Parent Field" <comma/>
+						var values = list();
+						macro("lookupParentFields",param("data_model"),currentNode,values);
+						return values;
+					</attribute>
+					<validation>
+                    	    		macro("validateNonEmpty");
+                    		</validation>
+					<verifyForSave>
+                        		macro("verifyNonEmpty");
+                    		</verifyForSave>
+				macro("setVisibility",currentNode,"parent_column");
+ 				</parameter>
+			</parameter>
+            <!--<parameter name="help_info" description="" type="Component" group="Properties" noSerialization="yes">-->
+                <!--<attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>-->
+                <!--<attribute name="text">"Optional Constraint bla bla."</attribute>-->
+                <!--<attribute name="color">macro("LIGHT_BLUE")</attribute>-->
+            <!--</parameter>-->
+            <parameter name="default_rule" description="Instance Date Selection Rule" type="String" length="20" group="Instance Selection Rule">
+                choices(asDescription(list(ndo("EQUAL",l("EQUAL")),ndo("LATEST",l("LATEST")))))
+                macro("setVisibility",currentNode,"default_rule");
+            </parameter>
+            <parameter name="dependency" description="" type="Component"  group="Reports" noSerialization="yes">
+                <attribute name="componentClass">"axiomsl.toolkit.dataset_editor.dynamicparameters.ModelNodeDependenciesButton"</attribute>
+            </parameter>
+        </macro>
+		<macro name="verifyAggregationType" arguments="fieldName, fieldType, aggrType, warning">
+			<if>
+				<aggrType/> != null and "" != <aggrType/> and <fieldType/> != null and <fieldType/> != ""
+            <then>
+					<if> ("SUM" == <aggrType/> or "AVG" == <aggrType/> or "debit" == <aggrType/> or "credit" == <aggrType/>)
+                    and !("INTEGER" == <fieldType/> or "FLOAT" == <fieldType/>)
+                    <then>
+							<if>
+								<warning/>
+								<then>
+                                var res = confirm(l("Aggregation function '%1' for field '%2' is not compatible with its datatype '%3'! Do you want to continue?", <aggrType/>, <fieldName/>, <fieldType/>));
+                                return res;
+                            </then>
+								<else>
+                                errorMessage(l("Aggregation function '%1' for field '%2' is not compatible with its datatype '%3'!", <aggrType/>, <fieldName/>, <fieldType/>));
+                                return false;
+                            </else>
+							</if>
+						</then>
+					</if>
+				</then>
+			</if>
+		</macro>
+        <macro name="verifyAggregationFormatType" arguments="fieldName, fieldType, formatType, aggrMethod, warning, detail">
+            <if>
+                <formatType/> != null and <formatType/> != "" and <fieldType/> != null and <fieldType/> != ""
+                <then>
+                    <if>((<fieldType/> == "INTEGER" or <aggrMethod/> == "COUNT") and (<formatType/> == "#,##0.00;(#,##0.00)" or <formatType/> == "#,##0.00" or <formatType/> == "#.##"or <formatType/> == "#.####" or <formatType/> == "#.####" or <formatType/> == "#.######" or <formatType/> == "#.########" or <formatType/> == "#.##########" or <formatType/> == "0.###E-#" or <formatType/> == "0.#######E-#" or <formatType/> == "0.##########E-#" or <formatType/> == "dd-MMM-yyyy" or <formatType/> == "dd-MMM-yyyy HH:mm:ss" or <formatType/> == "MM/dd/yyyy" or <formatType/> == "MM/dd/yyyy HH:mm:ss" or <formatType/> == "yyyy-MM-dd HH:mm:ss"))
+                        or (<fieldType/> == "FLOAT" and (<formatType/> == "#0" or <formatType/> == "#0;(#0)" or <formatType/> == "#,##0" or <formatType/> == "#,##0;(#,##0)" or <formatType/> == "dd-MMM-yyyy" or <formatType/> == "dd-MMM-yyyy HH:mm:ss" or <formatType/> == "MM/dd/yyyy" or <formatType/> == "MM/dd/yyyy HH:mm:ss" or <formatType/> == "yyyy-MM-dd HH:mm:ss"))
+                        or (<fieldType/> == "DATE" and (<formatType/> == "#0" or <formatType/> == "#0;(#0)" or <formatType/> == "#,##0" or <formatType/> == "#,##0;(#,##0)" or <formatType/> == "#,##0.00;(#,##0.00)" or <formatType/> == "#,##0.00" or <formatType/> == "#.##" or <formatType/> == "#.####" or <formatType/> == "#.####" or <formatType/> == "#.######" or <formatType/> == "#.########" or <formatType/> == "#.##########" or <formatType/> == "0.###E-#" or <formatType/> == "0.#######E-#" or <formatType/> == "0.##########E-#"))
+                    <then>
+                            <if>
+                                <warning/>
+                                <then>
+                                    var res;
+                                    <if> <aggrMethod/> == "COUNT"
+                                        <then>
+                                            res = confirm(l("Format type '%1' for field '%2' is not compatible with its aggregation function COUNT! Do you want to continue?", <formatType/>, <fieldName/>));
+                                        </then>
+                                        <else>
+                                            res = confirm(l("Format type '%1' for field '%2' is not compatible with its datatype '%3'! Do you want to continue?", <formatType/>, <fieldName/>, <fieldType/>));
+                                        </else>
+                                    </if>
+                                    <if> !res or <detail/>
+                                        <then>
+                                            return res;
+                                        </then>
+                                    </if>
+                                </then>
+                                <else>
+                                    <if> <aggrMethod/> == "COUNT"
+                                        <then>
+                                            errorMessage(l("Format type '%1' for field '%2' is not compatible with its aggregation function COUNT!", <formatType/>, <fieldName/>));
+                                        </then>
+                                        <else>
+                                            errorMessage(l("Format type '%1' for field '%2' is not compatible with its datatype '%3'!", <formatType/>, <fieldName/>, <fieldType/>));
+                                        </else>
+                                    </if>;
+                                    return false;
+                                </else>
+                            </if>
+                    </then>
+                    </if>
+                </then>
+            </if>
+        </macro>
+		<!--formula - is single field reference expession - $alias.fieldName-->
+		<macro name="getFieldTypeFromModel" arguments="modelName, formula">
+        var modelName = <modelName/>;
+        var type2 = null;
+        <if> modelName != null and modelName != "" and <formula/> != null and <formula/> != "" and <formula/>.indexOf("!!!") &lt; 0 and <modelName/>.indexOf("!!!") &lt; 0
+            <then>
+                var model_xx = editor.locateObjectByName("DataModel", modelName);
+                var accessor_xx = new("axiomsl.accessors.DataModelAccessor", model_xx);
+                <if> accessor_xx.isValidExpression(<formula/>) and accessor_xx.isSingleFieldReference(<formula/>)
+                    <then>
+							<!--skip $-->
+                        var alias = function("axiomsl.accessors.AliasFieldNameExpression", "fromString", <formula/>.substring(1));
+                        var field = accessor_xx.getField(alias.getAlias(), alias.getFieldName(), true);
+                        trace("field.type" + field.type);
+                        type2 = field.type;
+                    </then>
+					</if>
+				</then>
+			</if>
+        ;type2
+    </macro>
+		<macro name="valueType" arguments="defaultValue">
+        choices(<asDescription>list(
+            ndo("VARCHAR", l("Character")),
+            ndo("INTEGER", l("Integer")),
+            ndo("FLOAT", l("Float")),
+            ndo("DATE", l("Date")),
+            ndo("UNICODE", l("Unicode Character"))
+            )
+        </asDescription>)
+        <default>
+				<defaultValue/>
+			</default>
+		</macro>
+		<macro name="valueSize">
+			<if>
+				<param name="valueType"/> == null or <param name="valueType"/> not in ("VARCHAR", "UNICODE")
+        <then>
+					<disabled/>
+				</then>
+				<else>
+					<enabled/>
+					<default>10</default>
+				</else>
+			</if>
+		</macro>
+		<macro name="setIfExists" arguments="object_xxx, property_xxx, dest_xxx">
+			<if>
+				<object_xxx/>.propertyIsSet(<property_xxx/>)
+        <then>
+					<dest_xxx/>.param(<property_xxx/>) = <object_xxx/>.getProperty(<property_xxx/>);
+        </then>
+				<else>
+					<dest_xxx/>.param(<property_xxx/>); <!--deserializing-->
+				</else>
+			</if>
+		</macro>
+		<macro name="loadTypeParameters" arguments="source_xxx, dest_xxx">
+        macro("loadTypeParameters_noNull", <source_xxx/>, <dest_xxx/>);
+        macro("setIfExists", <source_xxx/>, "valueNullable", <dest_xxx/>);
+    </macro>
+		<macro name="loadTypeParameters_noNull" arguments="source_xxx, dest_xxx">
+			<case>
+				<source_xxx/>.propertyIsSet("valueType")
+        <then>
+					<dest_xxx/>.param("valueType") = <source_xxx/>.getProperty("valueType");
+            <if>
+						<dest_xxx/>.param("valueType") in ("VARCHAR", "UNICODE")
+                <then>
+							<dest_xxx/>.param("valueSize") = <source_xxx/>.getProperty("valueSize");
+                </then>
+					</if>
+				</then>
+				<source_xxx/>.propertyIsSet("expression") and <source_xxx/>.getTable("expression").size() == 1 and <source_xxx/>.getTable("expression").get(0).getObjectType() == "DataModel:fieldReference"
+        <then>
+					<if>
+						<dest_xxx/>.param("model").indexOf("!!!") &lt; 0 and <dest_xxx/>.param("expression").indexOf("!!!") &lt; 0;
+                <then>
+                    var datatype = <source_xxx/>.getTable("expression").get(0).getProperty("value").getTargetObject().getString("type");
+                    <dest_xxx/>.param("valueType") = case(datatype == "TEXT", "VARCHAR", datatype == "UNICODE_TEXT", "UNICODE", datatype);
+                </then>
+					</if>
+				</then>
+			</case>
+		</macro>
+		<macro name="loadDataModelTree" arguments="dataModelName,dataModelObj,parserObj, routToObject">
+	var dataModel = <dataModelObj/>;
+	var parser = <parserObj/>;
+    var depName = <routToObject/>.getNameRoute();
+	var dataModelRoot = param("data_model");
+	var dataModelTree = dataModel.getTree("hierarchy");
+
+	dataModelRoot.setID(dataModelTree.getRootNode().getProperty("id"));
+	dataModelRoot.name() = dataModelTree.getRootNode().getProperty("name");
+    	dataModelRoot.param("isPermanent") = dataModel.getBoolean("isPermanent");
+	var dataSourceName = dataModelTree.getRootNode().getReference("dataSource").getTargetObjectName();
+	dataModelRoot.param("data_source") = depName+dataSourceName;
+
+	dataModelRoot.param("default_rule") = dataModelTree.getRootNode().getObject("instanceSelectionRule").getProperty("instanceDateRule").getString("type");
+	dataModelRoot.param("data_constraint") = parser.getExpressionString(dataModelTree.getRootNode().getTable("additionalConstraint"));
+
+	var childNode = null;
+	var propertyNode = null;
+	var parentNode = dataModelRoot;
+	var p_alias = "";
+	var joinColumns = null;
+	var joinParams = null;
+	var row = null;
+	macro("addionalDataModelNodeLoadingActions",dataModelRoot,dataModelTree.getRootNode());
+
+	<for> var i = 1 <comma/> i &lt; dataModelTree.getAllNodes().size() <comma/> i ++
+		<do>
+			propertyNode = dataModelTree.getAllNodes().get(i);
+			var parentName = propertyNode.getParentNode().getProperty("name");
+            var parentID = propertyNode.getParentNode().getProperty("id");
+			parentNode = dataModelRoot.findNodeByID(parentID);
+
+		 	childNode = parentNode.createChild("DataModel:node", propertyNode.getProperty("name"));
+			childNode.setID(propertyNode.getProperty("id"));
+
+            childNode.param("data_source") = depName + propertyNode.getReference("dataSource").getTargetObjectName();
+			childNode.param("relationship") = propertyNode.getProperty("relationshipToParent");
+			childNode.param("man_in_join") = propertyNode.getProperty("mandatoryInJoin");
+			childNode.param("default_rule") = propertyNode.getObject("instanceSelectionRule").getProperty("instanceDateRule").getString("type");
+			childNode.param("data_constraint") = parser.getExpressionString(propertyNode.getTable("additionalConstraint"));
+			childNode.param("add_join") = parser.getExpressionString(propertyNode.getTable("additionalJoinExpression"));
+
+			joinColumns  = propertyNode.getTable("join");
+			joinParams = childNode.param("column_for_join");
+
+			<for> var j = 0 <comma/> j &lt; joinColumns.size() <comma/> j ++
+				<do>
+				    row = joinParams.addLine();
+				    row.param("source_column") = joinColumns.get(j).getReference("sourceField").getTargetObjectNativeName();
+				    row.param("parent_column") = joinColumns.get(j).getReference("parentField").getTargetObjectNativeName();
+				</do>
+					</for>
+
+			var toStoreChildnode = childNode;
+			macro("addionalDataModelNodeLoadingActions",toStoreChildnode,propertyNode);
+			var toStoreParent = childNode.parent();
+			toStoreParent.add(toStoreChildnode);
+
+		</do>
+			</for>
+
+    	param("instanceKeys"); <!-- because it's optional, initialize value -->
+    	var accessor = new("axiomsl.accessors.DataModelAccessor", dataModel);
+    	var templates = array(
+                "default(instanceKeys.defaultInstanceKeyValueFormula)",
+                "forward(streamKeys.streamKeyName, name)",
+                "forward(streamKeys.additionalStreamColumns.*, zaq)",
+                "object2expression(streamKeys.streamKeyColumn)",
+                <!--"dictionaryReference(streamKeys.streamGroup)",-->
+                "table2string(streamKeys.additionalStreamColumns)",
+                "object2expression(streamKeys.additionalStreamColumns.*)");
+    	var params = array("instanceKeys","streamKeys");
+    	var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+    	matcher.match(dataModel, currentParameters, params, array("instanceKeys.permissions"), templates, parser, dataSet.getRouteFromCurrentBranch());
+
+    </macro>
+		<macro name="load_data_model_node" arguments="childNode,propertyNode">
+			<childNode/>.setID(<propertyNode/>.getProperty("id"));
+		<childNode/>.param("data_source") = <propertyNode/>.getReference("dataSource").getTargetObjectName(dataSet.getRouteFromCurrentBranch());
+		<childNode/>.param("relationship") = <propertyNode/>.getProperty("relationshipToParent");
+		<childNode/>.param("man_in_join") = <propertyNode/>.getProperty("mandatoryInJoin");
+		<childNode/>.param("default_rule") = <propertyNode/>.getObject("instanceSelectionRule").getProperty("instanceDateRule").getString("type");
+		<childNode/>.param("data_constraint") = parser.getExpressionString(<propertyNode/>.getTable("additionalConstraint"));
+		<childNode/>.param("add_join") = parser.getExpressionString(<propertyNode/>.getTable("additionalJoinExpression"));
+		var tmp_joinColumns = <propertyNode/>.getTable("join");
+		var tmp_joinParams = <childNode/>.param("column_for_join");
+		<for> var tmp_j = 0 <comma/> tmp_j &lt; tmp_joinColumns.size() <comma/> tmp_j ++
+		<do>
+			var row = tmp_joinParams.addLine();
+			row.param("source_column") = tmp_joinColumns.get(tmp_j).getReference("sourceField").getTargetObjectNativeName();
+			row.param("parent_column") = tmp_joinColumns.get(tmp_j).getReference("parentField").getTargetObjectNativeName();
+		</do>
+			</for>
+		</macro>
+		<macro name="optionalConstraintParents" arguments="dataModel,tempNode,values">
+	var tempNode = <tempNode/>;
+	var val =  <values/>;
+	<for>
+				<comma/> tempNode.parent() != null <comma/>
+				<do>
+			var nextSource = editor.locateObjectByName("DataSource", tempNode.parent().param("data_source"));
+			<for> var i = 0 <comma/> i &lt; nextSource.getTable("layout").size() <comma/> i ++
+			<do>
+				var row = list();
+				row.add("$" + tempNode.parent().name() + "." + nextSource.getTable("layout").get(i).getProperty("name"));
+				row.add(nextSource.getTable("layout").get(i).getProperty("description"));
+				val.add(row);
+			</do>
+					</for>
+		tempNode = tempNode.parent();
+		</do>
+			</for>
+		</macro>
+		<macro name="addJoinExpressionParent" arguments="dataModel,tempNode,values">
+        var tempNode = <tempNode/>;
+        var val =  <values/>;
+        var parentSource = editor.locateObjectByName("DataSource", tempNode.parent().param("data_source"));
+        <for> var i = 0 <comma/> i &lt; parentSource.getTable("layout").size() <comma/> i ++
+            <do>
+                var row = list();
+                row.add("$" + tempNode.parent().name() + "." + parentSource.getTable("layout").get(i).getProperty("name"));
+                row.add(parentSource.getTable("layout").get(i).getProperty("description"));
+                val.add(row);
+            </do>
+                </for>
+            </macro>
+            <macro name="lookupParentFields" arguments="dataModel,tempNode,values">
+            var val =  <values/>;
+            val.addAll(editor.getRemoteProxy().lookupFieldsInDataSource(currentNode.parent().param("data_source"), editor.getBranchId()));
+        </macro>
+		<macro name="save_datamodel_node" arguments="treeNode,propertyTree, parentNode,parser,nodeTypeName">
+            var parentDataSourceName = <treeNode/>.parent().param("data_source");
+            var parentDataSource = editor.locateObjectByName("DataSource", parentDataSourceName);
+            var childNode = <parentNode/>.addChild(<nodeTypeName/>);
+            var childDataSourceName = <treeNode/>.param("data_source");
+
+            var childDataSource = editor.locateObjectByName("DataSource", childDataSourceName);
+            trace( childDataSource);
+            childNode.setProperty("id", <treeNode/>.getID());
+            childNode.setProperty("name", <treeNode/>.name());
+            childNode.setProperty("description", childDataSource.getProperty("description"));
+            childNode.setProperty("dataSource", childNode.createReferencePropertyValue(childDataSourceName, childDataSource));
+            childNode.setProperty("relationshipToParent", <treeNode/>.param("relationship"));
+            childNode.setProperty("mandatoryInJoin", <treeNode/>.param("man_in_join"));
+
+            macro("rulesConstraints", childNode, <treeNode/>);
+
+            childNode.setProperty("additionalJoinExpression", <parser/>.parseExpression(<treeNode/>.param("add_join")));
+
+            var joins = childNode.getTable("join");
+            <for> var j = 0 <comma/> j &lt; <treeNode/>.param("column_for_join").size() <comma/> j ++
+                <do>
+                    var joinRow = joins.addRow("DataModel:node:join");
+                    var sourceField = childDataSource.getTable("layout").locate(<treeNode/>.param("column_for_join").get(j).param("source_column"), null);
+                    var parentField = parentDataSource.getTable("layout").locate(<treeNode/>.param("column_for_join").get(j).param("parent_column"), null);
+
+                    joinRow.setProperty("sourceField", childNode.createReferencePropertyValue(childDataSourceName, array(childDataSource, "layout", sourceField)));
+                    joinRow.setProperty("parentField", <parentNode/>.createReferencePropertyValue(parentDataSourceName, array(parentDataSource, "layout", parentField)));
+                </do>
+			</for>
+		</macro>
+		<macro name="rulesConstraints" arguments="node, treeNode">
+ 	instanceSelectionRule = <node/>.getObject("instanceSelectionRule");
+        instanceSelectionRule.getObject("instanceDateRule").setProperty("type", <treeNode/>.param("default_rule"));
+        <if> instanceKeys!=null
+            <then>
+                var instanceKeyRule;
+                var instanceKeyRules = instanceSelectionRule.getTable("instanceKeyRules");
+                <for> var j = 0 <comma/> j &lt; instanceKeys.size() <comma/> j ++
+                    <do>
+                        instanceKeyRule = instanceKeyRules.addRow("InstanceSelectionRule:instanceKeyRule");
+                        instanceKeyRule.setProperty("instanceKeyName", instanceKeys.get(j).param("name"));
+                        instanceKeyRule.setProperty("type", defaultRule);
+                    </do>
+					</for>
+				</then>
+			</if>
+			<node/>.setProperty("additionalConstraint", parser.parseExpression(<treeNode/>.param("data_constraint")));
+    </macro>
+		<macro name="commonDbSourcesParameters">
+			<parameter name="dbSource" description="System DB Source" group="Parameters" type="String" defaultValue="" length="20">
+				<choices>
+              	var sources = editor.getRemoteProxy().lookupObjects("DBSource");
+            </choices>
+			</parameter>
+			<parameter name="dataDbSource" description="Data DB Source" group="Parameters" type="String" defaultValue="" length="20">
+				<choices>
+              	var sources = editor.getRemoteProxy().lookupObjects("DBSource");
+            </choices>
+				<equals>
+                param("dbSource");
+            </equals>
+			</parameter>
+			<parameter name="dbSourceForResults" description="Destination DB Source" group="Parameters" type="String" defaultValue="" length="20">
+				<choices>
+              	var sources = editor.getRemoteProxy().lookupObjects("DBSource");
+            </choices>
+				<default>
+            macro("getDefaultDBSource");
+            </default>
+			</parameter>
+		</macro>
+		<macro name="commonConverterParameters">
+			<macro name="commonDbSourcesParameters"/>
+			<parameter name="skipExisting" description="Skip existings" type="boolean">
+				<default>
+               	macro("getDefaultSkipExisting");
+	    </default>
+			</parameter>
+			<parameter name="generateListOnly" description="Generate object list only" type="boolean"/>
+			<parameter name="objectList" description="Object List" type="String">
+				<attribute name="multiLine">4</attribute>
+                <attribute name="unlimitedSize"> true </attribute>
+				<if> param("generateListOnly")
+				<then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+					</else>
+				</if>
+			</parameter>
+		</macro>
+		<macro name="converterLoadCode" arguments="nonKeyPars">
+	param("dbSource") = <nonKeyPars/>.getProperty("dbSource");
+	param("dataDbSource") = <nonKeyPars/>.getProperty("dataDbSource");
+	param("dbSourceForResults") = <nonKeyPars/>.getProperty("dbSourceForResults");
+	<if>
+				<nonKeyPars/>.propertyIsSet("objectList")
+		<then>
+   			param("objectList") = <nonKeyPars/>.getProperty("objectList");
+		</then>
+			</if>
+
+	param("generateListOnly") = <nonKeyPars/>.getBoolean("generateListOnly");
+	param("skipExisting") = <nonKeyPars/>.getBoolean("skipExisting");
+    </macro>
+		<macro name="converterSaveCode" arguments="nonKeyPars">
+			<if> param("objectList")!=null
+		<then>
+					<nonKeyPars/>.setProperty("objectList", param("objectList"));
+		</then>
+			</if>
+			<nonKeyPars/>.setProperty("dbSourceForResults",param("dbSourceForResults"));
+	<nonKeyPars/>.setProperty("generateListOnly",param("generateListOnly"));
+	<nonKeyPars/>.setProperty("dbSource",param("dbSource"));
+	<nonKeyPars/>.setProperty("dataDbSource",param("dataDbSource"));
+        <nonKeyPars/>.setProperty("skipExisting",param("skipExisting"));
+    </macro>
+		<!-- Branch and Gabriel -->
+		<macro name="branchChoices" arguments="projectName">
+        var project = editor.locateObjectByName("Project", <projectName/>);
+        var branches = project.getTable("branches");
+        var ch = list();
+        <for> var ib = 0 <comma/> ib &lt; branches.size() <comma/> ib++
+                <do>
+                    ch.add(ndo(branches.get(ib).getProperty("name"), branches.get(ib).getProperty("description")));
+                </do>
+			</for>
+        ;ch
+    </macro>
+		<macro name="setProjectBranchNames" arguments="branchName, row">
+			<branchName/> = function("axiomsl.util.basic.GenericClassUtils", "replaceOccurences", <branchName/>, "!!!INV!", "");
+        <branchName/> = function("axiomsl.util.basic.GenericClassUtils", "replaceOccurences", <branchName/>, "!!!", "");
+        var branchSep = <branchName/>.indexOf("!");
+        var objecSep = <branchName/>.indexOf(":");
+        <if>    objecSep != -1
+            <then>
+					<row/>.param("branchName") = <branchName/>.substring(branchSep + 1, objecSep);
+            </then>
+				<else>
+					<row/>.param("branchName") = <branchName/>.substring(branchSep + 1);
+            </else>
+			</if>
+			<row/>.param("projectName") = <branchName/>.substring(0, branchSep);
+    </macro>
+		<macro name="getModelName" arguments="underlyingObjectType,underlyingObjectName">
+        var modelName = "";
+        <case>
+				<underlyingObjectType/> == "DataModel"
+            <then>
+                modelName=<underlyingObjectName/>;
+            </then>
+				<underlyingObjectType/> == "ModifyModel"
+           <then>
+               var modifyModel = locateIfExists("ModifyModel", <underlyingObjectName/>);
+               <if> modifyModel != null
+                   <then>
+                       modelName = function("axiomsl.server.object_framework.ObjectID", "getRouteToObject", <underlyingObjectName/>)+<underlyingObjectType/> + "[" + modifyModel.getName() + "]." + modifyModel.getReference("model").getTargetObjectName();
+                   </then>
+					</if>
+				</then>
+			</case>
+        ;modelName
+    </macro>
+		<macro name="lookupAliasesInModel" arguments="dataModelName">
+        var aliases = list();
+        var dataModel = locateIfExists("DataModel", <dataModelName/>);
+        <if> dataModel != null
+            <then>
+                var sources = dataModel.getTree("hierarchy").getAllNodes();
+                <for> var i = 0 <comma/> i &lt; sources.size(); <comma/> i++
+                    <do>
+                        var sourceName = sources.get(i).getReference("dataSource").getTargetObjectName(<routeToCurrentDataSet/>);
+                        aliases.add(ndo(sources.get(i).getProperty("name"), sourceName));
+                    </do>
+					</for>
+				</then>
+			</if>
+        ;aliases
+    </macro>
+
+    "levels", "additionalFields"
+
+     <macro name="adjustmentValidationLookup" arguments="table1, table2, listName, listDescription">
+        var tableNames = array(<table1/>, <table2/>);
+        macro("lookupFromValuesList"),
+        macro("parameterTablesLookup", tableNames, <listName/>, <listDescription/>, "$"),
+        macro("instanceDateKeysUnionFromModelsVariables", false, true, false),
+        macro("axiomExpressionLanguage"),
+        macro("userDefinedFunctions")
+    </macro>
+
+        <macro name="streamKeysTable">
+			<parameter name="name" description="Stream Key Name" type="String">
+				<validation>
+                		macro("validateColumnName");
+				macro("checkUniqueness_streams");
+            		</validation>
+				<verifyForSave>
+                		macro("verifyNonEmpty");
+            		</verifyForSave>
+			</parameter>
+			<parameter name="streamKeyColumn" description="Stream Key Field" type="String">
+                <attribute name="lookupFromValues">l("Select Field")
+                    <comma/>
+                    macro("lookupModelFields");
+                </attribute>
+				<verifyForSave>
+					<if>
+                    			operationType != editor.getManager().GENERATE
+                    		<then>
+                        		macro("verifyNonEmpty");
+                    		</then>
+					</if>
+				</verifyForSave>
+			</parameter>
+			<parameter name="additionalStreamColumns" description="Additional Stream Columns" type="String">
+                <attribute name="lookupFromValues">l("Select Field")
+                    <comma/>
+                    macro("lookupModelFields");
+                </attribute>
+				<attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupMultipleSelect">true</attribute>
+				<attribute name="lookupAppendSeparator">", "</attribute>
+			</parameter>
+		</macro>
+		<macro name="instanceKeysTable">
+			<if>
+            		param("data_model").param("isPermanent")
+        	<then>
+					<removed/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+			<parameter name="name" description="Key Name" type="String">
+				<validation>
+                		macro("validateColumnName");
+				macro("checkUniqueness_instanceKeys");
+            		</validation>
+				<verifyForSave>
+                		macro("verifyNonEmpty");
+            		</verifyForSave>
+			</parameter>
+			<parameter name="description" description="Key Description" type="String"/>
+			<parameter name="type" description="Key Type" type="String">
+        		choices(<asDescription>list(
+            			ndo("VARCHAR", l("VARCHAR")),
+                        ndo("INTEGER", l("INTEGER")),
+                        ndo("FLOAT", l("FLOAT")),
+                        ndo("DATE", l("DATE"))
+                                            )
+        		        </asDescription>)
+        		<default>
+        			'VARCHAR'
+        		</default>
+			</parameter>
+			<parameter name="size" description="Key Size" type="Integer">
+				<if>
+					<param name="type"/> != 'VARCHAR'
+            		<then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+						<default>10</default>
+					</else>
+				</if>
+			</parameter>
+			<onRowDeleted/>
+		</macro>
+		<macro name="getUnderlyingFullName">
+        ;<underlyingObjectType/> + "[" + <underlyingObjectName/> + "]"
+    </macro>
+		<macro name="filterNamedListByRight" arguments="namedList, right">
+        var elements = <namedList/>.getFilteredElements();
+        var excluded = list();
+        <for>var i = 0<comma/>i &lt; elements.size()<comma/>i ++
+            <do>
+                var entry = elements.get(i);
+                <if>!editor.getRemoteProxy().getPermissions().isObjectPermitted(entry.getDbId(), <right/>);
+                    <then>
+                        excluded.add(entry);
+                    </then>
+					</if>
+				</do>
+			</for>
+			<namedList/>.excludeElements(excluded);
+        <namedList/>;
+    </macro>
+		<macro name="loadTableFromAxiomObject" arguments="from, originalVars">
+        var listNames = null;  <!-- of variable names in a workflow-->
+        var listTypes = null;
+        <if>
+				<originalVars/> != null
+            <then>
+                listNames =  new("java.util.ArrayList");
+                listTypes =  new("java.util.ArrayList");
+                <for> var i = 0
+                    <comma/>
+                    i &lt; <originalVars/>.size();
+                    <comma/>
+                    i++
+                    <do>
+                        listNames.add(<originalVars/>.get(i).getString("name"));
+                        listTypes.add(<originalVars/>.get(i).getString("dataType"));
+                    </do>
+					</for>
+				</then>
+			</if>
+
+        ;macro("loadTable", listNames, listTypes, <from/>)
+    </macro>
+		<macro name="loadTable" arguments="listNames, listTypes, from">
+			<!--list = list of variable names-->
+
+        var map =  new("java.util.HashMap");
+        var to = list(); <!-- to initialize empty table-->
+
+        var table = <from/>;
+        <if> table != null
+            <then>
+					<for> var i = 0 <comma/> i &lt; table.size() <comma/> i++
+                    <do>
+                        var formRow = table.get(i);
+                        var name;
+                        var value;
+                        <if> formRow instanceof "axiomsl.server.object_framework.ObjectWithProperties"
+                            <then>
+                                name = formRow.getProperty("name");
+                                value = function("axiomsl.gui.batch.execution.TaskParameterParser", "getFreehandOrTypedValue", formRow);
+                            </then>
+								<else>
+                                name = formRow.param("name");
+                                value = formRow.param("value");
+                            </else>
+							</if>
+							<if>
+								<listNames/> == null
+                            <then>
+                                var row = tableRow();
+                                row.param("name") = name;
+                                row.param("value") = value;
+                                to.add(row);
+                            </then>
+								<else>
+                                map.put(name, value);
+                            </else>
+							</if>
+						</do>
+					</for>
+				</then>
+			</if>
+			<if>
+				<listNames/> != null
+            <then>
+					<for> var i = 0 <comma/> i &lt; <listNames/>.size() <comma/> i++
+                    <do>
+                        var row = tableRow();
+                        var name = <listNames/>.get(i);
+                        row.param("name") = name;
+                        var value = map.get(name);
+                        <if> value != null and
+                            (value instanceof "axiomsl.server.object_framework.FreehandPropertyValue" or
+                             value instanceof function("axiomsl.server.common.DataType", "getType", <listTypes/>.get(i)).getDataClass().getName())
+                            <then>
+                                row.param("value") = map.get(<listNames/>.get(i));
+                            </then>
+								<!--<else>-->
+								<!--row.param("value") = macro("getDefalutVarValue", list.get(i));-->
+								<!--</else>-->
+							</if>
+                        to.add(row);
+                    </do>
+					</for>
+				</then>
+			</if>
+        ;to
+    </macro>
+		<macro name="saveTable" arguments="from, to">
+        var table = <from/>;
+        <if> table != null
+            <then>
+					<for> var i = 0 <comma/> i &lt; table.size() <comma/> i++
+                    <do>
+                        var formRow = table.get(i);
+                        var row = <to/>.addRow("Task:parameterValue");
+                        row.setProperty("name", formRow.param("name"));
+                        function("axiomsl.gui.batch.execution.TaskParameterParser", "setFreehandOrTypedValue", formRow.param("value"), row);
+                    </do>
+					</for>
+				</then>
+			</if>
+		</macro>
+		<macro name="getDefalutVarValue" arguments="originalVars, varName, defaultValue">
+			<!--trace('zaq');-->
+        var defaultValue_ = <defaultValue/>;
+        <for> var i = 0
+            <comma/>
+            i &lt; <originalVars/>.size();
+            <comma/>
+            i++
+            <do>
+                var name;
+                var type;
+                <if>
+						<originalVars/>.get(i) instanceof "axiomsl.server.object_framework.ObjectWithProperties"
+                    <then>
+                        name = <originalVars/>.get(i).getString("name");
+                        type = <originalVars/>.get(i).getString("dataType");
+                    </then>
+						<else>
+                        name = <originalVars/>.get(i).param("name");
+                        type = <originalVars/>.get(i).param("dataType");
+                    </else>
+					</if>
+					<if> name == <varName/>
+						<then>
+							<!--trace(type);-->
+                        defaultValue_=case(type == "VARCHAR", "", type == "INTEGER", 0, type == "FLOAT", 0.0, type == "DATE", function("axiomsl.util.basic.GenericClassUtils", "getTodaysDate"))
+                    </then>
+					</if>
+				</do>
+			</for>
+			<!--trace(defaultValue);-->
+        ;defaultValue_
+    </macro>
+
+    <macro name="getEntityIndex" arguments="entityId, tableName">
+            var res = -1;
+            <for>   var i = 0;
+                    <comma/>
+                    i &lt; <tableName/>.size()
+                    <comma/>
+                    i ++
+                <do>
+                    var entityRow = <tableName/>.get(i);
+                    <if> entityRow.getID() == <entityId/>
+                            <then>
+                            res = i;
+                            break;
+                        </then>
+                        </if>
+                    </do>
+                </for>
+            ; res
+    </macro>
+
+    <macro name="storageTypeParameter">
+        <parameter name="storageType" description="Storage Type" group="Parameters" type="String" length="20">
+
+        <default>
+            trace("default value of storage type");
+            var defaultStorageType = new("axiomsl.server.object_framework.util.SystemDefaults", editor.getAxiomObjectManager(), editor.getAxiomEnvironment()).getString("defaultStorageType");
+            trace("defaultStorageType = " + defaultStorageType);
+            <if>defaultStorageType == null or defaultStorageType.length() == 0
+                <then>
+                    'CONTINUOUS_PARTITION'
+                </then>
+                <else>
+                    defaultStorageType
+                </else>
+            </if>
+        </default>
+
+        choices(asDescription(list(
+            ndo("PERMANENT", l("PERMANENT")),
+            ndo("SEGMENTED", l("SEGMENTED")),
+            ndo("CONTINUOUS", l("CONTINUOUS")),
+            ndo("CONTINUOUS_PARTITION", l("CONTINUOUS_PARTITION")))))
+        </parameter>
+    </macro>
+
+    <macro name="getSqlPatterns">
+        ;editor.getServerProxy().getSqlPatterns()
+    </macro>
+
+    <macro name="sqlMacros">
+        ;new("axiomsl.util.ui.NamedList", "SQL Macros", l("SQL Macros"), macro("getSqlPatterns").toArray())
+    </macro>
+
+    <macro name="expressionLookupCustom" arguments="fieldList">
+        new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), <fieldList/>.toArray()),
+        macro("sqlMacros"),
+        macro("axiomExpressionLanguage"),
+        macro("userDefinedFunctions")
+    </macro>
+
+    <macro name="expressionLookup" arguments="fieldList">
+        ;macro("expressionLookupCustom",  <fieldList/>);
+    </macro>
+
+    <macro name="expressionAndMappingLookup">
+        var modelList = list();
+        modelList.add(param("model"));
+        var fields = editor.getRemoteProxy().lookupFieldsInModelsAsStrings(modelList, editor.getBranchId());
+        macro("getFieldNamedList", fields),
+        macro("parameters", "taskTags"),
+        macro("instanceDateKeysUnionFromModelsVariables", false, true, true),
+        macro("sqlMacros"),
+        macro("axiomExpressionLanguage"),
+        macro("userDefinedFunctions")
+    </macro>
+
+    <macro name="axiomExpressionLanguage">
+        var expression = new("axiomsl.util.ui.NamedList", "Axiom Expression Language", l("Axiom Expression Language"), class("axiomsl.server.common.Lookups").lookupAxiomExpressionLanguage());
+        expression.setTooltip(l("Axiom Expressions must be enclosed in {{ }}"));
+        ;expression
+    </macro>
+
+    <macro name="userDefinedFunctions">
+        var expression = new("axiomsl.util.ui.NamedList", "User Defined Functions", l("User Defined Functions"), class("axiomsl.server.common.Lookups").lookupFunctionNames(editor.getAxiomObjectManager(), false, axiomEnvironment));
+        expression.setTooltip(l("User Defined Functions must be enclosed in {{ }}"));
+        ;expression
+    </macro>
+
+    <macro name="userDefinedFunctionsAndImports">
+        var userFunctionList = editor.getRemoteProxy().lookupObjects("Function");
+
+        <!-- For USER DEFINED FUNCTIONS Editor -->
+        <if>"USER_DEFINED_FUNCTION" == editor.getManager().getHistoryCategory() || "OBJECT_QUERY" == editor.getManager().getHistoryCategory()
+            <then>
+                var aliasTable = param("imports");
+                <for>var aliasTableIndex = 0<comma/>aliasTableIndex &lt; aliasTable.size()<comma/>
+                    aliasTableIndex++
+                    <do>
+                        var aliasTableRow = aliasTable.line(aliasTableIndex);
+                        userFunctionList.add(ndo(aliasTableRow.param("name"), l("Alias for '%1'",aliasTableRow.param("value"))));
+                    </do>
+                </for>
+            </then>
+        </if>
+
+        var namedList = new("axiomsl.util.ui.NamedList", "functions", l("Functions"),
+        userFunctionList.toArray());
+
+        ;namedList
+    </macro>
+
+     <macro name="getFieldNamedList" arguments="fields">
+         var namedList = new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), <fields/>.toArray());
+         namedList.setColumnTitles(array(l("Alias").toString(), l("Field Name").toString(), l("Description").toString()));
+         ;namedList
+     </macro>
+
+    <macro name="taskTags">
+        var res = list();
+        var constants = class("axiomsl.server.sql.ExecDateConstantResolver").TASK_TAGS;
+        <for>   var i = 0; <comma/> i &lt; constants.size() <comma/> i ++
+           <do>
+               var tag = constants.get(i);
+               res.add(ndo(tag.get(0), tag.get(1)));
+               </do>
+           </for>
+        ;res
+    </macro>
+
+    <macro name="supportedTags">
+        var res = list();
+        var constants = class("axiomsl.server.sql.ExecDateConstantResolver").SUPPORTED_TAGS;
+        <for>   var i = 0; <comma/> i &lt; constants.size() <comma/> i ++
+           <do>
+               var tag = constants.get(i);
+               res.add(ndo(tag.get(0), tag.get(1)));
+               </do>
+           </for>
+        ;res
+    </macro>
+
+    <macro name="parameters" arguments="macroName">
+        var taskTagsConstants = list();
+        taskTagsConstants.addAll(macro(<macroName/>));
+        new("axiomsl.util.ui.NamedList", "Parameters", l("Parameters"), taskTagsConstants.toArray())
+    </macro>
+
+    <macro name="reportLookup">
+        macro("instanceDateKeysUnionFromModelsVariables", true, false, true),
+        macro("axiomExpressionLanguage"),
+        macro("userDefinedFunctions")
+    </macro>
+
+    <macro name="parameterTablesLookup" arguments="tableNames, listName, listDescription, prefix">
+       var res = list();
+       var tableNamesArray = <tableNames/>;
+       <for> var index = 0 <comma/> index &lt; tableNamesArray.size() <comma/> index++
+            <do>
+               var parametersTable = param(tableNamesArray.get(index));
+               <for> var parameterIndex = 0 <comma/> parameterIndex &lt; parametersTable.size() <comma/> parameterIndex++
+                    <do>
+                        var parameter = parametersTable.get(parameterIndex);
+                        res.add(ndo(<prefix/> + parameter.param("name"), parameter.param("description")));
+                     </do>
+               </for>
+            </do>
+        </for>
+       var namedList = new("axiomsl.util.ui.NamedList", <listName/>, <listDescription/>, res.toArray());
+       namedList.setColumnTitles(array(
+        l("Name").toString(),
+        l("Description").toString()
+        ));
+       ;namedList
+   </macro>
+
+    <macro name="instanceDateKeysUnionFromModelsVariables" arguments="withExecDate, withAsOfDate, withVariables">
+        var instanceDateKeysVariables = list();
+        <if><withAsOfDate/>;
+            <then>
+                instanceDateKeysVariables.add(ndo("@ASOF_DATE", l("Instance Date")));
+                instanceDateKeysVariables.addAll(macro("instanceKeysUnionFromModels"));
+            </then>
+        </if>
+        var variables = macro("variables", "parameters");
+        macro("instanceDateKeysVariablesList", instanceDateKeysVariables, <withExecDate/>, <withVariables/>)
+   </macro>
+
+    <macro name="instanceDateKeysVariables" arguments="withExecDate, withAsOfDate, withVariables">
+        var instanceDateKeysVariables = list();
+        <if><withAsOfDate/>;
+            <then>
+                instanceDateKeysVariables.add(ndo("@ASOF_DATE", l("Instance Date")));
+            </then>
+        </if>
+        instanceDateKeysVariables.addAll(macro("instanceKeys"));
+
+        var variables = macro("variables", "dataLoadVariables");
+        macro("instanceDateKeysVariablesList", instanceDateKeysVariables,<withExecDate/>,<withVariables/>)
+    </macro>
+
+    <macro name="instanceDateKeysVariablesList" arguments="instanceDateKeysVariables, withExecDate, withVariables">
+       var variablesDescription;
+        <if><withVariables/>;
+            <then>
+                variablesDescription = l("Instance Date/Keys/Variables");
+                <if>variables.size()>0
+                    <then>
+                        <instanceDateKeysVariables/>.addAll(variables);
+                    </then>
+                </if>
+            </then>
+            <else>
+                variablesDescription = l("Instance Date/Keys");
+            </else>
+        </if>
+        <if><withExecDate/>;
+            <then>
+                <instanceDateKeysVariables/>.add(ndo("@EXEC_DATE", l("Task Execution Date")));
+            </then>
+        </if>
+       var namedList = new("axiomsl.util.ui.NamedList", "instanceDateKeysVariables", variablesDescription, <instanceDateKeysVariables/>.toArray());
+       namedList.setColumnTitles(array(l("Name").toString(), l("Description").toString()));
+       ;namedList
+    </macro>
+
+
+    <macro name="variables" arguments="parameterName">
+       var res = list();
+       var parametersTable = param(<parameterName/>);
+       <for> var parameterIndex = 0 <comma/> parameterIndex &lt; parametersTable.size() <comma/> parameterIndex++
+            <do>
+                var parameter = parametersTable.get(parameterIndex);
+                res.add(ndo("@" + parameter.param("name"), parameter.param("description")));
+             </do>
+       </for>
+       ;res
+   </macro>
+
+    <macro name="getConvertedInputValue" arguments="inputValue">
+        <if> <inputValue/> instanceof "[Ljava.lang.String;"
+            <then>
+                <!--field-->
+                macro("getFieldRefOrPattern", <inputValue/>.getName())
+            </then>
+            <else>
+                <!--macro-->
+                ;<inputValue/>.getName()
+            </else>
+        </if>
+    </macro>
+
+    <macro name="getFieldRefOrPattern" arguments="name">
+        <if><name/>.startsWith("@")
+            <then>
+                <name/>
+            </then>
+            <else>
+                "$" + <name/>
+            </else>
+        </if>
+    </macro>
+
+    <macro name="encodingChoices">
+        choices("UTF8", "EUC_KR", "Cp866", "Cp1251", "ISO-8859-5", "UTF-16LE");
+    </macro>
+
+    <macro name="constantsForCondition" arguments="instanceKeysSegmentedTable, instanceKeysContinuousTable">
+        var res = list();
+        var constants = class("axiomsl.server.sql.ExecDateConstantResolver").SUPPORTED_TAGS;
+        <for>   var i = 0; <comma/> i &lt; constants.size() <comma/> i ++
+           <do>
+               var tag = constants.get(i);
+               res.add(ndo(tag.get(0), tag.get(1)));
+               </do>
+        </for>
+        res.addAll(macro("expressionLookupCondition", <instanceKeysSegmentedTable/>, "name"));
+        res.addAll(macro("expressionLookupCondition", <instanceKeysContinuousTable/>, "colName"));
+        ;res
+    </macro>
+
+    <macro name="instanceKeys">
+        var instanceKeysSegmentedTable = param("instanceKeysSegmented");
+        var instanceKeysContinuousTable = param("instanceKeysContinuous");
+        var res = list();
+        res.addAll(macro("expressionLookupCondition", instanceKeysSegmentedTable, "name"));
+        res.addAll(macro("expressionLookupCondition", instanceKeysContinuousTable, "colName"));
+        ;res
+    </macro>
+
+    <macro name="expressionLookupCondition" arguments="instanceKeysTableArg, nameParameter">
+        var res1 = list();
+        var instanceKeysTableVar = <instanceKeysTableArg/>; <!-- to handle properly list(..) passed as parameter (to cache its value)-->
+        <if> instanceKeysTableVar!=null
+            <then>
+                <for> var j = 0 <comma/> j &lt; instanceKeysTableVar.size() <comma/> j++
+                    <do>
+                        var instanceKey = instanceKeysTableVar.get(j);
+                        var instanceKeyName = instanceKey.param(<nameParameter/>);
+                        res1.add(ndo("@"+instanceKeyName, l("Instance key")));
+                    </do>
+                 </for>
+            </then>
+        </if>
+        ;res1
+    </macro>
+
+    <macro name="loadTableFromReport" arguments="from, to, tableName">
+        var originalVars = null;
+        <if> <underlyingObjectName/> != null and <underlyingObjectName/> != ""
+            <then>
+                var report = locateInvalid(<underlyingObjectType/>, <underlyingObjectName/>);
+                trace(<underlyingObjectType/>);
+                trace(<tableName/>);
+                <if> report.propertyIsSet(<tableName/>)
+                    <then>
+                        originalVars = report.getTable(<tableName/>);
+                    </then>
+                </if>
+            </then>
+        </if>
+
+        <to/> = macro("loadTableFromAxiomObject", <from/>, originalVars);
+    </macro>
+
+    <macro name="getReportVarValue" arguments="varName">
+        var defaultValue = "";
+        <if> <underlyingObjectName/> != null and <underlyingObjectName/> != ""
+            <then>
+                var report = locateInvalid(<underlyingObjectType/>, <underlyingObjectName/>);
+                var originalVars;
+                <if> report.propertyIsSet("parameters")
+                    <then>
+                        originalVars = report.getTable("parameters");
+                        defaultValue = macro("getDefalutVarValue", originalVars, <varName/>, defaultValue);
+                    </then>
+                </if>
+            </then>
+        </if>
+        ;defaultValue
+    </macro>
+
+    <macro name="defaultInstanceKeyValueFormula" arguments="oldInstanceKeys, currentInstanceKeys, keyParameterName, keyDescriptionTableName">
+        macro("getInstanceKeys", <oldInstanceKeys/>,<currentInstanceKeys/>, <keyParameterName/>, <keyDescriptionTableName/>),
+        macro("axiomExpressionLanguage"),
+        macro("userDefinedFunctions")
+    </macro>
+
+    <macro name="getInstanceKeys" arguments="oldInstanceKeys, currentInstanceKeys, keyParameterName, keyDescriptionTableName">
+        var instanceKeysTable = macro("collectInstanceKeys",<oldInstanceKeys/>,<currentInstanceKeys/>);
+        var instanceKeysList = macro("parametricLookup", instanceKeysTable,<currentInstanceKeys/>,<currentParameters/>.getID(), null, <keyParameterName/>, <keyDescriptionTableName/>, "@");
+        <if>instanceKeysList != null
+            <then>
+                var instanceKeys = list();
+                instanceKeys.add(ndo("@ASOF_DATE", l("Instance Date")));
+                instanceKeys.addAll(instanceKeysList);
+                new("axiomsl.util.ui.NamedList", "Instance Date/Keys", l("Instance Date/Keys"), instanceKeys.toArray())
+            </then>
+        </if>
+    </macro>
+
+    <macro name="collectInstanceKeys" arguments="oldInstanceKeys, currentInstanceKeys">
+        <if><oldInstanceKeys/> == null
+            <then>
+                ;array(<currentInstanceKeys/>);
+            </then>
+            <else>
+                ;array(<oldInstanceKeys/>,<currentInstanceKeys/>);
+            </else>
+        </if>
+    </macro>
+
+        <macro name="verifyFourEyesCheck">
+            <if> param("fourEyesCheck") == false
+                <then>
+                    var notificationsTable = editor.locateObjectByName("AdjustmentNotifications", "AdjustmentNotifications").getTable("notifications");
+                    <for> var i = notificationsTable.size() - 1
+                        <comma/>
+                        i &gt;= 0
+                        <comma/>
+                        --i
+                        <do>
+                            var dataSourceInstance = notificationsTable.get(i).getReference("dataSourceInstanceReference").getTargetObject();
+                            var dataSourceDbId = new("axiomsl.server.object_framework.DbID", "DataSource", dataSourceInstance.getString("branchId"), dataSourceInstance.getString("underlyingObjectId"));
+                            var parentId = function("axiomsl.server.object_framework.ObjectIDUtil", "getProducerObjectId", dataSourceDbId, editor.getAxiomObjectManager().getResolver());
+                            <if> <axiomForSave/>.getId().equals(parentId.getObjectId()) and  <axiomForSave/>.getBranchId().equals(parentId.getBranchId())
+                                <then>
+                                    errorMessage(l(<string>Unable to remove Four Eyes Check: "%1" has pending adjustments. Please remove all parked and rejected adjustments to dependent objects.</string>,
+                                                dataSourceInstance.getString("name")));
+                                    abort;
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+                 </then>
+            </if>
+        </macro>
+
+        <macro name="getEmailFunctions">
+            var lookup = list();
+            var resolver = objectManager.getResolver();
+            var functions = resolver.lookupObjects('Function', null);
+            <for> var i = 0 <comma/> i &lt; functions.size() <comma/> i++
+                <do>
+                    var function = axiomObjectManager.locate(function("axiomsl.server.object_framework.ObjectID","createNameId", "Function" ,null, functions.get(i).getName()));
+                    var arguments;
+                    <if> function.propertyIsSet("arguments")
+                        <then>
+                            arguments = function.getTable("arguments");
+                        </then>
+                        <else>
+                            continue;
+                        </else>
+                    </if>
+                    <if> arguments.locateByPropertyIfExists("from","name") != null and
+                        arguments.locateByPropertyIfExists("to","name") != null and
+                        arguments.locateByPropertyIfExists("cc","name") != null and
+                        arguments.locateByPropertyIfExists("bcc","name") != null and
+                        arguments.locateByPropertyIfExists("attachment","name") != null and
+                        arguments.locateByPropertyIfExists("subject","name") != null and
+                        arguments.locateByPropertyIfExists("body","name") != null
+                        <then>
+                            lookup.add(ndo(function.getString("name"), lp(function.getString("description"))));
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;lookup
+        </macro>
+        <macro name="lookupFromValues">
+            var lookup = list();
+            lookup.add(ndo("newValue", l("New value being validated")));
+            lookup.add(ndo("isNewRow", l("True if new row being validated")));
+            lookup.add(ndo('if( , , )', l("Conditional expression: if(condition, true_expression, false_expression)")));
+            lookup.add(ndo('error("message text")', l("Error message statement")));
+            ;lookup
+        </macro>
+
+        <macro name="lookupFromValuesList">
+            ;new("axiomsl.util.ui.NamedList", "Values/Results", l("Values/Results"), macro("lookupFromValues").toArray())
+        </macro>
+
+        <macro name="instanceKeysUnionFromModels">
+            var unique = list();
+            var lookupInstanceKeys = list();
+            var models = param("models");
+            <for>var i = 0
+                <comma/>
+                i &lt; models.size()
+                <comma/>
+                i++
+                <do>
+                    var row = models.get(i);
+                    var modelName = row.param("name");
+                    var dataModel = editor.locateObjectByName("DataModel", modelName);
+                    <if>dataModel.propertyIsSet("instanceKeys")
+                        <then>
+                            var instanceKeys = dataModel.getTable("instanceKeys");
+                            <for>var j = 0
+                                <comma/>
+                                j &lt; instanceKeys.size()
+                                <comma/>
+                                j ++
+                                <do>
+                                    var instanceKey = instanceKeys.get(j);
+                                    var instanceKeyName = instanceKey.getString("name");
+                                    var instanceKeyDescription = instanceKey.getString("description");
+                                    <if>!unique.contains(instanceKeyName)
+                                        <then>
+                                            unique.add(instanceKeyName);
+                                            lookupInstanceKeys.add(ndo("@"+instanceKeyName, instanceKeyDescription));
+                                        </then>
+                                    </if>
+                                </do>
+                            </for>
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;lookupInstanceKeys
+        </macro>
+        <macro name="instanceKeysNames">
+            var unique = list();
+            var models = param("models");
+            <for>var i = 0
+                <comma/>
+                i &lt; models.size()
+                <comma/>
+                i++
+                <do>
+                    var row = models.get(i);
+                    var modelName = row.param("name");
+                    var dataModel = editor.locateObjectByName("DataModel", modelName);
+                    <if>dataModel.propertyIsSet("instanceKeys")
+                        <then>
+                            var instanceKeys = dataModel.getTable("instanceKeys");
+                            <for>var j = 0
+                                <comma/>
+                                j &lt; instanceKeys.size()
+                                <comma/>
+                                j ++
+                                <do>
+                                    var instanceKey = instanceKeys.get(j);
+                                    var instanceKeyName = instanceKey.getString("name");
+                                    <if>!unique.contains(instanceKeyName)
+                                        <then>
+                                            unique.add(instanceKeyName);
+                                        </then>
+                                    </if>
+                                </do>
+                            </for>
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;unique
+        </macro>
+
+        <macro name="isAbsolute" arguments="path">
+            var downloadManager = editor.getRemoteProxy().getDownloadManager();
+            downloadManager.isAbsolute(<path/>);
+        </macro>
+
+        <macro name="getServerFileSeparator">
+            downloadManager.getServerFileSeparator();
+        </macro>
+
+        <macro name="recalculateStreams" arguments="mappedReports, manager, editor">
+
+            var localMappedReports = new("java.util.ArrayList");
+
+            <for>var d = 0
+                <comma/>
+                d &lt;<mappedReports/>.size();
+                <comma/>
+                d++
+                <do>
+                    var mappedReport =<mappedReports/>.get(d);
+                    localMappedReports.add(mappedReport);
+                </do>
+            </for>
+
+            <!-- adding new streams from MappedReports|Hypercubes -->
+            var streams = function("axiomsl.business_logic.xbrl.mapped_report.MappedReportsBatchHelper","getStreamList",
+            localMappedReports,<manager/>,<editor/>.getBranchId());
+
+            <if>streams!=null
+                <then>
+                    <if>!streams.isEmpty()
+                        <then>
+
+                            param("hasStreams") = true;
+                            var streamsParam = param("streams");
+
+                            <for>var i = 0
+                                <comma/>
+                                i &lt; streams.size();
+                                <comma/>
+                                i++
+                                <do>
+                                    var found = false;
+                                    streams.get(i).getString("streamKeyName").compareToIgnoreCase(" " +
+                                    streamsParam.size());
+                                    <for>var j = 0
+                                        <comma/>
+                                        j &lt; streamsParam.size();
+                                        <comma/>
+                                        j++
+                                        <do>
+                                            <if>
+                                                streams.get(i).getString("streamKeyName").compareTo(streamsParam.get(j).param("streamKeyName"))==0
+                                                <then>
+                                                    found = true;
+                                                </then>
+                                            </if>
+                                        </do>
+                                    </for>
+
+                                    <if>!found
+                                        <then>
+                                            var line = streamsParam.addLine();
+                                            line.param("streamKeyName") = streams.get(i).getString("streamKeyName");
+                                            param("hasStreams") = !param("streams").isEmpty();
+                                        </then>
+                                    </if>
+
+                                    <if>streamsParam.size()==0
+                                        <then>
+                                            var line = streamsParam.addLine();
+                                            line.param("streamKeyName") = streams.get(i).getString("streamKeyName");
+                                            param("hasStreams") = !param("streams").isEmpty();
+                                        </then>
+                                    </if>
+
+                                </do>
+                            </for>
+
+                            <for>var i = 0
+                                <comma/>
+                                i &lt; streamsParam.size();
+                                <comma/>
+                                i++
+                                <do>
+                                    var found = false;
+                                    <!--function("axiomsl.business_logic.xbrl.mapped_report.MappedReportsBatchHelper","debug",streamsParam.get(i).param("streamKeyName"),streams);-->
+
+                                    <for>var j = 0
+                                        <comma/>
+                                        j &lt; streams.size();
+                                        <comma/>
+                                        j++
+                                        <do>
+                                            <if>
+                                                streams.get(j).getString("streamKeyName").compareTo(streamsParam.get(i).param("streamKeyName"))==0
+                                                <then>
+                                                    found = true;
+                                                </then>
+                                            </if>
+                                        </do>
+                                    </for>
+
+                                    <if>!found
+                                        <then>
+                                            streamsParam.remove(i);
+                                        </then>
+                                    </if>
+                                </do>
+                            </for>
+                        </then>
+                        <else>
+                            param("hasStreams") = false;
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    param("hasStreams") = false;
+                </else>
+            </if>
+
+        </macro>
+
+        <macro name="getInstanceKeysAsMap">
+            var map = new("java.util.HashMap");
+            <for> var i = 0 <comma/> param("instanceKeys") != null and i &lt; param("instanceKeys").size() <comma/> i++
+                <do>
+                    var keyName = param("instanceKeys").get(i).param("instanceKeyName");
+                    var keyValue = param("instanceKeys").get(i).param("instanceKeyValue");
+                    var keyType = macro("getKeyValueType", param("instanceKeys").get(i).param("instanceKeyName"));
+                    map.put(keyName, list(keyValue, keyType));
+                </do>
+            </for>
+            ;map
+        </macro>
+
+        <macro name="getConfig" arguments="hardLocate">
+            <case>
+                <underlyingObjectType/> == "ModifyModel"
+                <then>
+                    <!--locate if exists and is valid-->
+                    var modifyModel = if(<hardLocate/>, locate(<underlyingObjectType/>, <underlyingObjectName/>), locateIfExists(<underlyingObjectType/>, <underlyingObjectName/>));
+                    <if>
+                        modifyModel != null
+                        <then>
+                            modifyModel.getReference("model").getTargetObject()<!--data model-->
+                        </then>
+                        <else>
+                            null
+                        </else>
+                    </if>
+                </then>
+
+                <underlyingObjectType/> in ("DataSource", "DataModel")
+                <then>
+                    if(<hardLocate/>, locate(<underlyingObjectType/>, <underlyingObjectName/>),
+                    locateIfExists(<underlyingObjectType/>, <underlyingObjectName/>))
+                </then>
+
+                <else>
+                    if(<hardLocate/>,
+                    locate("ModelBasedTaskConfig", <underlyingObjectType/> + "[" + <underlyingObjectName/> + "]"),
+                    locateIfExists("ModelBasedTaskConfig", <underlyingObjectType/> + "[" + <underlyingObjectName/> + "]"))
+                </else>
+            </case>
+        </macro>
+
+        <macro name="getKeyValueType" arguments="keyName">
+            <!--trace('zaq');-->
+            var type = "VARCHAR";
+            <if> <underlyingObjectName/> != null and <underlyingObjectName/> != ""
+                <then>
+                    var config = macro("getConfig", true);
+                    <if>
+                        <underlyingObjectType/> == "ModifyModel"
+                        <then>
+                            var modifyModel = locateIfExists(<underlyingObjectType/>, <underlyingObjectName/>);
+                            <if>
+                                modifyModel != null
+                                <then>
+                                    var modifyModelInstanceKeys = modifyModel.getOptionalValue("instanceKeys", list());
+                                    <for> var ik = 0 <comma/> ik &lt; modifyModelInstanceKeys.size() <comma/> ik++
+                                        <do>
+                                            var name = modifyModelInstanceKeys.get(ik).getString("name");
+                                            <if>
+                                                name == <keyName/>
+                                                <then>
+                                                    type = modifyModelInstanceKeys.get(ik).getString("type");
+                                                </then>
+                                            </if>
+                                        </do>
+                                    </for>
+                                </then>
+                            </if>
+                        </then>
+                    </if>
+                    <if>
+                        <underlyingObjectType/> == "DataSource" and config.getString("storageType").startsWith("CONTINUOUS")
+                        <then>
+                            var definedInstanceKeys = config.getTable("instanceKeys");
+                            <for> var ik = 0 <comma/> ik &lt; definedInstanceKeys.size() <comma/> ik++
+                                <do>
+                                    var columnObject = definedInstanceKeys.get(ik).getReference("value").getTargetObject();
+                                    <if>
+                                        columnObject.getString("name") == <keyName/>
+                                        <then>
+                                            type = columnObject.getString("type");
+                                        </then>
+                                    </if>
+                                </do>
+                            </for>
+                        </then>
+                        <else>
+                            var instKey = config.getTable("instanceKeys").locateIfExists(<keyName/>);
+                            <if> instKey != null
+                                <then>
+                                    type = instKey.getString("type");
+                                    <!--trace(type);-->
+                                </then>
+                            </if>
+                        </else>
+                    </if>
+                </then>
+            </if>
+            ;type
+        </macro>
+    </macros>
+</data_set_category>

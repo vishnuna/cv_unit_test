@@ -1,0 +1,14 @@
+<metadata>
+	<object type="ExportedInstance" extends="ObjectInBranch" version="8">
+		<property name="dataSource" valueType="url" targetObjectType="DataSource"/>
+		<property name="instanceId" valueType="string" canBeEmpty="false"/>
+		<property name="status" valueType="string" canBeEmpty="false" choices="NONE, ERROR, POPULATING, ACTIVE, WARNING, INCOMPLETE"/>
+		<property name="instanceDate" optional="true" valueType="date"/>
+		<property name="instanceKeyValues" optional="true" valueType="table" rowTypes="InstanceObject:instanceKeyValue"/>
+		<property name="layout" optional="true" valueType="table" rowTypes="DataTableLayout:field"/>
+		<!-- only if exporting with data -->
+		<property name="dataTable" optional="true" valueType="object" objectType="DataSourceInstance:dataTableInfo"/>
+		<!-- only for external instance-->
+		<!--inside dataTable, only tableName, dbSource and possibly partitionName will be populated -->
+	</object>
+</metadata>

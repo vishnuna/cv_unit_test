@@ -1,0 +1,444 @@
+<data_set_category name="ALERT_SUBSCRIPTIONS"
+	description="Alert Subscriptions"
+	windowTitle="Alert Subscriptions" 
+	entityName="User"
+        icon="user"
+        windowIcon="windowicon.limits"
+        fixedNameMode="true"
+        screenWidth="800"
+        screenHeight="500"
+    	objectType="AlertSubscriptions"
+    	extends="COMMON_UTILS, DOC_DATA">
+	
+
+<parameters>
+	<parameter name="alert_types" description="Alert Types" type="tree" group="Parameters" rootNodeType="AlertSubscriptions:root" namesAreGloballyUnique="true" >
+		<nodeType name="AlertSubscriptions:root" description="Alert Types" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="AlertSubscriptions:alertTypeParameters_FILE_UPDATE">		
+		</nodeType>
+
+		<nodeType name="AlertSubscriptions:alertTypeParameters_FILE_UPDATE" description="File Update" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="false" childrenTypes="AlertSubscriptions:alertAttributes_FILE_UPDATE">
+			<parameter name="directoryForDownload" description="Directory for download" type="String" defaultValue="c:\download\$project\$branch\$asOfDate" length="40" group="Properties">
+			</parameter>
+		</nodeType>
+
+		<nodeType name="AlertSubscriptions:alertAttributes_FILE_UPDATE" description="Filter" renameAllowed="true" deleteAllowed="true" hasChildren="false">
+
+
+			<parameter name="projectName" description="Project" type="String" length="20">
+				<attribute name="lookupFromValues"> l("Project") <comma/>
+                    			editor.getRemoteProxy().lookupArray("Project")
+                		</attribute>
+				<onParameterChange>
+					macro("updateStreamKey");
+				</onParameterChange>
+			</parameter>
+
+			<parameter name="branchName" description="Branch" type="String" length="20">
+				<attribute name="lookupFromValues"> l("Branch") <comma/>
+					<if> (editor.getRemoteProxy().isObjectExists("Project", param("projectName"), null))
+						<then>
+							var aProject = editor.locateObjectByName("Project", param("projectName"));
+							var table = aProject.getTable("branches");
+							var res = list();
+							<for> var i = 0 <comma/> i &lt; table.size() <comma/> i++
+                						<do>	
+									var aBranchRef = table.get(i);
+                   							res.add(ndo(aBranchRef.getProperty("name"), aBranchRef.getProperty("description")));
+								</do>
+							</for>
+							res
+						</then>
+						<else>
+							editor.getRemoteProxy().lookupArray("Branch")
+						</else>
+					</if>
+                		</attribute>
+				<onParameterChange>
+					macro("updateStreamKey");
+				</onParameterChange>
+			</parameter>
+
+			<parameter name="reportType" description="Report Type" type="String" length="20">
+                choices(asDescription(list(ndo("FreeFormReport", l("FreeFormReport")), ndo("TabularReport", l("TabularReport")),"")))
+				<onParameterChange>
+					macro("updateStreamKey");
+				</onParameterChange>
+			</parameter>
+
+			
+			<parameter name="reportName" description="Report Name" type="String" length="20">
+				<attribute name="lookupFromValues"> l("Report") <comma/>
+                    			<if> (editor.getRemoteProxy().isObjectExists("Project", param("projectName"), null))
+						<then>
+							<if> (editor.getRemoteProxy().isObjectExists("Branch", param("projectName")+"!"+param("branchName"), null))
+								<then>
+									<if> "".equals(param("reportType"))
+										<then>		
+										</then>
+										<else>
+											var aBranch = editor.locateObjectByName("Branch", param("projectName")+"!"+param("branchName"));
+											editor.getRemoteProxy().lookupArray(param("reportType"), aBranch.getProperty("objectId"))
+										</else>
+									</if>
+								</then>
+							</if>
+						</then>
+					</if>
+                		</attribute>
+				<onParameterChange>
+					macro("updateStreamKey");
+				</onParameterChange>
+			</parameter>
+
+			<parameter name="anyEntity" description="Any entity" type="boolean" defaultValue="false">
+				<onParameterChange>
+					macro("updateStreamKey");
+				</onParameterChange>
+			</parameter>
+
+
+
+			<parameter name="streamKeyName" description="Entity stream key" type="String" length="20">
+				<if> param("anyEntity")
+					<then>
+						<disabled/>	
+					</then>
+					<else>
+						<enabled/>
+					</else>
+				</if>
+
+				<attribute name="lookupFromValues"> l("Stream Key") <comma/>
+					macro("getStreamKeys");
+				</attribute>
+			
+			</parameter>
+
+			<parameter name="entities" description="Entities" type="table" keyParameter="value" noSerialization="yes">
+				<if> param("anyEntity")
+					<then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+					</else>
+				</if>
+				<parameter name="value" description="Value" type="String" length="20">
+                			<attribute name="lookupFromValues">l("Stream Key Value") <comma/>
+
+                    				var result = macro("getStreamProperties", param("streamKeyName"));
+                    				<if> result != null and !result.propertyIsEmpty("lookupSource")
+                        				<then>
+                            					trace("isEmpty="  + result.propertyIsEmpty("lookupSource")); 
+                            					var helper = new("axiomsl.proxy.LookupHelper");
+                            					var dataSource = result.getReference("lookupSource").getTargetObject();
+
+                            					var lookupCodeField = result.getReference("lookupCodeField").getTargetObject();
+                            					var lookupDescriptionField = result.getReference("lookupDescriptionField").getTargetObject();
+                                
+                            					var res = helper.lookupValues(dataSource,
+                                        				null, null,
+                                        				lookupCodeField,
+                                        				lookupDescriptionField,
+                                        				null,
+                                       					null,
+                                                        editor.getUser().getUserName(), editor.getAxiomEnvironment());
+                            					return res;
+                        				</then>
+                    				</if>
+                			</attribute>
+				</parameter> 
+			</parameter>
+
+			<parameter name="help_info_anyEntity" description="" type="Component" noSerialization="yes">
+				<if> param("anyEntity")
+					<then>
+						<enabled/>
+					</then>
+					<else>
+						<removed/>
+					</else>
+				</if>
+				<attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+				<attribute name="text">l("Each entity in the report must match against one of the values in the filter.")</attribute>
+				<attribute name="color">macro("LIGHT_BLUE")</attribute>
+			</parameter>
+
+		</nodeType>
+	</parameter>
+</parameters>
+
+<newCode>
+	var treeRoot = param("alert_types");
+	var typeNode = treeRoot.createChild("AlertSubscriptions:alertTypeParameters_FILE_UPDATE", "File Update");
+	typeNode.setID("FILE_UPDATE");
+	typeNode.addToParent();
+</newCode>
+
+<loadCode>
+	macro("loadAlertType", "FILE_UPDATE", "File Update");
+</loadCode>
+
+<saveCode>
+    class("axiomsl.metadata_upgraders.AlertSubscriptionsUpgrader").setUserReference(<axiomForSave/>);
+    macro("saveAlertType", "FILE_UPDATE");
+</saveCode>
+
+<macros>
+
+	<macro name="load_type_FILE_UPDATE" arguments="parameters, node">
+		macro("setTypeParameter", <parameters/>, <node/>, "directoryForDownload", "c:\download\$project\$branch\$asOfDate");
+	</macro>
+
+	
+
+	<macro name="load_filter_FILE_UPDATE" arguments="attrs, node">
+		<node/>.param("projectName") = <attrs/>.getProperty("projectName");
+		<node/>.param("branchName") = <attrs/>.getProperty("branchName");
+		<node/>.param("reportType") = <attrs/>.getProperty("reportType");
+		<node/>.param("reportName") = <attrs/>.getProperty("reportName");
+		<node/>.param("streamKeyName") = <attrs/>.getProperty("streamKeyName");
+
+		var entities = <attrs/>.getTable("entities");
+		<if> entities.size()==1 and entities.get(0).getProperty("value").equals("*")
+			<then>
+				<node/>.param("anyEntity") = true;
+			</then>
+			<else>
+				<node/>.param("anyEntity") = false;
+				<for> var k = 0 <comma/> k &lt; entities.size()<comma/> k++	
+				<do>
+					var anEntity = entities.get(k);
+					var row = <node/>.param("entities").addLine();
+					row.param("value") = anEntity.getProperty("value");
+
+				</do>
+				</for>
+			</else>
+		</if>
+	
+	</macro>
+
+	<macro name="save_type_FILE_UPDATE" arguments="parameters,node">
+		<parameters/>.setProperty("directoryForDownload", <node/>.param("directoryForDownload"));
+	</macro>
+
+	<macro name="save_filter_FILE_UPDATE" arguments="attrs,node">
+		<attrs/>.setProperty("projectName",<node/>.param("projectName"));
+		<attrs/>.setProperty("branchName",<node/>.param("branchName"));
+		<attrs/>.setProperty("reportType",<node/>.param("reportType"));
+		<attrs/>.setProperty("reportName",<node/>.param("reportName"));
+		<if> <node/>.param("streamKeyName") != null 
+			<then>
+				<attrs/>.setProperty("streamKeyName",<node/>.param("streamKeyName"));
+			</then>
+		</if>
+		var entitiesTable = <attrs/>.getTable("entities");
+		
+		<if> <node/>.param("anyEntity")
+			<then>
+				var aRow = entitiesTable.addRow("AlertSubscriptions:listEntryFilter");
+				aRow.setProperty("value", "*");
+			</then>
+			<else>
+					var entities = <node/>.param("entities");
+					<for> var o = 0 <comma/> o &lt; entities.size()<comma/> o++	
+						<do>
+							var aRow = entitiesTable.addRow("AlertSubscriptions:listEntryFilter");
+							var anEntity = entities.get(o);
+							aRow.setProperty("value", anEntity.param("value"));
+						</do>
+					</for>	
+			</else>
+		</if>
+
+
+
+	</macro>
+
+
+
+	<macro name="saveAlertType" arguments="typeId">
+	
+		var alertSubscriptions = <axiomForSave/>;
+		var alertTypes = alertSubscriptions.getTable("alertTypes");	
+	
+		var types = param("alert_types").children();
+		<for> var i = 0 <comma/> i &lt; types.size() <comma/> i ++
+			<do>
+			var typeNode = types.get(i);
+			<if> typeNode.getID().equals(<typeId/>)
+				<then>
+					var alertType = alertTypes.addRow("AlertSubscriptions:alertType");
+					alertType.setProperty("type", <typeId/>);
+					var parameters = alertType.createObjectPropertyValue("AlertSubscriptions:alertTypeParameters_"+<typeId/>);
+					alertType.setProperty("parameters", parameters);
+					macro("save_type_"+<typeId/>, parameters, typeNode);
+					var filters = alertType.getTable("filters");
+					var ruleNodes = typeNode.children();
+					<for> var k = 0 <comma/> k &lt; ruleNodes.size() <comma/> k ++
+						<do>
+						var ruleNode = ruleNodes.get(k);
+						var aFilter = filters.addRow("AlertSubscriptions:filter");
+						var attrs = aFilter.createObjectPropertyValue("AlertSubscriptions:alertAttributes_"+<typeId/>);
+						aFilter.setProperty("attributes", attrs);
+						aFilter.setProperty("name", ruleNode.name());
+						aFilter.setProperty("id", <typeId/>+k);
+						macro("save_filter_"+<typeId/>, attrs, ruleNode);
+						</do>
+					</for>
+				</then>
+			</if>
+			</do>
+		</for>	
+
+	</macro>
+
+
+	 
+	<macro name="loadAlertType" arguments="typeId, typeName">
+		var alertSubscriptions = <originalAxiom/>;
+		var alertTable = alertSubscriptions.getTable("alertTypes");
+		var treeRoot = param("alert_types");
+		var typeNode = treeRoot.createChild("AlertSubscriptions:alertTypeParameters_"+<typeId/>, <typeName/>);  
+		typeNode.setID(<typeId/>);
+		var typeNodeRow = alertTable.locateByPropertyIfExists(<typeId/>,"type"); 
+		<if> typeNodeRow != null
+			<then>
+				macro("load_type_"+<typeId/>, typeNodeRow.getProperty("parameters"), typeNode);
+				var filtersTable = typeNodeRow.getTable("filters");
+				<for> var i = 0 <comma/> i &lt; filtersTable.size()<comma/> i++
+					<do>
+						var aFilter = filtersTable.get(i);
+						var attrs = aFilter.getObject("attributes");
+						var node = typeNode.createChild("AlertSubscriptions:alertAttributes_"+<typeId/>, aFilter.getProperty("id"));
+						node.name() = aFilter.getProperty("name");
+						macro("load_filter_"+<typeId/>, attrs, node);
+						node.addToParent();
+					</do>
+				</for>
+				
+			</then>
+			<else>
+				macro("load_type_"+<typeId/>, null, typeNode);
+			</else>
+		</if>
+		typeNode.addToParent();
+	</macro>
+
+
+
+	<macro name="setTypeParameter" arguments="parameters, node, name, defValue">
+		<if> <parameters/>==null
+			<then>
+				<node/>.param(<name/>) = <defValue/>;
+			</then>
+			<else>
+				<node/>.param(<name/>) = <parameters/>.getProperty(<name/>);
+			</else>
+		</if>
+	</macro>
+
+	<macro name="reportExists">
+		var res = false;
+		<if> !"".equals(param("reportType"))
+			<then>
+				<if> (editor.getRemoteProxy().isObjectExists("Branch", param("projectName")+"!"+param("branchName"), null))
+					<then>
+						var aBranch = editor.locateObjectByName("Branch", param("projectName")+"!"+param("branchName"));
+						<if> (editor.getRemoteProxy().isObjectExists(param("reportType"), param("reportName"), aBranch.getProperty("objectId")))
+							<then>		
+								res = true;
+							</then>
+						</if>
+					</then>
+				</if>
+			</then>
+		</if>
+		res
+	</macro>
+
+	<macro name="getStreamKeys">
+		var streamValues = list();
+		<if> !"".equals(param("reportType"))
+			<then>
+				<if> (editor.getRemoteProxy().isObjectExists("Branch", param("projectName")+"!"+param("branchName"), null))
+					<then>
+						var aBranch = editor.locateObjectByName("Branch", param("projectName")+"!"+param("branchName"));
+						<if> (editor.getRemoteProxy().isObjectExists(param("reportType"), param("reportName"), aBranch.getProperty("objectId")))
+							<then>	
+								var modelBasedTaskConfig= editor.getAxiomObjectManager().locate(function("axiomsl.server.object_framework.ObjectID", "createNameId" ,"ModelBasedTaskConfig", aBranch.getProperty("objectId"), param("reportType")+"["+param("reportName")+"]"));			
+								var streamsTable = modelBasedTaskConfig.getTable("streamKeys");
+								<for> var s = 0 <comma/> s &lt; streamsTable.size() <comma/> s++
+									<do>
+										var streamKey = streamsTable.get(s);
+										streamValues.add(streamKey.getProperty("streamKeyName")); 
+									</do>
+								</for>
+							</then>
+						</if>
+					</then>
+				</if>
+			</then>
+		</if>
+		;streamValues
+	</macro>
+
+	<macro name="updateStreamKey">
+		<if> macro("reportExists") and !param("anyEntity") 
+				<then>
+					var streamList = macro("getStreamKeys");
+					<if> streamList.size()==1
+						<then>
+							param("streamKeyName") = streamList.get(0);
+						</then>
+						<else>
+							<if> streamList.size()>1 and (param("streamKeyName") == null or param("streamKeyName").equals(""))
+								<then>
+									param("streamKeyName") = streamList.get(0);
+								</then>
+							</if> 
+						</else>
+					</if>
+				</then>
+		</if>
+	</macro>
+
+
+        <macro name="getStreamProperties" arguments="streamName">
+            var result1 = null;
+
+
+            <if> !"".equals(param("reportType"))
+		<then>
+			<if> (editor.getRemoteProxy().isObjectExists("Branch", param("projectName")+"!"+param("branchName"), null))
+				<then>
+					var aBranch = editor.locateObjectByName("Branch", param("projectName")+"!"+param("branchName"));
+					<if> (editor.getRemoteProxy().isObjectExists(param("reportType"), param("reportName"), aBranch.getProperty("objectId")))
+						<then>	
+							var object = editor.getAxiomObjectManager().locate(function("axiomsl.server.object_framework.ObjectID", "createNameId" ,"ModelBasedTaskConfig", aBranch.getProperty("objectId"), param("reportType")+"["+param("reportName")+"]"));			
+                            				var streamsKeys = object.getTable("streamKeys");
+                            				<for> var i = 0 <comma/> i &lt; streamsKeys.size() <comma/> i++
+                                				<do>
+                                    					var row = streamsKeys.get(i);
+									
+                                    					<if> <streamName/> == row.getString("streamKeyName");
+                                        				<then>
+                                            					result1 = row;
+										
+                                            					break;
+                                        				</then>
+                                    					</if>
+                                				</do>
+                           				 </for>
+						</then>
+					</if>
+				</then>
+			</if>
+		</then>
+	    </if>		
+            ;result1
+        </macro>
+    
+</macros>
+</data_set_category>

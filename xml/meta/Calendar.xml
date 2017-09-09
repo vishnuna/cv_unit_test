@@ -1,0 +1,23 @@
+<metadata>
+	<object type="Calendar" extends="ObjectInBranch" version="4">
+		<property name="dbSourceForResults" valueType="url" targetObjectType="DBSource"/>
+		<property name="startYear" valueType="integer" minValue="1970" maxValue="2070" defaultValue="1970"/>
+		<!-- 	Month is ZERO base for java.util.Calendar.
+		Value '0' represent January. 			
+-->
+		<property name="endYear" valueType="integer" minValue="1970" maxValue="2070" defaultValue="2070"/>
+		<property name="weekends" valueType="table" rowTypes="Calendar:weekend"/>
+		<property name="overrides" valueType="table" rowTypes="Calendar:override"/>
+	</object>
+	<object type="Calendar:weekend" version="2">
+		<property name="dayNumber" valueType="integer" minValue="1" maxValue="7"/>
+		<property name="description" valueType="string"/>
+	</object>
+	<object type="Calendar:override" version="2">
+		<property name="year" valueType="integer" minValue="1970" maxValue="2070"/>
+		<property name="month" valueType="integer" minValue="0" maxValue="11"/>
+		<property name="day" valueType="integer" minValue="1" maxValue="31"/>
+		<property name="isHoliday" valueType="boolean"/>
+		<property name="description" valueType="string"/>
+	</object>
+</metadata>

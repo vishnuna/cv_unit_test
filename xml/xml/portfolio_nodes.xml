@@ -1,0 +1,278 @@
+<object stamp="a3f0fea9-1311-4883-b79b-28f3f00fd1d7_1495199966962" type="DataSource" version="18">
+	<property name="name" value="portfolio_nodes" valueType="string"/>
+	<property name="description" value="" valueType="string"/>
+	<property name="objectId" value="12eb4b33-76bb-4906-9234-d9dfc0c59ffa" valueType="string"/>
+	<property name="branchId" value="d51b0689-d64c-45cb-a7d5-47427126edd5" valueType="string"/>
+	<property name="hosting" value="INTERNAL" valueType="string"/>
+	<property name="dbSource" valueType="url">DBSource["ORACLE"{4e6e5b36-b98d-45ad-b5a5-a13c97df8b8f}]</property>
+	<property name="loader" valueType="url">DataSourceLoader["load_file"{load_file}]</property>
+	<property name="defaultVisibilityInModel" value="true" valueType="boolean"/>
+	<property name="dataStructure" value="FLAT" valueType="string"/>
+	<property name="layout" valueType="table">
+		<object type="DataSource:field" version="5">
+			<property name="name" value="portfolio_name" valueType="string"/>
+			<property name="description" value="" valueType="string"/>
+			<property name="id" value="8c83ff81-b4a7-4ce8-a048-c202035a8ea9" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="VARCHAR" valueType="string"/>
+			<property name="size" value="1000" valueType="integer"/>
+			<property name="allowNulls" value="false" valueType="boolean"/>
+			<property name="allowDefault" value="false" valueType="boolean"/>
+			<property name="isAutoUniqueId" value="false" valueType="boolean"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+			<property name="defaultInstanceKeyValueFormula" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="node_path" valueType="string"/>
+			<property name="description" value="" valueType="string"/>
+			<property name="id" value="a6a4bf23-8506-4359-9e0e-c67c65994657" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="VARCHAR" valueType="string"/>
+			<property name="size" value="4000" valueType="integer"/>
+			<property name="allowNulls" value="false" valueType="boolean"/>
+			<property name="allowDefault" value="false" valueType="boolean"/>
+			<property name="isAutoUniqueId" value="false" valueType="boolean"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+			<property name="defaultInstanceKeyValueFormula" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="node_name" valueType="string"/>
+			<property name="description" value="" valueType="string"/>
+			<property name="id" value="39542d14-ecee-4cfe-be8f-079cbe3a39d2" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="VARCHAR" valueType="string"/>
+			<property name="size" value="1000" valueType="integer"/>
+			<property name="allowNulls" value="false" valueType="boolean"/>
+			<property name="allowDefault" value="false" valueType="boolean"/>
+			<property name="isAutoUniqueId" value="false" valueType="boolean"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+			<property name="defaultInstanceKeyValueFormula" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="node_description" valueType="string"/>
+			<property name="description" value="" valueType="string"/>
+			<property name="id" value="b42a8b33-4be1-4fee-aebf-b4581244b73d" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="VARCHAR" valueType="string"/>
+			<property name="size" value="4000" valueType="integer"/>
+			<property name="allowNulls" value="true" valueType="boolean"/>
+			<property name="allowDefault" value="false" valueType="boolean"/>
+			<property name="isAutoUniqueId" value="false" valueType="boolean"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+			<property name="defaultInstanceKeyValueFormula" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="node_condition" valueType="string"/>
+			<property name="description" value="" valueType="string"/>
+			<property name="id" value="69207e9b-19ad-4ebd-82c8-ce8706249066" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="VARCHAR" valueType="string"/>
+			<property name="size" value="4000" valueType="integer"/>
+			<property name="allowNulls" value="true" valueType="boolean"/>
+			<property name="allowDefault" value="false" valueType="boolean"/>
+			<property name="isAutoUniqueId" value="false" valueType="boolean"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+			<property name="defaultInstanceKeyValueFormula" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="is_node_condition_truncated" valueType="string"/>
+			<property name="description" value="" valueType="string"/>
+			<property name="id" value="b788fe33-c88d-45bf-a015-ba90613123a3" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="VARCHAR" valueType="string"/>
+			<property name="size" value="1" valueType="integer"/>
+			<property name="allowNulls" value="true" valueType="boolean"/>
+			<property name="allowDefault" value="false" valueType="boolean"/>
+			<property name="isAutoUniqueId" value="false" valueType="boolean"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+			<property name="defaultInstanceKeyValueFormula" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="as_of_date" valueType="string"/>
+			<property name="description" value="" valueType="string"/>
+			<property name="id" value="2b4d57ea-6e66-4e21-bf90-d4cb1ac18290" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="DATE" valueType="string"/>
+			<property name="allowNulls" value="false" valueType="boolean"/>
+			<property name="allowDefault" value="false" valueType="boolean"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+			<property name="defaultInstanceKeyValueFormula" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:field" version="5">
+			<property name="name" value="report_name" valueType="string"/>
+			<property name="description" value="" valueType="string"/>
+			<property name="id" value="c9fe14c2-8073-4235-be91-ef0b7f667a5b" valueType="string"/>
+			<property name="title" value="" valueType="string"/>
+			<property name="type" value="VARCHAR" valueType="string"/>
+			<property name="size" value="10" valueType="integer"/>
+			<property name="allowNulls" value="false" valueType="boolean"/>
+			<property name="allowDefault" value="false" valueType="boolean"/>
+			<property name="isAutoUniqueId" value="false" valueType="boolean"/>
+			<property name="syntheticContent" valueType="table"/>
+			<property name="lookupSource" valueType="url"/>
+			<property name="parentFields" valueType="table"/>
+			<property name="aggregatedFunction" value="" valueType="string"/>
+			<property name="isCountFieldFor" valueType="url"/>
+			<property name="producingMap" valueType="table"/>
+			<property name="displayFormat" value="" valueType="string"/>
+			<property name="showSubtotal" value="false" valueType="boolean"/>
+			<property name="isHidden" value="false" valueType="boolean"/>
+			<property name="defaultInstanceKeyValueFormula" value="" valueType="string"/>
+		</object>
+	</property>
+	<property name="keyFields" valueType="table">
+		<object type="DataSource:localFieldReference" version="3">
+			<property name="value" valueType="url">DataSource[this].layout["portfolio_name"{8c83ff81-b4a7-4ce8-a048-c202035a8ea9}]</property>
+		</object>
+		<object type="DataSource:localFieldReference" version="3">
+			<property name="value" valueType="url">DataSource[this].layout["node_path"{a6a4bf23-8506-4359-9e0e-c67c65994657}]</property>
+		</object>
+	</property>
+	<property name="index" valueType="table">
+		<object type="DataSource:index" version="3">
+			<property name="clustered" value="false" valueType="boolean"/>
+			<property name="unique" value="false" valueType="boolean"/>
+			<property name="fields" valueType="table">
+				<object type="DataSource:localFieldReference" version="3">
+					<property name="value" valueType="url">DataSource[this].layout["node_name"{39542d14-ecee-4cfe-be8f-079cbe3a39d2}]</property>
+				</object>
+			</property>
+		</object>
+	</property>
+	<property name="createIndexOnKeyFields" value="true" valueType="boolean"/>
+	<property name="indexOnKeyFieldsClustered" value="true" valueType="boolean"/>
+	<property name="storageType" value="CONTINUOUS_PARTITION" valueType="string"/>
+	<property name="internalSourceTablePrefix" value="" valueType="string"/>
+	<property name="asOfDateField" valueType="url">DataSource[this].layout["as_of_date"{2b4d57ea-6e66-4e21-bf90-d4cb1ac18290}]</property>
+	<property name="instanceKeys" valueType="table">
+		<object type="DataSource:localFieldReference" version="3">
+			<property name="value" valueType="url">DataSource[this].layout["report_name"{c9fe14c2-8073-4235-be91-ef0b7f667a5b}]</property>
+		</object>
+	</property>
+	<property name="loaderConfigFields" valueType="table">
+		<object type="DataSource:loaderConfigField" version="3">
+			<property name="sourceField" valueType="url">DataSource[this].layout["portfolio_name"{8c83ff81-b4a7-4ce8-a048-c202035a8ea9}]</property>
+			<property name="origColumn" value="1" valueType="string"/>
+			<property name="format" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:loaderConfigField" version="3">
+			<property name="sourceField" valueType="url">DataSource[this].layout["node_path"{a6a4bf23-8506-4359-9e0e-c67c65994657}]</property>
+			<property name="origColumn" value="2" valueType="string"/>
+			<property name="format" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:loaderConfigField" version="3">
+			<property name="sourceField" valueType="url">DataSource[this].layout["node_name"{39542d14-ecee-4cfe-be8f-079cbe3a39d2}]</property>
+			<property name="origColumn" value="3" valueType="string"/>
+			<property name="format" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:loaderConfigField" version="3">
+			<property name="sourceField" valueType="url">DataSource[this].layout["node_description"{b42a8b33-4be1-4fee-aebf-b4581244b73d}]</property>
+			<property name="origColumn" value="4" valueType="string"/>
+			<property name="format" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:loaderConfigField" version="3">
+			<property name="sourceField" valueType="url">DataSource[this].layout["node_condition"{69207e9b-19ad-4ebd-82c8-ce8706249066}]</property>
+			<property name="origColumn" value="5" valueType="string"/>
+			<property name="format" value="" valueType="string"/>
+		</object>
+		<object type="DataSource:loaderConfigField" version="3">
+			<property name="sourceField" valueType="url">DataSource[this].layout["is_node_condition_truncated"{b788fe33-c88d-45bf-a015-ba90613123a3}]</property>
+			<property name="origColumn" value="6" valueType="string"/>
+			<property name="format" value="" valueType="string"/>
+		</object>
+	</property>
+	<property name="loaderActions" valueType="table"/>
+	<property name="postTableCreationStatements" valueType="table"/>
+	<property name="postAdjustmentTableCreationStatements" valueType="table"/>
+	<property name="dataLoadVariables" valueType="table"/>
+	<property name="computeStatistics" value="NONE" valueType="string"/>
+	<property name="reapplyAdjustmentsAfterDataLoad" value="false" valueType="boolean"/>
+	<property name="archivalProperties" valueType="object">
+		<object type="ArchivalProperties" version="2">
+			<property name="daily" value="false" valueType="boolean"/>
+			<property name="weekly" value="false" valueType="boolean"/>
+			<property name="monthly" value="false" valueType="boolean"/>
+			<property name="quarterly" value="false" valueType="boolean"/>
+			<property name="semiAnnually" value="false" valueType="boolean"/>
+			<property name="annually" value="false" valueType="boolean"/>
+			<property name="intraDay" value="false" valueType="boolean"/>
+			<property name="userDefined" value="false" valueType="boolean"/>
+		</object>
+	</property>
+	<property name="validations" valueType="table"/>
+	<property name="delimiter" value="|" valueType="string"/>
+	<property name="skipRows" value="0" valueType="integer"/>
+	<property name="newlineConversion" value="none" valueType="string"/>
+	<property name="targetEncoding" value="" valueType="string"/>
+	<property name="convertEncoding" value="false" valueType="boolean"/>
+	<property name="trailingNullCols" value="true" valueType="boolean"/>
+	<property name="columnHeadersFromFile" value="false" valueType="boolean"/>
+	<property name="loaderControlFile" value="" valueType="string"/>
+	<property name="parameterIsNotAFile" value="true" valueType="boolean"/>
+	<property name="codeWillCreateFile" value="false" valueType="boolean"/>
+	<property name="loaderPreprocessCode" value="var currentBranchid = task.getBranchId();&#xa;var currentBranchO = class(&quot;axiomsl.server.object_framework.ObjectID&quot;).createDbId(&quot;Branch&quot;,null,currentBranchid);&#xa;var branchId=axiomObjectManager.locate(currentBranchO,axiomEnvironment).getTable(&quot;dependencies&quot;).locate(loaderParameters).getReference(&quot;branch&quot;).getTargetObjectID();&#xa;var mdrmError=new(&quot;java.util.HashMap&quot;);&#xa;var portfolios=axiomObjectManager.listObjectsOfType(&quot;Portfolio&quot;, branchId.getObjectId(), axiomEnvironment);&#xa;&lt;for>var i = 0 &lt;comma/> i &amp;lt;portfolios.size() &lt;comma/> i++&#xa;&lt;do>&#xa;&#x9;var portolioId=class(&quot;axiomsl.server.object_framework.ObjectID&quot;).createDbId(&quot;Portfolio&quot;,branchId.getObjectId(),portfolios.get(i).getDbId());&#xa;&#x9;var portfolio=axiomObjectManager.locate(portolioId,axiomEnvironment);&#xa;&#x9;var portfolio_name=portfolio.getName();&#xa;&#x9;var portfolioNodes=portfolio.getTree(&quot;hierarchy&quot;).getAllNodes();&#xa;&#x9;&lt;for>var j = 0 &lt;comma/> j &amp;lt;portfolioNodes.size() &lt;comma/> j++&#xa;&#x9;&lt;do>&#xa;&#x9;&#x9;&lt;if>portfolioNodes.get(j).propertyIsSet(&quot;name&quot;)&#xa;&#x9;&#x9;&lt;then>&#xa;&#x9;&#x9;&#x9;var node_name=portfolioNodes.get(j).getProperty(&quot;name&quot;);&#xa;&#x9;&#x9;&#x9;var node_description=&quot;&quot;;&#xa;&#x9;&#x9;&#x9;var node_condition=&quot;&quot;;&#xa;&#x9;&#x9;&#x9;var is_node_condition_truncated=&quot;&quot;;&#xa;&#x9;&#x9;&#x9;var node_first=&quot;&quot;;&#xa;&#x9;&#x9;&#x9;&lt;if>portfolioNodes.get(j).propertyIsSet(&quot;description&quot;)&#xa;&#x9;&#x9;&#x9;&lt;then>&#xa;&#x9;&#x9;&#x9;&#x9;node_description=portfolioNodes.get(j).getProperty(&quot;description&quot;);&#xa;&#x9;&#x9;&#x9;&lt;/then>&#xa;&#x9;&#x9;&#x9;&lt;/if>&#xa;&#x9;&#x9;&#x9;&lt;if>portfolioNodes.get(j).propertyIsSet(&quot;condition&quot;)&#xa;&#x9;&#x9;&#x9;&lt;then>&#xa;&#x9;&#x9;&#x9;&#x9;node_first=portfolioNodes.get(j).getTree(&quot;condition&quot;).getAllNodes().get(0);&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;var route = class(&quot;axiomsl.server.object_framework.RouteToObject&quot;).createIdRouteFromObjectId(axiomObjectManager, branchId.getObjectId(), portfolio.getId());&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;var portfolioParser = new(&quot;axiomsl.accessors.ExpressionParserImpl&quot;,new(&quot;axiomsl.accessors.PortfolioAccessor&quot;,portfolio), route);&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;var cs=new(&quot;axiomsl.util.condition.ConditionSequence&quot;,node_first,portfolioParser);&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;var node_condition_full=cs.toString();&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;if>node_condition_full.length()>4000&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;then>&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;node_condition=node_condition_full.substring(0,3999);&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;is_node_condition_truncated=&quot;Y&quot;;&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;/then>&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;else>&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;node_condition=node_condition_full;&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;/else>&#xa;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;/if>&#xa;&lt;!--.replaceAll(&quot;&amp;lt;CONDITION&quot;,&quot;&amp;lt;CO&quot;).replaceAll(&quot;CONDITION&amp;gt;&quot;,&quot;CO&amp;gt;&quot;).replaceAll(&quot;&amp;lt;OPERATION&quot;,&quot;&amp;lt;OP&quot;).replaceAll(&quot;OPERATION&amp;gt;&quot;,&quot;OP&amp;gt;&quot;).replaceAll(&quot;&amp;lt;COLNAME&quot;,&quot;&amp;lt;CN&quot;).replaceAll(&quot;COLNAME&amp;gt;&quot;,&quot;CN&amp;gt;&quot;).replaceAll(&quot;&amp;lt;VALUE&quot;,&quot;&amp;lt;V&quot;).replaceAll(&quot;VALUE&amp;gt;&quot;,&quot;V&amp;gt;&quot;);-->&#xa;&#x9;&#x9;&#x9;&lt;/then>&#xa;&#x9;&#x9;&#x9;&lt;/if>&#xa;&#x9;&#x9;&#x9;out.println(portfolio_name+&quot;|&quot;+node_first+&quot;|&quot;+node_name+&quot;|&quot;+node_description+&quot;|&quot;+node_condition+&quot;|&quot;+is_node_condition_truncated); &#xa;&#x9;&#x9;&lt;/then>&#xa;&#x9;&#x9;&lt;/if>&#xa;&#x9;&lt;/do>&#xa;&#x9;&lt;/for>&#xa;&lt;/do>&#xa;&lt;/for>" valueType="string"/>
+	<property name="fourEyesCheck" value="false" valueType="boolean"/>
+	<property name="readOnlyAdjustment" value="false" valueType="boolean"/>
+	<property name="keepTableContent" value="false" valueType="boolean"/>
+	<property name="loadSheetName" value="" valueType="string"/>
+	<property name="maxErrors" value="2147483647" valueType="integer"/>
+	<property name="doNotFailIfRejected" value="true" valueType="boolean"/>
+	<property name="freezeLevel" value="1" valueType="integer"/>
+	<property name="instanceRebuildRestriction" value="AlterFullRebuild" valueType="string"/>
+</object>

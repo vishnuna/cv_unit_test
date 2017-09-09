@@ -1,0 +1,55 @@
+<data_set_category name="SUBMISSION_DATES"
+                   description="Submission Dates"
+                   windowTitle="Submission Dates Setup"
+                   entityName="Submission Dates"
+                   icon="image.reports"
+                   windowIcon="windowicon.branch"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="SubmissionDates"
+                   singleDataSet="SubmissionDates">
+
+    <parameters>
+        <parameter name="gotoArchiveForDate" description="" type="Component" noSerialization="yes">
+			<attribute name="componentClass">"axiomsl.gui.source.setup.ArchiveForDateButton"</attribute>
+			<attribute name="tableName">"dates"</attribute>
+		</parameter>
+        <parameter name="dates" description="Execution Dates" type="table" length="7" reorder="false" allowAddRemove="false" keyParameter="date">
+            <parameter name="date" description="Date" type="date">
+                <readonly/>
+            </parameter>
+            <parameter name="isSubmitted" description="Is Submitted" type="boolean" defaultValue="false">
+                <if>
+                    !editor.getRemoteProxy().getPermissions().isObjectPermitted(new("axiomsl.server.object_framework.DbID", "Branch", null, editor.getBranchId()),
+                        if(currentParameters.getID() == "true", "U", "F"))
+                    <then>
+                        <readonly/>
+                    </then>
+                    <else>
+                        <enabled/>
+                    </else>
+                </if>
+            </parameter>
+        <verifyForSave>
+            return confirm(l(<string>Are you sure you want to save changes to submitted dates? Freezing a date will freeze the currernt version and related data instances.</string>))
+        </verifyForSave>
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        var route = dataSet.getRouteFromCurrentBranch();
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(<originalAxiom/>, currentParameters, array("dates"), route);
+        <for> var i = 0<comma/> i &lt; param("dates").size() <comma/> i++
+            <do>
+                param("dates").get(i).setID(<originalAxiom/>.getTable("dates").get(i).getBoolean("isSubmitted").toString()); <!-- id == original frozen state -->
+            </do>
+        </for>
+    </loadCode>
+
+    <saveCode>
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(<axiomForSave/>, currentParameters, array("dates"), route);
+    </saveCode>
+</data_set_category>

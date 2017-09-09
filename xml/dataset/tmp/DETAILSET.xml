@@ -1,0 +1,341 @@
+<data_set_category name="DETAIL_SET" description="DetailSet Setup" windowTitle="Detail Set Setup" entityName="DetailSet"
+                   icon="aggregation" screenWidth="800" screenHeight="500" objectType="DetailSet"
+                   extends="COMMON_UTILS, MAPPING, DOC_DATA">
+    <parameters>
+        <macro name="modelParameter"/>
+        <parameter name="fields" description="Fields" type="table" length="7" group="Fields" keyParameter="name"
+                   compareByID="true">
+            <parameter name="name" description="Fields Name" type="String" length="20">
+                <attribute name="lookupFromModelFieldList">l("Select Detail")
+                    <comma/>
+                    editor.getRemoteProxy().lookupFieldsInModels(macro("getResolvedModels"),
+                    editor.getBranchId());
+                </attribute>
+                <!--<convertInputValue>-->
+                    <!--inputValue.getName();-->
+
+                <!--</convertInputValue>-->
+                <validation>
+                    macro("validateColumnName");
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+                <onParameterChange>                    
+                    var fieldId =<currentParameters/>.getID();
+                    macro("updateFieldInMapping", inputValue, fieldId, -1, "fieldGroup", "change");
+                    <if>inputValue != null &amp;&amp; !(inputValue instanceof "java.lang.String")
+                        <then>
+                            param("description") = inputValue.getDescription();
+                            param("type")= inputValue.type;
+                        </then>
+                    </if>
+                    <!--macro("renameIndices", oldValue, newValue);-->
+                </onParameterChange>
+            </parameter>
+            <parameter name="description" description="Fields Description" type="String" wrapOnReport="true"/>
+
+            <parameter name="type" description="Value Type" type="String">
+                macro("valueType", "FLOAT");
+            </parameter>
+            <parameter name="size" description="Value Size" type="integer"/>
+            <parameter name="nullable" description="Value Nullable" type="boolean"/>
+
+
+            <onRowAdded>
+                macro("onFieldRowAdded", null, "fieldGroup");
+            </onRowAdded>
+            <onRowDeleted>
+                macro("onFieldRowDeleted", "fieldGroup");
+            </onRowDeleted>
+            <onRowMoved>
+                macro("onFieldRowMoved", null, "fieldGroup");
+            </onRowMoved>
+        </parameter>
+        
+        <parameter name="mappings" description="Mapping" type="tree" group="Fields Mapping"
+                   rootNodeType="rootMappingNode" tableTransposed="true" compareByID="true">
+            <nodeType name="rootMappingNode" description="Mapping" renameAllowed="false" deleteAllowed="false"
+                      hasChildren="true" childrenAreFixed="true" childrenTypes="fieldGroup"/>
+            <nodeType name="fieldGroup" description="Fields Mapping" renameAllowed="false" deleteAllowed="false"
+                      hasChildren="true" childrenAreFixed="true" childrenTypes="fieldMappingNode"/>
+            <!--hasID = true to facilitate comparison of mapping nodes by id -->
+            <nodeType name="fieldMappingNode" description="Field" renameAllowed="false" deleteAllowed="false"
+                      hasChildren="false" childrenAreFixed="false" hasID="true">
+                <parameter name="fieldMapping" description="Field Mapping" type="table" keyParameter="model"
+                           allowAddRemove="false" reorder="false" length="5" tableTransposed="true"
+                           mergeOnComparison="true">
+                    <parameter name="model" description="Model" type="string" wrapOnReport="true">
+                        <readonly/>
+                    </parameter>
+                    <parameter name="expression" description="Expression" type="string" wrapOnReport="true">
+                        <attribute name="allowAppend"/>
+                        <attribute name="lookupFromFieldList">l("Field")
+                            <comma/>
+                            var models = list();
+                            models.add(param("model"));
+                            editor.getRemoteProxy().lookupFieldsInModelsAsStrings(models, editor.getBranchId());
+                        </attribute>
+                        <convertInputValue>
+                            "$" + inputValue.get(0) + "." + inputValue.get(1)
+                        </convertInputValue>
+                        <if>
+                            param("model") == "UNRESOLVED"
+                            <then>
+                                <disabled/>
+                            </then>
+                            <else>
+                                <enabled/>
+                            </else>
+                        </if>
+                        <validation>
+                            macro("validateMappingExpression");
+                        </validation>
+                        <verifyForSave>
+                            macro("verifyMappingExpression");
+                        </verifyForSave>
+                    </parameter>
+                   <!-- <parameter name="valueType" description="Value Type" type="string">
+                        <if>
+                            param("model") == "UNRESOLVED" || macro("isSingleFieldReference")
+                            <then>
+                                <equals>
+                                    <if>param("model") != "UNRESOLVED"
+                                        <then>
+                                            var model = editor.locateObjectByName("DataModel", param("model"));
+                                            var accessor = new("axiomsl.accessors.DataModelAccessor", model);
+                                            var route = function("axiomsl.server.object_framework.RouteToObject",
+                                            "createNameRouteFromObjectName", editor.getAxiomObjectManager(),
+                                            editor.getBranchId(), param("model"));
+                                            var parser = new("axiomsl.accessors.ExpressionParserImpl",
+                                            editor.createObject("DataModel"), accessor, route);
+                                            var table = parser.parseExpression(param("expression"));
+                                            var type =
+                                            table.get(0).getProperty("value").getTargetObject().getString("type");
+                                            return if(type == "TEXT", "VARCHAR", type);
+                                        </then>
+                                    </if>
+                                </equals>
+                                <readonly/>
+                            </then>
+                            <else>
+                                <enabled/>
+                            </else>
+                        </if>
+                        macro("valueType", "FLOAT");
+                    </parameter>
+                    <parameter name="valueSize" description="Value Size" type="integer">
+                        <if>
+                            param("model") == "UNRESOLVED" || macro("isSingleFieldReference")
+                            <then>
+                                <disabled/>
+                            </then>
+                            <else>
+                                <enabled/>
+                                macro("valueSize");
+                            </else>
+                        </if>
+                    </parameter>
+                    <parameter name="valueNullable" description="Value Nullable?" type="boolean">
+                        <if>
+                            param("model") == "UNRESOLVED" || macro("isSingleFieldReference")
+                            <then>
+                                <disabled/>
+                            </then>
+                            <else>
+                                <enabled/>
+                            </else>
+                        </if>
+                    </parameter>-->
+                </parameter>
+                <parameter name="help_info_mapping" description="" type="Component" noSerialization="yes">
+                    <attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+                    <attribute name="text">l("SQL syntax must be used in expressions")</attribute>
+                    <attribute name="color">macro("LIGHT_GREEN")</attribute>
+                </parameter>
+            </nodeType>
+        </parameter>
+
+
+    </parameters>
+    <loadCode>
+        var detailSet =<originalAxiom/>;
+        <!--model setup -->
+        var models = detailSet.getTable("models");
+        <!--deserialization in empty case-->
+        param("models");
+        <for>var i = 0
+            <comma/>
+            i &lt; models.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("models").addLine();
+                var modelRef = models.get(i).getReference("dataModel");
+                row.param("name") = modelRef.getTargetObjectName(dataSet.getRouteFromCurrentBranch());
+                row.setID(modelRef.getTargetObjectID(dataSet.getRouteFromCurrentBranch(),
+                editor.getBranchId()).getObjectId());
+            </do>
+        </for>
+
+        <!--fields setup -->
+        var fields = detailSet.getTable("fields");
+        param("fields");<!--deserializing-->
+        <for>var i = 0
+            <comma/>
+            i &lt; fields.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("fields").addLine();
+                var field = fields.get(i);
+                row.param("name") = field.getString("name");
+                row.param("description") = field.getString("description");
+                row.param("type")= field.getString("valueType");
+                row.param("size")= field.getInteger("valueSize");
+                row.param("nullable")= field.getBoolean("valueNullable");
+                row.setID(field.getString("id"));
+            </do>
+        </for>
+
+    </loadCode>
+
+    <saveCode>
+        var detailsetForSave =<axiomForSave/>;
+        var accessor = new("axiomsl.accessors.AggregationAccessor", detailsetForSave);
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor);
+
+        <!--model save -->
+        var modelTable = detailsetForSave.getTable("models");
+        var models = param("models");
+        <for>var i = 0
+            <comma/>
+            i &lt; models.size()
+            <comma/>
+            i ++
+            <do>
+                var row = models.get(i);
+                var modelName = row.param("name");
+                var modelRow = modelTable.addRow("ModelBasedTask:modelEntry");
+                modelRow.setProperty("dataModel", modelRow.createReferencePropertyValue("DataModel", modelName));
+            </do>
+        </for>
+        <!--fields save -->
+        var fieldsTable = detailsetForSave.getTable("fields");
+        var fields = param("fields");
+        <for>var i = 0
+            <comma/>
+            i &lt; fields.size()
+            <comma/>
+            i ++
+            <do>
+                var field = fields.get(i);
+                var fieldRow = fieldsTable.addRow("DetailSet:fields");
+                macro("copyRefProperties", field, fieldRow);
+            </do>
+        </for>
+        <!--mapping save-->
+        var mappingsTable =<axiomForSave/>.getTable("mappings");
+        var mappingsTree = param("mappings");
+        parser.setContext(<axiomForSave/>);
+        <if>true;
+            <then>
+                macro("saveMappingForTable", "fields",<axiomForSave/>.getObjectType()+":localFieldReference", null);
+            </then>
+        </if>
+
+    </saveCode>
+
+
+    <macros>
+
+        <macro name="copyRefProperties" arguments="source_xxx, dest_xxx">
+            <dest_xxx/>.setProperty("name",<source_xxx/>.param("name"));
+            <dest_xxx/>.setProperty("description",<source_xxx/>.param("description"));
+            <dest_xxx/>.setProperty("id",<source_xxx/>.getID());
+            <dest_xxx/>.setProperty("valueType",<source_xxx/>.param("type"));
+            <dest_xxx/>.setProperty("valueSize",<source_xxx/>.param("size"));
+            <dest_xxx/>.setProperty("valueNullable",<source_xxx/>.param("nullable"));
+        </macro>
+
+        <!--different from default implementation because have type-->
+        <macro name="updateModelMapping" arguments="modelName, modelId, prevId, modelIndex, operationType">
+            <!--!!!!modelId is not used!!! - MODEL_NAME INSTEAD-->
+            var nodes = param("mappings").getAllNodes();
+            <for>var i = 0;
+                <comma/>
+                i &lt; nodes.size()
+                <comma/>
+                i ++
+                <do>
+                    var node = nodes.get(i);
+                    <if>node.level() == 2
+                        <then>
+                            var fieldMapping = node.param("fieldMapping");
+                            <case>
+                                <operationType/>
+                                == "delete"
+                                <then>
+                                    fieldMapping.remove(<modelIndex/>);
+                                </then>
+                                <operationType/>
+                                == "add"
+                                <then>
+                                    var newModelMapping = fieldMapping.addLine(<modelIndex/>);
+                                    newModelMapping.param("model") =<modelName/>;
+                                    newModelMapping.param("type")="Date";
+                                    <!--newModelMapping.setID(<modelId/>);-->
+                                    macro("updateMappingExpForModel",<modelName/>, node.name(), newModelMapping);
+                                </then>
+                                <operationType/>
+                                == "change"
+                                <then>
+                                    var newModelMapping = fieldMapping.get(<modelIndex/>);
+                                    newModelMapping.param("model") =<modelName/>;
+                                    <!--newModelMapping.setID(<modelId/>);-->
+                                    macro("updateMappingExpForModel",<modelName/>, node.name(), newModelMapping);
+                                </then>
+                                <operationType/>
+                                == "move"
+                                <then>
+                                    <!--there prevId is oldIndex and modelIndex - newIndex-->
+                                    var movedModelMapping = fieldMapping.get(<prevId/>);
+                                    fieldMapping.remove(<prevId/>);
+                                    fieldMapping.add(<modelIndex/>, movedModelMapping);
+                                </then>
+                            </case>
+                        </then>
+                    </if>
+                </do>
+            </for>
+        </macro>
+        <!--fieldId -  for delete and rename-->
+        <!--index2Add -  for add-->
+
+
+
+
+
+        <macro name="getFieldType" arguments="fieldId, groupType">
+            var type = currentParameters.param("valueType");
+            <if>type != null and "" != type
+                <else>
+                    var node = macro("getNodeInMapping",<fieldId/>,<groupType/>);
+                    <if>node.param("fieldMapping").size() != 0;
+                        <then>
+                            var row = node.param("fieldMapping").get(0);
+                            type = row.param("valueType");
+                            <if>type != null and "" != type
+                                <else>
+                                    type = macro("getFieldTypeFromModel", row.param("model"), row.param("expression"));
+                                </else>
+                            </if>
+                        </then>
+                    </if>
+                </else>
+            </if>
+            ;type
+        </macro>
+
+    </macros>
+</data_set_category>

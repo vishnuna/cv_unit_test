@@ -1,0 +1,414 @@
+<data_set_category name="REPORTING_MODULE" description="Reporting Module"
+                   windowTitle="Reporting Module Setup" entityName="ReportingModule"
+                   icon="reporting_module" screenWidth="800" screenHeight="500" objectType="ReportingModule"
+                   extends="COMMON_UTILS, DOC_DATA">
+    <!--Current version may work incorrectly in case when one Taxonomy branch dependent on another Taxonomy branch -->
+    <parameters>
+        <!--Generate Reports tab -->
+        <parameter name="reports" description="Reports:" type="table" group="Reports" keyParameter="name" allowCopyPaste="true">
+            <if>editor.isReadOnlyMode()
+                <then>
+                    <readonly/>
+                </then>
+            </if>
+            <parameter name="name" description="Name" type="String" length="10" isDataSet="Report">
+                <readonly/>
+                <onParameterChange>
+                    param("longName") = macro("getReportLongName", newValue);
+                </onParameterChange>
+            </parameter>
+            <parameter name="longName" description="Long Name" type="String" length="70">
+                <readonly/>
+            </parameter>
+            <confirmAddRow>
+                var name = macro("getName", addedRow);
+                <if> !"".equals(name) and !editor.isObjectExists("Report", name);
+                    <then>
+                        errorMessage(l("Report with name '%1' is not found.", name));
+                        ;false
+                    </then>
+                    <else>
+                        macro("checkUniquenessOnConfirm", list());
+                    </else>
+                </if>
+            </confirmAddRow>
+        </parameter>
+        <!--Generate Validations tab -->
+        <parameter name="validationSets" description="Validation Sets:" type="table" group="Validations"
+                   keyParameter="name" rowType="ValidationSet" allowCopyPaste="true" length="5">
+            <if>editor.isReadOnlyMode()
+                <then>
+                    <readonly/>
+                </then>
+            </if>
+            <parameter name="name" description="Name" type="String" length="10" isDataSet="ValidationSet">
+                <readonly/>
+                <onParameterChange>
+                    param("description") =  editor.getRemoteProxy().getObjectDescription("ValidationSet", newValue, editor.getBranchId());
+                </onParameterChange>
+            </parameter>
+            <parameter name="description" description="Description" type="String" length="70">
+                <readonly/>
+            </parameter>
+            <default>
+                var rows = list();
+                return rows;
+            </default>
+            <confirmAddRow>
+                var name = macro("getName", addedRow);
+                <if> !"".equals(name) and !editor.isObjectExists("ValidationSet", name);
+                    <then>
+                        errorMessage(l("ValidationSet with name '%1' is not found.", name));
+                        ;false
+                    </then>
+                    <else>
+                        macro("checkUniquenessOnConfirm", list());
+                    </else>
+                </if>
+            </confirmAddRow>
+        </parameter>
+        <!--<parameter name="validationFunctionSets" description="Validation Function Sets" type="table" group="Validations"-->
+                   <!--keyParameter="name" rowType="ValidationFunctionSet" allowCopyPaste="false" length="5">-->
+            <!--<parameter name="name" description="Name" type="String" length="10" isDataSet="ValidationSet">-->
+                <!--<readonly/>-->
+                <!--<onParameterChange>-->
+                    <!--param("description") = editor.getRemoteProxy().getObjectDescription("ValidationFunctionSet", newValue, editor.getBranchId());-->
+                <!--</onParameterChange>-->
+            <!--</parameter>-->
+            <!--<parameter name="description" description="Description" type="String" length="70">-->
+                <!--<readonly/>-->
+            <!--</parameter>-->
+            <!--<default>-->
+                <!--var rows = list();-->
+                <!--return rows;-->
+            <!--</default>-->
+        <!--</parameter>-->
+
+        <!--Generate Constants tab -->
+        <parameter name="constants" description="Constants:" type="tree" group="Constants" rootNodeType="rootConstantNode">
+            <if>editor.isReadOnlyMode()
+                <then>
+                    <readonly/>
+                </then>
+            </if>
+            <nodeType name="rootConstantNode" description="Constants" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="false" childrenTypes="constant"/>
+            <nodeType name="constant" description="Constant" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false" childrenNamesAreUnique="true">
+                <parameter name="constName" description="Constant name:" type="String" group="Constant">
+                    <onParameterChange>
+                        currentNode.setName(newValue);
+                    </onParameterChange>
+                    <validation>
+                        macro("validateNonEmpty")
+                    </validation>
+                </parameter>
+                <parameter name="description" description="Description:" type="String" group="Constant"/>
+                <parameter name="expression" description="Value expression:" type="String" group="Constant">
+                    <attribute name="lookupAppend">true</attribute>
+                    <attribute name="multiLine">4</attribute>
+                    <attribute name="lineWrap"> true </attribute>
+                    <attribute name="lookupFromValues"> l("Expressions") <comma/>
+                        macro("axiomExpressionLanguage"),
+                        macro("userDefinedFunctions")
+                    </attribute>
+                    <verifyForSave>
+                        macro("verifyNonEmpty")
+                    </verifyForSave>
+                </parameter>
+                <parameter name="view" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.ViewDocFileButton"</attribute>
+                </parameter>
+                <parameter name="upload" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.UploadHelpButton"</attribute>
+                </parameter>
+
+                <parameter name="docFile" description="Documentation File" type="string" length="40" group="Documentation" row="0" freehand="no">
+                </parameter>
+
+                <parameter name="comment" description="Notes" type="String" length="7" group="Documentation" freehand="no">
+                    <attribute name="multiLine">3</attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+                </parameter>
+            </nodeType>
+            <onNodeAdded>
+                addedNode.param("constName") = addedNode.getName();
+            </onNodeAdded>
+            <onNodeRenamed>
+                renamedNode.param("constName") = renamedNode.getName();
+            </onNodeRenamed>
+        </parameter>
+
+        <!--Generate Submission Parameters tab -->
+        <parameter name="submissionFileType" description="Submission File Type:" type="String" group="Submission Parameters" defaultValue="XBRL_INSTANCE">
+            choices(
+                <asDescription>
+                    ndo("XBRL_INSTANCE",l("XBRL_INSTANCE")), ndo("XML_OUTPUT",l("XML_OUTPUT")), ndo("OTHER",l("OTHER"))
+                </asDescription>
+            )
+            <default>
+                'XBRL_INSTANCE'
+            </default>
+        </parameter>
+        <parameter name="xbrlSchema" description="XBRL Schema:" type="String" group="Submission Parameters" length="70">
+            <if>
+                "XBRL_INSTANCE".equals(<param name="submissionFileType"/>)
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+            <verifyForSave>
+                macro("verifyNonEmpty")
+            </verifyForSave>
+        </parameter>
+        <parameter name="useFilingIndicators" description="Use Filing Indicators:" group="Submission Parameters" type="Boolean">
+            <if>
+                "XBRL_INSTANCE".equals(<param name="submissionFileType"/>)
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="provider" description="XBRL Taxonomy Provider:" type="String" group="Submission Parameters">
+            <if>
+                "XBRL_INSTANCE".equals(<param name="submissionFileType"/>)
+                <then>
+                    <enabled/>
+                    <choices>
+                        class("axiomsl.business_logic.xbrl.XbrlTaxonomyProvider").values();
+                    </choices>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="version" description="Version Of Specification Of Submission File:" group="Submission Parameters" type="String">
+            <if>
+                "XBRL_INSTANCE".equals(<param name="submissionFileType"/>)
+                <then>
+                    <enabled/>
+                    <choices>
+                        class("axiomsl.business_logic.xbrl.XbrlTaxonomyProvider").valueOf(param("provider")).getSupportedVersions();
+                    </choices>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="xsltFile" description="XSL Transformation File" type="String" group="Submission Parameters" freehand="no">
+            <attribute name="multiLine">5</attribute>
+            <attribute name="unlimitedSize">true</attribute>
+
+            <if>
+                "XML_OUTPUT".equals(<param name="submissionFileType"/>)
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+     </parameters>
+
+    <loadCode>
+        var reportingModule =<originalAxiom/>;
+
+        <!--Load Submission Parameters -->
+        param("submissionFileType") = reportingModule.getString("submissionFileType");
+
+        <if> reportingModule.propertyIsSet("submissionParameters")
+            <then>
+                var parameters = reportingModule.getObject("submissionParameters");
+                <if> "XBRL_INSTANCE".equals(param("submissionFileType"))
+                    <then>
+                        param("xbrlSchema") = parameters.getString("xbrlSchema");
+                        param("useFilingIndicators") = parameters.getBoolean("useFilingIndicators");
+                        param("provider") = class("axiomsl.business_logic.xbrl.XbrlTaxonomyProvider").valueOf(parameters.getString("provider"));
+                        param("version") = parameters.getString("version");
+                    </then>
+                    <else>
+                        <if> "XML_OUTPUT".equals(param("submissionFileType"))
+                            <then>
+                                param("xsltFile") = parameters.getString("xsltFile");
+                            </then>
+                            <else>
+                                param("xbrlSchema") = "";
+                                param("useFilingIndicators") = false;
+                            </else>
+                        </if>
+                    </else>
+                </if>
+            </then>
+        </if>
+        <!--Load Reports -->
+        <if> reportingModule.propertyIsSet("reports");
+            <then>
+                var reports = reportingModule.getTable("reports");
+                var reportList = list();
+                <for>var i = 0 <comma/> i &lt; reports.size() <comma/> i++
+                    <do>
+                        var reportRef = reports.get(i).getReference("value");
+                        var row = tableRow();
+                        row.param("name") = reportRef.getTargetObjectName(dataSet.getRouteFromCurrentBranch());
+                        row.param("longName") = macro("getReportLongName", reportRef.getTargetObjectName());
+                        reportList.add(row);
+                    </do>
+                </for>
+                param("reports") = reportList;
+            </then>
+        </if>
+        <!--Load ValidationSets -->
+        <if> reportingModule.propertyIsSet("validationSets");
+            <then>
+                var validationSets = reportingModule.getTable("validationSets");
+                var validationSetList = list();
+                <for>var i = 0 <comma/> i &lt; validationSets.size() <comma/> i++
+                    <do>
+                        var validationSetRef = validationSets.get(i).getReference("value");
+                        var row = tableRow();
+                        var name = validationSetRef.getTargetObjectName(dataSet.getRouteFromCurrentBranch());
+                        row.param("name") = name;
+                        row.param("description") = editor.getRemoteProxy().getObjectDescription("ValidationSet", name, editor.getBranchId());
+                        validationSetList.add(row);
+                    </do>
+                </for>
+                param("validationSets") = validationSetList;
+            </then>
+        </if>
+        <!--Load Constants -->
+        var constantsTable = reportingModule.getTable("constants");
+        var constants = param("constants");
+        <for>var i = 0 <comma/> i &lt; constantsTable.size() <comma/> i++
+            <do>
+                var constant = constantsTable.get(i);
+                var constantNode = constants.createChild("constant", constant.getString("name"));
+                constantNode.setID(constant.getProperty("name"));
+                constantNode.param("constName") = constant.getProperty("name");
+                constantNode.param("description") = constant.getProperty("description");
+                constantNode.param("expression") = constant.getProperty("expression");
+                constantNode.param("comment") = constant.getOptionalValue("comment", "");
+                constantNode.param("docFile") = constant.getOptionalValue("docFile", "");
+                constantNode.addToParent();
+            </do>
+        </for>
+        param("constants") = constants;
+
+    </loadCode>
+
+    <saveCode>
+        var reportingModule =<axiomForSave/>;
+        reportingModule.setProperty("submissionFileType", param("submissionFileType"));
+        <!--Save Submission Parameters -->
+        var parameters;
+        <if> "XBRL_INSTANCE".equals(param("submissionFileType"))
+            <then>
+                parameters = reportingModule.createObjectPropertyValue("ReportingModule:parameters_XBRL_INSTANCE");
+                parameters.setProperty("xbrlSchema", param("xbrlSchema"));
+                parameters.setProperty("useFilingIndicators", param("useFilingIndicators"));
+                parameters.setProperty("provider", param("provider"));
+                parameters.setProperty("version", param("version"));
+            </then>
+            <else>
+                <if> "XML_OUTPUT".equals(param("submissionFileType"))
+                    <then>
+                        parameters = reportingModule.createObjectPropertyValue("ReportingModule:parameters_XML_OUTPUT");
+                        parameters.setProperty("xsltFile", param("xsltFile"));
+                    </then>
+                    <else>
+                        parameters = reportingModule.createObjectPropertyValue("ReportingModule:parameters_OTHER");
+                    </else>
+                </if>
+            </else>
+        </if>
+        reportingModule.setProperty("submissionParameters", parameters);
+        <!--Save Reports -->
+        var reportsTable = reportingModule.getTable("reports");
+        var reports = param("reports");
+        <for> var i = 0 <comma/> i &lt; reports.size() <comma/> i++
+            <do>
+                var row = reportsTable.addRow("Report:reference");
+                var reportName = reports.get(i).param("name");
+                row.setProperty("value", row.createReferencePropertyValue("Report", reportName));
+            </do>
+        </for>
+        <!--Save ValidationSets -->
+        var validationSetsTable = reportingModule.getTable("validationSets");
+        var validationSets = param("validationSets");
+        <for> var i = 0 <comma/> i &lt; validationSets.size() <comma/> i++
+            <do>
+                var row = validationSetsTable.addRow("ValidationSet:reference");
+                var validationSetName = validationSets.get(i).param("name");
+                row.setProperty("value", row.createReferencePropertyValue("ValidationSet", validationSetName));
+            </do>
+        </for>
+        <!--Save Constants -->
+        var constants = param("constants");
+        <for>var i = 0 <comma/> i &lt; constants.childCount() <comma/> i++
+            <do>
+                var constantChild = constants.child(i);
+                var resultingModel = reportingModule.getTable("constants").addRow("ReportingModule:constant");
+                resultingModel.setProperty("id", constantChild.param("constName"));
+                resultingModel.setProperty("name", constantChild.param("constName"));
+                resultingModel.setProperty("description", constantChild.param("description"));
+                resultingModel.setProperty("expression", constantChild.param("expression"));
+
+                <if>!constantChild.param("comment").isEmpty()
+                    <then>
+                        resultingModel.setProperty("comment", constantChild.param("comment"));
+                    </then>
+                </if>
+                <if>!constantChild.param("docFile").isEmpty()
+                    <then>
+                        resultingModel.setProperty("docFile", constantChild.param("docFile"));
+                    </then>
+                </if>
+
+            </do>
+        </for>
+
+    </saveCode>
+
+
+    <macros>
+        <!--Find the report long name by the reportName in the ReportList object and return it.
+        (or !!! Report Long Name Not Found !!! string if the report with name reportName is not found)-->
+        <!--works only with local branch-->
+        <macro name="getReportLongName" arguments="reportName">
+            var reportLongName = l("!!! Report Long Name Not Found !!!").toString();
+            var reportListObject = macro("locateFromTaxonomy", "ReportList", "ReportList");
+            var reportListTable = reportListObject.getTable("reports");
+            <for>var j = 0 <comma/> j &lt; reportListTable.size() <comma/> j++
+                <do>
+                    var reportRow = reportListTable.get(j);
+                    <if>reportRow.getString("name").equals(<reportName/>.toString())
+                        <then>
+                            reportLongName = reportRow.getString("longName");
+                            break;
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;reportLongName
+        </macro>
+
+        <macro name="locateFromTaxonomy" arguments="objectType, objectName">
+            <if>dataSet.getAxiomObject() != null
+                <then>
+                    ;editor.locate(function("axiomsl.server.object_framework.ObjectID",
+                    "createNameId",<objectType/>, dataSet.getAxiomObject().getBranchId(), <objectName/>));
+                </then>
+                <else>
+                    ;editor.locateObjectByName(<objectType/>,  <objectName/>);
+                </else>
+            </if>
+        </macro>
+    </macros>
+
+</data_set_category>

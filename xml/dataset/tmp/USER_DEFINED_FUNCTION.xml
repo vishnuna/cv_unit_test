@@ -1,0 +1,66 @@
+<data_set_category name="USER_DEFINED_FUNCTION"
+                   description="Function Setup"
+                   windowTitle="Function Setup"
+                   entityName="User Defined Function"
+                   icon="windowicon.function_32"
+                   screenWidth="600"
+                   screenHeight="600"
+                   objectType="UserDefinedFunction"
+                   extends="FUNCTION">
+
+    <parameters>
+        <parameter name="imports" description="Function Imports" type="table" length="3" keyParameter="name" group="Imports">
+            <parameter name="name" description="Alias" type="String" wrapOnReport="true">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("imports")));
+                    <if>!isAnIdentifier(newValue)
+                        <then>
+                            return l("Field name must be alpha-numeric and start with a letter");
+                        </then>
+                    </if>
+                </validation>
+            </parameter>
+
+            <parameter name="value" description="Function" lookupInPlace="yes" type="String" length="20" isDataSet="UserDefinedFunction" wrapOnReport="true">
+                <onParameterChange>
+
+                    <if>newValue != null and newValue.length() != 0
+                        <then>
+                            param("name") = newValue.replace(':','_');
+                        </then>
+                    </if>
+                </onParameterChange>
+                <validation>
+                    <!--macro("checkModelExists");-->
+                    <!--macro("checkUniqueness", list());-->
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+
+            <confirmAddRow>
+                <!--macro("checkModelExistsOnConfirm");-->
+                macro("checkUniquenessOnConfirm", list(param("imports")));
+            </confirmAddRow>
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var templates = null;
+        var params = array("imports");
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(<originalAxiom/>, currentParameters, params, null, templates, null, route);
+    </loadCode>
+
+    <saveCode>
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var templates = null;
+        var params = array("imports");
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(<axiomForSave/>, currentParameters, params,null, templates, null, route);
+    </saveCode>
+
+</data_set_category>

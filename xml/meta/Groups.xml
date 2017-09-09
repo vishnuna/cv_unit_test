@@ -1,0 +1,18 @@
+<metadata>
+	<object type="Groups" extends="GlobalObject" version="2">
+        <!--the name of the object will be XXXXGroups where XXXX is the type of the object whose groups these are-->
+		<property name="objectType" valueType="string"/>
+		<property name="groupHierarchy" valueType="tree" rootNodeType="Groups:rootNode"/>
+    </object>
+    <!--root node will have no name or id because it's always there and it's never shown and it does not have any objects assigned to it-->
+    <objectNode type="Groups:rootNode" version="2">
+        <property name="name" valueType="string" defaultValue=""/>
+        <property name="description" valueType="string" defaultValue=""/>
+        <property name="id" valueType="string"  defaultValue=""/>
+        <children childrenTypes="Groups:node"/>
+    </objectNode>
+    <!--Objects belonging to the group will have the id of the group node. Reference is not necessary because we won't allow deleting nonempty group nodes-->
+    <objectNode type="Groups:node" extends="ReferencibleSubobject" version="1">
+        <children childrenTypes="Groups:node"/>
+    </objectNode>
+</metadata>

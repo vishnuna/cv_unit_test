@@ -1,0 +1,331 @@
+<data_set_category name="MAPPED_REPORTING_MODULE"
+                   description="Mapped Reporting Module Setup"
+                   windowTitle="Mapped Reporting Module Setup"
+                   entityName="MappedReportingModule"
+                   icon="reporting_module"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="MappedReportingModule"
+                   extends="COMMON_UTILS, DOC_DATA">
+    <parameters>
+        <parameter name="isLoading" description="Data Set Is Loading" type="boolean" hidden="true"/>
+
+        <parameter name="reportingModule" description="ReportingModule" type="String" group="Report Mappings" length="80" isDataSet="ReportingModule">
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+
+            <validation>
+                macro("checkRMExists");
+            </validation>
+
+            <onParameterChange>
+                macro("loadRM", newValue, false);
+            </onParameterChange>
+
+            <if>editor.isCanRename() != null
+                 <then>
+                     <if>!editor.isCanRename()
+                         <then>
+                            <readonly/>
+                         </then>
+                     </if>
+                 </then>
+            </if>
+        </parameter>
+
+        <parameter name="mappedReports" description="MappedReports in scope of this module" type="table" group="Report Mappings"
+                   length="7" reorder="false" keyParameter="report" autoSortRows="false" allowAddRemove="false" >
+            <parameter name="report" description="Report" type="string">
+                <readOnly/>
+            </parameter>
+
+            <parameter name="isIncluded" description="Is Included" type="boolean">
+                <onParameterChange>
+                    <if>(param("isIncluded") == true) and editor.isTMBranch()
+                        <then>param("mappedReport") = editor.getMRName(param("report"));</then>
+                    </if>
+                </onParameterChange>
+            </parameter>
+
+            <parameter name="mappedReport" description="Mapped Report" type="string">
+                <attribute name="lookupFromValues"> l("Mapped Report") <comma/>
+                    <!--<forTable name="mappedReports">-->
+                    var lookupList = list();
+                    var mappedReports = editor.getAllPossibleMappedReports(editor.createMappingNameId("Report", param("report")));
+                    <for>var i = 0
+                        <comma/>
+                        i &lt; mappedReports.size()
+                        <comma/>
+                        i++
+                        <do>
+                            var mr = mappedReports.get(i);
+                            <if>!param("mappedReport").equals(mr.getName())
+                                <then>
+                                    lookupList.add(mr);
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+                    lookupList
+                    <!--</forTable>-->
+                </attribute>
+                <if>!param("isIncluded")
+                    <then>
+                        <readOnly/>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                    </else>
+                </if>
+
+                <attribute name="lookupMultipleSelect">false</attribute>
+
+                <verifyForSave>
+                    <if>param("isIncluded")
+                        <then>
+                            macro("verifyNonEmpty");
+                        </then>
+                    </if>
+                </verifyForSave>
+            </parameter>
+
+            <parameter name="longName" description="Long Name" type="string">
+                <readOnly/>
+            </parameter>
+        </parameter>
+
+        <parameter name="includeAll" description="Include All" type="Component" group="Report Mappings" noSerialization="yes" row="0">
+            <attribute name="componentClass">"axiomsl.util.ui.AxiomButton"<comma/> l("Include All")<comma/> "image.xbrl.check_box" <comma/> false</attribute>
+            <attribute name="action">
+                <forTable name="mappedReports">
+                    param("isIncluded") = true;
+                </forTable>
+            </attribute>
+        </parameter>
+
+        <parameter name="excludeAll" description="Exclude All" type="Component" group="Report Mappings" noSerialization="yes" row="0">
+            <attribute name="componentClass">"axiomsl.util.ui.AxiomButton"<comma/> l("Exclude All")<comma/> "image.unchecked_box" <comma/> false</attribute>
+            <attribute name="action">
+                <forTable name="mappedReports">
+                    param("isIncluded") = false;
+                </forTable>
+            </attribute>
+        </parameter>
+
+        <parameter name="activateAll" description="Activate All Mapped Reports" type="Component" group="Report Mappings" noSerialization="yes" row="1">
+            <attribute name="componentClass">"axiomsl.util.ui.AxiomButton"<comma/>null<comma/>l("Activate All Mapped Reports")</attribute>
+            <attribute name="action">
+                <!--macro("loadRM", param("reportingModule"), true);-->
+                <forTable name="mappedReports">
+                    <if>
+                        param("isIncluded") == true;
+                        <then>
+                            var tableRo = editor.getTableRow(param("reportingModule"), param("report"), true);
+                            var mappedReport = tableRo.getMappedReport();
+                            <if>mappedReport != null
+                                <then>param("mappedReport") = mappedReport</then>
+                                <else>param("mappedReport") = ""</else>
+                            </if>
+                        </then>
+                    </if>
+                </forTable>
+            </attribute>
+            <if>!editor.isTMBranch()
+                <then>
+                    <removed/>
+                </then>
+                <else>
+                    <enabled/>
+                </else>
+            </if>
+        </parameter>
+
+        <parameter name="signoffPrerequisite" description="Sign Off Prerequisite" type="String" length="27" group="Properties">
+            <attribute name="multiLine"> 2 </attribute>
+            <attribute name="lineWrap"> true </attribute>
+            <attribute name="lookupAppend">true</attribute>
+            <attribute name="lookupFromValues"> l("Constraint") <comma/>
+                macro("buildPrerequisiteParameters")
+            </attribute>
+        </parameter>
+
+        <parameter name="saveSuccessfulValidations" description="Allow saving and logging of successful validations" type="boolean" group="Parameters"/>
+
+        <parameter name="evaluateWithoutData" description="Evaluate validations bound to fallbacks" type="boolean" defaultValue="true" group="Parameters"/>
+
+    </parameters>
+
+    <loadCode>
+        param("isLoading") = true;
+        var mrm =<originalAxiom/>;
+        editor.setMRM(mrm);
+        editor.checkCustomMRM();
+        var route = dataSet.getRouteFromCurrentBranch();
+
+        param("evaluateWithoutData") = mrm.getOptionalBoolean("evaluateWithoutData");
+        param("reportingModule") = mrm.getReference("reportingModule").getTargetObjectName();
+        param("signoffPrerequisite") = mrm.getString("signoffPrerequisite");
+        param("saveSuccessfulValidations") = mrm.getBoolean("saveSuccessfulValidations");
+        var mappedReports = editor.getTableRows(mrm.getTable("mappedReports"), mrm.getReference("reportingModule"));
+
+        var mrRows = list();
+        var mrList = list();
+        <for>var i = 0
+            <comma/>
+            i &lt; mappedReports.size()
+            <comma/>
+            i++
+            <do>
+                var tableRo = mappedReports.get(i);
+                var row = tableRow();
+                <try>
+                    row.param("report") = tableRo.getName();
+                    row.param("isIncluded") = !tableRo.isExcluded();
+                    row.param("longName") = tableRo.getLongName();
+                    var mappedReportName = tableRo.getMappedReport();
+                    <if>mappedReportName != null
+                        <then>row.param("mappedReport") = mappedReportName</then>
+                        <else>row.param("mappedReport") = ""</else>
+                    </if>
+                    mrRows.add(row);
+                    mrList.add(row.param("report"));
+                    <catch>var e</catch>
+                    trace(e.getMessage());
+                </try>
+            </do>
+        </for>
+
+        param("mappedReports") = mrRows;
+
+        param("isLoading") = false;
+    </loadCode>
+
+    <saveCode>
+        var mrmObject=<axiomForSave/>;
+
+        function("axiomsl.gui.xbrl.editor.mapped_reporting_module.MappedReportingModuleDataSetEditor", "insertRefToReportingModule", mrmObject, param("reportingModule"));
+        mrmObject.setProperty("signoffPrerequisite", param("signoffPrerequisite"));
+        mrmObject.setProperty("evaluateWithoutData", param("evaluateWithoutData"));
+        mrmObject.setProperty("saveSuccessfulValidations", param("saveSuccessfulValidations"));
+        var mrsTable = mrmObject.getTable("mappedReports");
+        var mrsParam = param("mappedReports");
+        <try>
+            <for>var i = 0
+                <comma/>
+                i &lt; mrsParam.size()
+                <comma/>
+                i++
+                <do>
+                    var row = mrsTable.addRow("MappedReportingModule:mappedReport");
+                    var reportName = macro("getName", mrsParam.get(i).param("report"));
+                    var mappedReportName = macro("getName", mrsParam.get(i).param("mappedReport"));
+                    <!--var mappedReportId = editor.createMappingNameId("MappedReport", mappedReportName);-->
+                    var reportId = editor.createMappingObjectId("Report", reportName);
+                    row.setProperty("id", reportId.getObjectId());
+                    row.setProperty("name", reportId.getObjectId());
+                    row.setProperty("isExcluded", !mrsParam.get(i).param("isIncluded"));
+                    <if>(mappedReportName != null) &amp;&amp; (!mappedReportName.equals(""))
+                        <then>
+                            row.setProperty("mappedReport", row.createReferencePropertyValue("MappedReport", mappedReportName));
+                        </then>
+                    </if>
+                </do>
+            </for>
+            <catch>var e</catch>
+            trace(e.getMessage());
+        </try>
+    </saveCode>
+
+    <macros>
+        <macro name="checkName" arguments="mrmObject">
+            var msg = editor.checkName(mrmObject);
+            <if>msg != null
+                <then>
+                    errorMessage(msg);
+                </then>
+            </if>
+        </macro>
+
+        <macro name="buildPrerequisiteParameters">
+            var result = new("java.util.Vector");
+            result.add(macro("axiomExpressionLanguage"));
+            result.add(macro("userDefinedFunctions"));
+
+            var reportsTable = param("mappedReports");
+            var reports = list();
+            <for>var i = 0 <comma/> i &lt; reportsTable.size() <comma/> i++
+                <do>
+                    var row = reportsTable.get(i);
+                    <if> row.param("isIncluded")
+                        <then>
+                            reports.add(row.param("mappedReport"));
+                        </then>
+                    </if>
+                </do>
+            </for>
+
+            result.addAll(editor.lookupPrerequisiteParameters(reports));
+            ;result
+        </macro>
+
+        <macro name="loadRM" arguments="newValue, activateMRs">
+            <if><newValue/> == null or <newValue/>.isEmpty()
+                <then>
+                    return;
+                </then>
+            </if>
+            var mappedReports = editor.getTableRows(<newValue/>, <activateMRs/>);
+
+            var mrRows = list();
+            var mrList = list();
+            <for>var i = 0
+                <comma/>
+                i &lt; mappedReports.size()
+                <comma/>
+                i++
+                <do>
+                    var tableRo = mappedReports.get(i);
+                    var row = tableRow();
+                    <try>
+                        row.param("report") = tableRo.getName();
+                        row.param("isIncluded") = !tableRo.isExcluded();
+                        row.param("longName") = tableRo.getLongName();
+                        var mappedReport = tableRo.getMappedReport();
+                        <if>mappedReport != null
+                            <then>row.param("mappedReport") = mappedReport</then>
+                            <else>row.param("mappedReport") = ""</else>
+                        </if>
+                        mrRows.add(row);
+                        mrList.add(row.param("report"));
+                        <catch>var e</catch>
+                        trace(e.getMessage());
+                    </try>
+                </do>
+            </for>
+            param("mappedReports") = mrRows;
+        </macro>
+
+        <macro name="checkRMExists">
+            <if> !macro("isEmpty", newValue)
+                <then>
+                    var rmName = macro("getName", newValue);
+                    var rmId = editor.createNameId("ReportingModule", rmName);
+                    <if> !editor.getAxiomObjectManager().objectExists(rmId,editor.getAxiomEnvironment())
+                        <then>
+                            return l("Reporting Module '%1' doesn't exist!", rmName);
+                        </then>
+                    </if>
+                    var resolver = editor.getAxiomObjectManager().getResolver();
+                    <if> resolver.getObjectEntry(resolver.resolve(rmId)).isInvalid()
+                        <then>
+                            return l("Reporting Module '%1' is invalid!", rmName);
+                        </then>
+                    </if>
+                </then>
+            </if>
+        </macro>
+    </macros>
+
+</data_set_category>

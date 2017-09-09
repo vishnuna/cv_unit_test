@@ -1,0 +1,11 @@
+<metadata>
+	<object type="GlobalObject" version="2">
+		<property name="name" valueType="string" canBeEmpty="false" essential="true"/>
+		<property name="description" valueType="string"/>
+		<property name="isGenerated" optional="true" valueType="boolean"/>
+		<!-- objectId: for primary object, this is the root id, for generated - the composite id -->
+		<property name="objectId" valueType="string" canBeEmpty="false" upgraderClass="axiomsl.metadata_upgraders.GUIDGenerator" essential="true"/>
+		<!-- dbId: only used for generated object - the key for storing the object in db -->
+		<property name="dbId" valueType="string" canBeEmpty="false" optional="true"/>
+	</object>
+</metadata>

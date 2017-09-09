@@ -1,0 +1,10 @@
+<metadata>
+	<object type="InstanceParameters" version="2">
+		<property name="status" valueType="string" canBeEmpty="false" choices="NONE, ERROR, POPULATING, ACTIVE, WARNING, INCOMPLETE" defaultValue="NONE" upgraderClass="axiomsl.metadata_upgraders.InstancePropertyUpgrader"/>
+		<property name="needsRebuildStatus" valueType="string" canBeEmpty="true" choices="NEEDS_REBUILD, NEEDS_REBUILD_INDEX, REBUILDING, ERROR_REBUILDING" upgraderClass="axiomsl.metadata_upgraders.InstancePropertyUpgrader"/>
+		<property name="isArchived" valueType="boolean" upgraderClass="axiomsl.metadata_upgraders.InstancePropertyUpgrader"/>
+		<property name="isFrozen" valueType="boolean" upgraderClass="axiomsl.metadata_upgraders.InstancePropertyUpgrader"/>
+        <property name="instanceDate" optional="true" valueType="date"/>
+        <property name="instanceKeyValues" optional="true" valueType="table" rowTypes="InstanceObject:instanceKeyValue"/>
+	</object>
+</metadata>

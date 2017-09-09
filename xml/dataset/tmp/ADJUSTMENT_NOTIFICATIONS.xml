@@ -1,0 +1,132 @@
+<data_set_category name="ADJUSTMENT_NOTIFICATIONS"
+                   description="Adjustment Notifications"
+                   windowTitle="Adjustment Notifications"
+                   entityName="Adjustment Notifications"
+                   icon="image.reports"
+                   windowIcon="windowicon.branch"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="FilteredNotifications"
+                   singleDataSet="FilteredNotifications"
+                   readOnlyMode="true">
+
+    <events>
+        <event name="adjNotification">
+            <filter property="eventType" value="AXIOM_OBJECT_UPDATE_EVENT"/>
+            <filter property="objectType" value="FilteredNotifications"/>
+        </event>
+    </events>
+
+    <parameters>
+        <parameter name="bringToFront" description="Bring this window to front on new notifications" type="boolean" defaultValue="true">
+                    <onParameterChange>
+                        <if>newValue != null
+                            <then>
+                                 editor.getUser().setUserPreference("bringToFront",newValue);
+                            </then>
+                        </if>
+                    </onParameterChange>
+		</parameter>
+        <parameter name="gotoParkedFinal" description="" type="Component" noSerialization="yes">
+			<attribute name="componentClass">"axiomsl.gui.adjustment.GoToPostingButton"</attribute>
+			<attribute name="tableName">"parkedFinal"</attribute>
+		</parameter>
+
+        <parameter name="parkedFinal" description="Parked Adjustments Notifications:" type="table" allowAddRemove="false" reorder="false" length="5">
+            <readonly/>
+            <parameter name="project" description="Project Name" type="string" length="10"/>
+            <parameter name="branch" description="Branch Name" type="string" length="10"/>
+            <parameter name="name" description="Data Source Name" type="String" length="10"/>
+            <parameter name="date" description="Date" type="string" length="10"/>
+            <parameter name="parkedFinal" description="# of Parked Records" type="integer" length="10"/>
+
+            <if> event("adjNotification") != null
+                <then>
+                    <if> event("adjNotification").getDbId().getDbId() == dataSet.getAxiomObject().getDbId()
+                        <then>
+                            dataSet.setAxiomObject(event("adjNotification").getObject());
+                            macro("refresh", event("adjNotification").getObject());
+                        </then>
+                    </if>
+                </then>
+            </if>
+        </parameter>
+
+        <parameter name="gotoParkedRejected" description="" type="Component" noSerialization="yes">
+			<attribute name="componentClass">"axiomsl.gui.adjustment.GoToRejectedButton"</attribute>
+			<attribute name="tableName">"parkedRejected"</attribute>
+		</parameter>
+        
+        <parameter name="parkedRejected" description="Rejected Adjustments Notifications:" type="table" allowAddRemove="false" reorder="false" length="5">
+            <readonly/>
+            <parameter name="project" description="Project Name" type="string" length="10"/>
+            <parameter name="branch" description="Branch Name" type="string" length="10"/>
+            <parameter name="name" description="Data Source Name" type="String" length="10"/>
+            <parameter name="date" description="Date" type="string" length="10"/>
+            <parameter name="parkedRejected" description="# of Rejected Records" type="integer" length="10"/>
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        macro("refresh", <originalAxiom/>);
+        param("bringToFront")=editor.getUser().getUserPreference("bringToFront",true);
+    </loadCode>
+
+    <saveCode>
+        editor.getUser().setUserPreference("bringToFront",param("bringToFront"));
+    </saveCode>
+
+    <macros>
+        <macro name="refresh" arguments="axiomObject">
+            var axiom = <axiomObject/>;
+            var notifications = <axiomObject/>.getTable("notifications");
+            var parkedFinal = list();
+            var parkedRejected = list();
+            <for> var i = 0
+                    <comma/>
+                    i &lt; notifications.size()
+                    <comma/> i++
+               <do>
+                   var notification = notifications.get(i);
+                   var instance = notification.getReference("dataSourceInstanceReference").getTargetObject();
+                   var props = new("axiomsl.server.instancemanager.DataSourceInstanceProperties").createProperties(instance, editor.getRemoteProxy().getAxiomEnvironment());
+                   var branchId = props.getUnderlyingObjectId().getBranchId();
+                   var resolver = editor.getRemoteProxy().getAxiomObjectManager().getResolver();
+                   var sourceDbId = resolver.resolve(props.getUnderlyingObjectId());
+                   var sourceName = resolver.getName(sourceDbId);
+
+                   var branch = editor.locateObjectById("Branch", branchId);
+                   var project = editor.locateObjectById("Project", branch.getString("projectId"));
+
+                   <if> notification.getInteger("parkedFinal") != 0
+                       <then>
+                           var row = tableRow();
+                           row.param("name") = sourceName;
+                           row.param("parkedFinal") = notification.getInteger("parkedFinal");
+                           row.param("date") = props.getInstancePropsDescription();
+                           row.param("branch") = branch.getName();
+                           row.param("project") = project.getName();
+                           row.setID(instance.getId());
+                           parkedFinal.add(row);
+                       </then>
+                   </if>
+
+                   <if> notification.getInteger("parkedRejected") != 0
+                       <then>
+                           var row = tableRow();
+                           row.param("name") = sourceName;
+                           row.param("parkedRejected") = notification.getInteger("parkedRejected");
+                           row.param("date") = props.getInstancePropsDescription();
+                           row.param("branch") = branch.getName();
+                           row.param("project") = project.getName();
+                           row.setID(instance.getId());
+                           parkedRejected.add(row);
+                       </then>
+                   </if>
+                </do>
+            </for>
+            param("parkedFinal") = parkedFinal;
+            param("parkedRejected") = parkedRejected;
+        </macro>
+    </macros>
+</data_set_category>

@@ -1,0 +1,470 @@
+<data_set_category name="SHORTHAND"
+	description="Shorthand Setup"
+	windowTitle="Shorthand Setup"
+	entityName="Shorthand"
+	icon="shorthand"
+	screenWidth="800"
+	screenHeight="500"
+    objectType="Shorthand"
+    extends="COMMON_UTILS, DOC_DATA">
+
+    <parameters>
+        <parameter name="models" description="Models" type="table" length="7" group="Models" keyParameter="name">
+            <parameter name="name" description="Model Name" lookupInPlace="yes" type="String" length="20" isDataSet="DataModel" wrapOnReport="true">
+                <validation>
+                    macro("checkModelExists");
+                    macro("checkUniqueness",list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+
+                <onParameterChange>
+                    var nodes = param("conditions").getAllNodes();
+
+                    var found = 0;
+
+                    <for>var i = 0 <comma/> i &lt; nodes.size() <comma/> i ++ <do>
+                        var nodeModels = nodes.get(i).param("models");
+
+                    <for>var j = 0 <comma/> j &lt; nodeModels.size() <comma/> j ++ <do>
+                        <if> oldValue == nodeModels.get(j).param("name")
+                        <then>
+                            nodeModels.remove(j);
+
+                            var newLine = nodeModels.addLine();
+                            newLine.param("name") = if(newValue == "", "[Empty]", newValue);
+
+                            found++;
+
+                            i = nodes.size();<!-- To break next level loop -->
+                            break;
+                        </then>
+
+                        </if>
+                    </do>
+                    </for>
+                    </do>
+                    </for>
+
+                    <if> found == 0
+                        <then>
+                            var newLine = param("conditions").param("models").addLine();
+                            newLine.param("name") = if(newValue == "", "[Empty]", newValue);
+                        </then>
+                    </if>
+
+                </onParameterChange>
+            </parameter>
+
+            <confirmAddRow>
+                macro("checkModelExistsOnConfirm");
+
+                macro("checkUniquenessOnConfirm", list());
+            </confirmAddRow>
+
+            <onRowAdded>
+                <!--Handling copy/paste operation-->
+                var newValue = addedRow.param("name");
+                <if> newValue != ""
+                   <then>
+                       var node = param("conditions").getAllNodes().get(0);
+                       var newLine = node.param("models").addLine();
+                       newLine.param("name") = if(newValue == "", "[Empty]", newValue);
+                   </then>
+                </if>
+            </onRowAdded>
+
+            <onRowDeleted>
+                var deletedName = deletedRow.param("name");
+
+                var nodes = param("conditions").getAllNodes();
+
+                <for>var i = 0 <comma/> i &lt; nodes.size() <comma/> i ++ <do>
+                    var nodeModels = nodes.get(i).param("models");
+
+                    <for>var j = 0 <comma/> j &lt; nodeModels.size() <comma/> j ++ <do>
+                        <if> deletedName == nodeModels.get(j).param("name")
+                        <then>
+                            nodeModels.remove(j);
+
+                            i = nodes.size();<!-- To break next level loop -->
+                            break;
+                        </then>
+
+                    </if>
+
+                    </do>
+                    </for>
+                </do>
+                </for>
+            </onRowDeleted>
+
+            <parameter name="description" description="Model Description" noSerialization="yes" type="String" wrapOnReport="true">
+                <readonly/>
+                <equals>
+                    <if> <param name="name"/> == ""
+                        <then>""</then>
+                        <else>
+                            editor.getRemoteProxy().getModelDescription(param("name"), editor.getBranchId());
+                        </else>
+                    </if>
+                </equals>
+            </parameter>
+        </parameter>
+
+
+        <parameter name="conditions" description="Conditions" type="tree" length="400" group="Conditions" rootNodeType="commonConditionsNode" defaultRootName="&lt;Default Conditions&gt;" namesAreGloballyUnique="false">
+
+            <nodeType name ="commonConditionsNode" description="Common Conditions" icon="" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="false" childrenTypes="modelConditionsNode">
+
+                <parameter name="condition" description="Conditions" type="Condition" length="7" group="Conditions">
+                    <attribute name="models">
+                        macro("getValidModels");
+                    </attribute>
+                </parameter>
+
+                <parameter name="models" description="Models" allowAddRemove="false" reorder="false" type="table" length="7" group="Condition Models" keyParameter="name">
+                    <readOnly/>
+                    <parameter name="name" readOnly="true" description="Model Name" lookupInPlace="no" type="String" length="20" wrapOnReport="true"/>
+                    <parameter name="description" description="Model Description" noSerialization="yes" type="String" wrapOnReport="true"/>
+                </parameter>
+            </nodeType>
+
+            <nodeType name ="modelConditionsNode" description="Overriden Condition" icon="windowicon.model" renameAllowed="true" deleteAllowed="true" hasChildren="false">
+                <parameter name="condition" description="Conditions" type="Condition" length="7" group="Conditions">
+                    <attribute name="models">
+                        macro("getValidModels");
+                    </attribute>
+
+                </parameter>
+
+                <parameter name="models" description="Models" type="table" length="7" group="Condition Models" keyParameter="name">
+                    <parameter name="name" description="Model Name" lookupInPlace="yes" type="String" length="20" wrapOnReport="true">
+                        <readonly/>
+                        <attribute name="lookupFromValues"> l("Data Model") <comma/>
+                            var result = list();
+                            var defaultModels = param("conditions").param("models");
+
+                            <for>var i = 0
+                                <comma/>
+                                i &lt; defaultModels.size()
+                                <comma/>
+                                i ++
+                                <do>
+                                    var model = defaultModels.get(i);
+                                    result.add(ndo(model.param("name"), model.param("description")));
+                                </do>
+                            </for>
+
+                            result
+                        </attribute>
+                        <validation>
+                            macro("checkModelExists");
+                            macro("checkUniqueness", list());
+                        </validation>
+                        <verifyForSave>
+                            macro("verifyNonEmpty");
+
+                             var l = list();
+                             var nodes = param("conditions").getAllNodes();
+                             var occurence = 0;
+                             <for>var i = 0 <comma/> i &lt; nodes.size() <comma/> i ++ <do>
+                                var models = nodes.get(i).param("models");
+
+                                 <for>var j = 0 <comma/> j &lt; models.size() <comma/> j ++ <do>
+                                        <if> models.get(j).param("name") == currentParameter.getParameterValue()
+                                            <then>
+                                                <if> occurence==0
+                                                    <then>
+                                                        occurence++;
+                                                    </then>
+                                                    <else>
+                                                        errorMessage(l("Duplicate model %1 in overriden conditions", currentParameter.getParameterValue()));
+                                                        return false;
+                                                    </else>
+                                                </if>
+                                            </then>
+                                        </if>
+                                    </do>
+                                 </for>
+                                </do>
+                              </for>
+
+                        </verifyForSave>
+
+                        <onParameterChange>
+                            var models = param("conditions").param("models");
+                            var model = list();
+                            model.add(newValue);
+                            macro("removeModels", models, model);
+                        </onParameterChange>
+                    </parameter>
+
+                    <confirmAddRow>
+                        macro("checkModelExistsOnConfirm");
+                        macro("checkUniquenessOnConfirm", list());
+                    </confirmAddRow>
+
+                    <onRowDeleted>
+                        var deletedName = deletedRow.param("name");
+                        var allModels = currentParameters.getParameterList().getRootList().getParameterValue("models"); <!-- ParameterList, not ParameterContext-->
+
+                        <for>var i = 0 <comma/> i &lt; allModels.size() <comma/> i ++<do>
+
+                            <if>deletedName == allModels.get(i).getParameterValue("name")
+                            <then>
+                                var valueForNewLine = if(deletedName == "", "[Empty]", deletedName);
+
+                                var occurence = 0;
+                                var nodes = param("conditions").getAllNodes();
+
+                                <for>var m = 0 <comma/> m &lt; nodes.size() <comma/> m ++ <do>
+                                    var models = nodes.get(m).param("models");
+
+                                     <for>var j = 0 <comma/> j &lt; models.size() <comma/> j ++ <do>
+                                            <if> models.get(j).param("name") == deletedName
+                                                <then>
+                                                    occurence++;
+                                                </then>
+                                            </if>
+                                        </do>
+                                     </for>
+                                    </do>
+                                </for>
+
+                                <if> occurence == 0
+                                <then>
+                                    var newLine = param("conditions").param("models").addLine();
+                                    newLine.param("name") = valueForNewLine;
+                                </then>
+                                </if>
+                            </then>
+                            </if>
+                        </do>
+                        </for>
+
+                    </onRowDeleted>
+
+                    <parameter name="description" description="Model Description" noSerialization="yes" type="String" wrapOnReport="true">
+                        <readonly/>
+                        <equals>
+                            <if> <param name="name"/> == ""
+                                <then>""</then>
+                                <else>
+                                    editor.getRemoteProxy().getModelDescription(param("name"), editor.getBranchId());
+                                </else>
+                            </if>
+                        </equals>
+                    </parameter>
+                </parameter>
+
+            </nodeType>
+            <onNodeDeleted>
+                var models = deletedNode.param("models");
+
+                <for>var i = 0 <comma/> i &lt; models.size() <comma/> i ++
+                    <do>
+                        var modelName = models.get(i).param("name");
+                        var newLine = param("conditions").param("models").addLine();
+                        newLine.param("name") = if(modelName == "", "[Empty]", modelName);
+                    </do>
+                </for>
+            </onNodeDeleted>
+
+            <onNodeAdded>
+                var models = addedNode.param("models");
+                <for>var i = 0 <comma/> i &lt; models.size() <comma/> i ++
+                    <do>
+                        var modelName = macro("getName", models.get(i));
+                        var modelExists = false;
+                        <for>var j = 0 <comma/> j &lt; param("models").size() <comma/> j ++
+                            <do>
+                                 <if>modelName == param("models").get(j).param("name")
+                                     <then>
+                                         modelExists = true;
+                                         break;
+                                     </then>
+                                 </if>
+                             </do>
+                         </for>
+                        <if>!modelExists
+                            <then>
+                                var modelRow = tableRow();
+                                modelRow.param("name") = models.get(i).param("name");
+                                modelRow.param("description") = models.get(i).param("description");
+                                param("models").add(modelRow);
+                            </then>
+                        </if>
+                    </do>
+                </for>
+
+
+                var commonModels = param("conditions").param("models");
+                macro("removeModels", commonModels, models);
+            </onNodeAdded>
+
+            <validateNode>
+                <if>newNode.type() == "modelConditionsNode"
+                    <then>
+                        var newModels = newNode.param("models");
+                        <for>var i = 0 <comma/> newModels != null and i &lt; newModels.size() <comma/> i ++
+                            <do>
+                                var modelName = macro("getName", newModels.get(i));
+
+                                <for>var j = 0 <comma/> j &lt; param("conditions").childCount() <comma/> j ++
+                                    <do>
+                                        var models = param("conditions").child(j).param("models");
+                                         <for>var k = 0 <comma/> k &lt; models.size() <comma/> k ++
+                                             <do>
+                                                 <if>modelName.equals(models.get(k).param("name"))
+                                                     <then>
+                                                         return l("Overriden condition node with %1 model already exists", modelName);
+                                                     </then>
+                                                 </if>
+                                             </do>
+                                         </for>
+                                    </do>
+                                </for>
+                            </do>
+                        </for>
+                    </then>
+                </if>
+            </validateNode>
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        var shorthand = <originalAxiom/>;
+
+        var accessor = new("axiomsl.accessors.ShorthandAccessor", shorthand);
+        var route = dataSet.getRouteFromCurrentBranch();
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor, route);
+
+        var templates = array("forward(models.value, name)");
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+
+        matcher.match(shorthand, currentParameters, array("models"), null, templates, parser, route);
+        matcher.match(shorthand, param("conditions"), array("condition"), null, templates, parser, route);
+
+        var overrides = shorthand.getTable("modelConditionOverrides");
+
+        var l = list();
+        var models = shorthand.getTable("models");
+
+        <for>var i = 0 <comma/> i &lt; models.size() <comma/> i ++<do>
+            l.add(models.get(i).getProperty("value").getTargetObjectName(dataSet.getRouteFromCurrentBranch()));
+        </do>
+        </for>
+
+         var nodes = list();
+
+        <for>var j = 0 <comma/> j &lt; overrides.size() <comma/> j ++ <do>
+            var overCond = overrides.get(j);
+
+            var newNode = param("conditions").createChild("modelConditionsNode", overCond.getString("name"));
+
+            matcher.match(overrides.get(j), newNode, array("condition", "models"), null, templates, parser, route);
+
+            var overModels = newNode.param("models");
+
+            <for>var i = 0 <comma/> i &lt; overModels.size() <comma/> i ++ <do>
+                l.remove(overModels.get(i).param("name"));
+                </do>
+            </for>
+
+            nodes.add(newNode);
+            </do>
+        </for>
+
+        param("conditions").param("models"); <!-- init default -->
+        <for>var i = 0 <comma/> i &lt; l.size() <comma/> i ++ <do>
+                var newLine = param("conditions").param("models").addLine();
+                newLine.param("name") = l.get(i);
+                </do>
+        </for>
+
+        <for>var i = 0 <comma/> i &lt; nodes.size() <comma/> i ++ <do>
+                nodes.get(i).addToParent();
+                </do>
+        </for>
+    </loadCode>
+
+    <saveCode>
+        var shorthandForSave = <axiomForSave/>;
+        var accessor = new("axiomsl.accessors.ShorthandAccessor", shorthandForSave);
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", route, accessor);
+
+        var templates = array("forward(models.value, name)");
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+
+        var modelSet = list();
+        matcher.match(shorthandForSave, currentParameters, array("models"), null, templates, parser, route);
+
+        var overrides = shorthandForSave.getTable("modelConditionOverrides");
+
+        <for>var i = 0 <comma/> i &lt; param("conditions").childCount() <comma/> i++<do>
+                var override = overrides.addRow("Shorthand:modelCondition");
+                var models = param("conditions").child(i).param("models");
+
+                <for> var j = 0 <comma/> j &lt; models.size() <comma/> j++<do>
+                        var modelName = models.get(j).param("name");
+                        <if> modelSet.contains(modelName)
+                            <then>
+                                errorMessage(l("Duplicate model %1", modelName));
+                            </then>
+                        </if>
+
+                        modelSet.add(modelName);
+                        var refObject = override.createObjectPropertyValue("DataModel:reference");
+                        refObject.setProperty("value", refObject.createReferencePropertyValue("DataModel",modelName));
+                    </do>
+                </for>
+
+                matcher.match(override, param("conditions").child(i), array("models", "condition"), null, templates, parser, route);
+                override.setProperty("name", param("conditions").child(i).getName());
+            </do>
+        </for>
+
+        matcher.match(shorthandForSave, param("conditions"), array("condition"), null, templates, parser, route);
+
+    </saveCode>
+
+    <macros>
+        <macro  name="removeModels" arguments="fromModelList,modelNameList">
+            <for>var j = 0 <comma/> j &lt; <modelNameList/>.size() <comma/> j ++
+                <do>
+                    var modelName = macro("getName", <modelNameList/>.get(j));
+                    <for>var i = 0 <comma/> i &lt; <fromModelList/>.size() <comma/> i ++
+                        <do>
+                            <if>modelName.equals(<fromModelList/>.get(i).param("name"))
+                                <then>
+                                    <fromModelList/>.remove(i);
+                                    break;
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+                </do>
+            </for>
+        </macro>
+
+        <macro name="getValidModels">
+            var l = list();
+            var models = param("models");
+            <for>var i = 0 <comma/> i &lt; models.size() <comma/> i ++
+                <do>
+                    var model = models.get(i);
+                    var modelName = model.param("name");
+                    <if>modelName != null and modelName != ""
+                        <then>
+                            l.add(modelName);
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;l
+        </macro>
+    </macros>
+</data_set_category>

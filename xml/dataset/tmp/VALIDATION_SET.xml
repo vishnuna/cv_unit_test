@@ -1,0 +1,1417 @@
+<data_set_category name="VALIDATION_SET" extends="COMMON_UTILS, DOC_DATA, SUBMISSION_UTILS"
+                   description="ValidationSet Setup"
+                   windowTitle="ValidationSet Setup"
+                   entityName="ValidationSet"
+                   icon="validation_set"
+                   screenWidth="600"
+                   screenHeight="350"
+                   objectType="ValidationSet">
+
+    <parameters>
+        <parameter name="preconditions" description="Preconditions" type="tree" length="400" group="Preconditions" rootNodeType="PreconditionRoot:node" defaultRootName="Preconditions" namesAreGloballyUnique="false"
+                plugInClass="axiomsl.gui.xbrl.editor.validation_set.PreconditionTreeParameterValue">
+            <onNodeRenamed>
+                <if>renamedNode.type().equals("Precondition:node")
+                    <then>
+                        <if>!renamedNode.getName().equals(renamedNode.param("preconditionName"))
+                            <then>
+                                renamedNode.param("preconditionName") = renamedNode.getName();
+                            </then>
+                        </if>
+                    </then>
+                </if>
+
+                <if>renamedNode.type().equals("Variable:node")
+                    <then>
+                        <if>!renamedNode.param("variableName").equals(renamedNode.getName())
+                            <then>
+                                renamedNode.param("variableName") = editor.getNameWithoutPrefix(renamedNode.getName());
+                            </then>
+                        </if>
+                    </then>
+                </if>
+            </onNodeRenamed>
+
+            <onNodeAdded>
+                <if>addedNode.type().equals("Precondition:node")
+                    <then>
+                        <if>!addedNode.getName().equals(addedNode.param("preconditionName"))
+                            <then>
+                                addedNode.param("preconditionName") = addedNode.getName();
+                            </then>
+                        </if>
+                    </then>
+                </if>
+            </onNodeAdded>
+
+            <onNodeDeleted>
+                <if>deletedNode.type().equals("Precondition:node")
+                    <then>
+                        var nodes = editor.getPreconditionLinkNodes(deletedNode.param("preconditionName"), param("validations"));
+                        <for>
+                            var i = 0;
+                            <comma/>
+                            i != nodes.size();
+                            <comma/>
+                            i++;
+                            <do>
+                                nodes.get(i).delete();
+                            </do>
+                        </for>
+                    </then>
+                </if>
+            </onNodeDeleted>
+
+            <nodeType name="Precondition:node" description="Precondition" icon="image.xbrl.precondition" renameAllowed="true" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="Variable:node" namesAreGloballyUnique="false">
+                <parameter name="preconditionName" description="Precondition Name" type="String" defaultValue="" group="Precondition Parameters" length="20">
+                    <default>
+                        editor.getNameWithoutPrefix(editor.getDefaultNodeName(currentNode))
+                    </default>
+
+                    <onParameterChange>
+                        currentNode.setName(newValue);
+                        var nodes = editor.getPreconditionLinkNodes(oldValue, param("validations"));
+                        <for>
+                            var i = 0;
+                            <comma/>
+                            i != nodes.size();
+                            <comma/>
+                            i++;
+                            <do>
+                                nodes.get(i).setName(l("Precondition: ").toString() + newValue);
+                                nodes.get(i).param("preconditionName") = newValue;
+                            </do>
+                            </for>
+                    </onParameterChange>
+
+                    <validation>
+                        editor.validateNodeName(currentNode, newValue);
+                    </validation>
+                </parameter>
+                <parameter name="preconditionDescription" description="Description" type="String" length="20" group="Precondition Parameters">
+                    <onParameterChange>
+                        var name = currentNode.getName();
+                        var node = editor.getPreconditionLinkNodes(name, param("validations"));
+                        <for>
+                            var i = 0;
+                            <comma/>
+                            i != node.size();
+                            <comma/>
+                            i++;
+                            <do>
+                                node.get(i).param("preconditionDescription") = newValue;
+                            </do>
+                        </for>
+                    </onParameterChange>
+                </parameter>
+                <parameter name="preconditionExpression" description="Expression" type="String" length="27"
+                           plugInClass="axiomsl.gui.xbrl.editor.validation_set.ExpressionParameterValue" group="Precondition Parameters">
+                    <onParameterChange>
+                        var name = currentNode.getName();
+                        var node = editor.getPreconditionLinkNodes(name, param("validations"));
+                        <for>
+                            var i = 0;
+                            <comma/>
+                            i != node.size();
+                            <comma/>
+                            i++;
+                            <do>
+                                node.get(i).param("preconditionExpression") = newValue;
+                            </do>
+                        </for>
+                    </onParameterChange>
+                    <attribute name="multiLine"> 2 </attribute>
+                    <attribute name="lineWrap"> true </attribute>
+                    <attribute name="lookupAppend">true</attribute>
+                    <attribute name="lookupFromValues"> l("Expression") <comma/>
+                        var l = list();
+                        <for>var i = 0;
+                            <comma/>
+                            i != currentNode.childCount();
+                            <comma/>
+                            i++;
+                            <do>
+                                l.add(ndo("$" + editor.getNameWithoutPrefix(currentNode.child(i).getName()), currentNode.child(i).param("variableDescription")));
+                            </do>
+                        </for>
+
+                        ;new("axiomsl.util.ui.NamedList", "Variables", l("Variables"), l.toArray()),
+                        macro("validationFunctions"),
+                        macro("axiomExpressionLanguage")
+
+                        <!--macro("userDefinedFunctions")-->
+                    </attribute>
+                </parameter>
+
+                <parameter name="infoPreconditionScope" description="" type="Component" group="Precondition Scope" noSerialization="yes">
+                    <attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+                    <attribute name="text">l("Scope must contain only 1 point.")</attribute>
+                    <attribute name="color">macro("LIGHT_BLUE")</attribute>
+                </parameter>
+
+                <parameter name="preconditionScope" description="Conditions" type="condition" group="Precondition Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.validation_set.VariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("LIST");
+                        l.add("EXTERNAL_LIST");
+                        l.add("SINGULAR_WILDCARD");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("ALWAYS_TRUE");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("OR");
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+
+                    <onParameterChange>
+                        var name = currentNode.getName();
+                        var node = editor.getPreconditionLinkNodes(name, param("validations"));
+                        <for>
+                            var i = 0;
+                            <comma/>
+                            i != node.size();
+                            <comma/>
+                            i++;
+                            <do>
+                                node.get(i).param("preconditionScope") = newValue;
+                            </do>
+                        </for>
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="view" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.ViewDocFileButton"</attribute>
+                </parameter>
+                <parameter name="upload" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.UploadHelpButton"</attribute>
+                </parameter>
+
+                <parameter name="docFile" description="Documentation File" type="string" length="40" group="Documentation" row="0" freehand="no">
+                </parameter>
+
+                <parameter name="comment" description="Notes" type="String" length="7" group="Documentation" freehand="no">
+                    <attribute name="multiLine">3</attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+                </parameter>
+
+            </nodeType>
+
+            <nodeType name="Variable:node" description="Variable" icon="image.xbrl.variable" renameAllowed="false" deleteAllowed="true"  hasChildren="true" childrenTypes="Variable:node" alphaNumericName="false" namesAreGloballyUnique="false">
+                <parameter name="variableName" description="Variable Name" type="String" defaultValue="" group="Variable Parameters" length="20">
+                    <default>
+                        editor.getNameWithoutPrefix(currentNode.getName());
+                    </default>
+
+                    <onParameterChange>
+                        <if>!newValue.equals(editor.getNameWithoutPrefix(currentNode.getName()))
+                            <then>
+                                currentNode.setName(l("Variable: ").toString() + newValue);
+                            </then>
+                        </if>
+                    </onParameterChange>
+                    <validation>
+                        editor.validateNodeName(currentNode, l("Variable: ").toString() + newValue)
+                    </validation>
+                </parameter>
+                <parameter name="variableDescription" description="Description" type="String" length="20" group="Variable Parameters">
+                </parameter>
+                <parameter name="variableBindType" description="Bind Type" type="String" length="20" group="Variable Parameters">
+                    choices(
+                    <asDescription>
+                        ndo("SINGLE_FACT",l("SINGLE_FACT")), ndo("SET_EXPRESSION",l("SET_EXPRESSION"))
+                    </asDescription>
+                    )
+                    <onParameterChange>
+                        currentNode.getNode().setAllowsChildren(newValue.equals("SET_EXPRESSION"));
+                        editor.updateTreeActions(currentNode);
+                    </onParameterChange>
+                </parameter>
+                <parameter name="variableExpression" description="Expression" type="String" length="27" group="Variable Parameters">
+                           <!--plugInClass="axiomsl.gui.xbrl.editor.validation_set.ExpressionParameterValue"-->
+                    <attribute name="multiLine"> 2 </attribute>
+                    <attribute name="lineWrap"> true </attribute>
+                    <attribute name="lookupAppend">true</attribute>
+                    <attribute name="lookupFromValues"> l("Expression") <comma/>
+                        var l = list();
+                        <for>var i = 0;
+                            <comma/>
+                            i != currentNode.childCount();
+                            <comma/>
+                            i++;
+                            <do>
+                                <if>currentNode.child(i).type().equals("Variable:node")
+                                    <then>
+                                        l.add(ndo("$" + editor.getNameWithoutPrefix(currentNode.child(i).getName()), currentNode.child(i).param("variableDescription")));
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+
+                        ;new("axiomsl.util.ui.NamedList", "Variables", l("Variables"), l.toArray()),
+                        macro("validationFunctions"),
+                        macro("axiomExpressionLanguage")
+                    </attribute>
+                    <if>param("variableBindType") == "SET_EXPRESSION"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+
+                <parameter name="variableBindIsMandatory" description="Bind Is Mandatory" type="Boolean" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableMustBeNonemptySequence" description="Must Be Nonempty Sequence" type="Boolean" group="Variable Parameters">
+                    <if>param("variableBindType") == "SET_EXPRESSION"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableHasFallbackValue" description="Has Fallback Value" type="Boolean" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackValueType" description="Fallback Value Type" type="String" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if> param("variableHasFallbackValue")
+                                <then>
+                                    <enabled/>
+                                    choices(
+                                    <asDescription>
+                                        ndo("VARCHAR",l("VARCHAR")), ndo("FLOAT",l("FLOAT")), ndo("INTEGER",l("INTEGER")), ndo("DATE",l("DATE"))
+                                    </asDescription>
+                                    )
+                                </then>
+                                <else>
+                                    <disabled/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackVarchar" description="Fallback Value" type="String" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>!param("variableHasFallbackValue")
+                                <then>
+                                    <disabled/>
+                                </then>
+                                <else>
+                                    <if>param("variableFallbackValueType") == "VARCHAR"
+                                        <then>
+                                            <if>param("variableHasFallbackValue")
+                                                <then>
+                                                    <enabled/>
+                                                </then>
+                                                <else>
+                                                    <disabled/>
+                                                </else>
+                                            </if>
+                                        </then>
+                                        <else>
+                                            <removed/>
+                                        </else>
+                                    </if>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackDate" description="Fallback Value" type="Date" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>param("variableFallbackValueType") == "DATE"
+                                <then>
+                                    <if> param("variableHasFallbackValue")
+                                        <then>
+                                            <enabled/>
+                                        </then>
+                                        <else>
+                                            <disabled/>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackFloat" description="Fallback Value" type="Double" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>param("variableFallbackValueType") == "FLOAT"
+                                <then>
+                                    <if>param("variableHasFallbackValue")
+                                        <then>
+                                            <enabled/>
+                                        </then>
+                                        <else>
+                                            <disabled/>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackInt" description="Fallback Value" type="Integer" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>param("variableFallbackValueType") == "INTEGER"
+                                <then>
+                                    <if>param("variableHasFallbackValue")
+                                        <then>
+                                            <enabled/>
+                                        </then>
+                                        <else>
+                                            <disabled/>
+                                        </else>
+                                    </if>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+
+                <parameter name="singleFactScope" description="Conditions" type="condition" group="Single Fact Scope"
+                        plugInClass="axiomsl.gui.xbrl.editor.validation_set.VariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("LIST");
+                        l.add("EXTERNAL_LIST");
+                        l.add("SINGULAR_WILDCARD");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("ALWAYS_TRUE");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("OR");
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+
+                    <if>param("variableBindType") == "SINGLE_FACT"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+
+                <parameter name="sequenceScope" description="Conditions" type="condition" group="Set Scope"
+                        plugInClass="axiomsl.gui.xbrl.editor.validation_set.VariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("EXTERNAL_LIST");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+                    <if>param("variableBindType") == "SET_EXPRESSION"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+
+                <parameter name="iterationScope" description="Conditions" type="condition" group="Iteration Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.validation_set.VariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("EXTERNAL_LIST");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="PreconditionRoot:node" description="Precondition Node" icon="image.xbrl.precondition" renameAllowed="false" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="Precondition:node" namesAreGloballyUnique="false"/>
+
+        </parameter>
+
+        <parameter name="validations" description="Validations" type="tree" length="400" group="Validations" rootNodeType="ValidationRoot:node" defaultRootName="Validation" namesAreGloballyUnique="false"
+            plugInClass="axiomsl.gui.xbrl.editor.validation_set.ValidationTreeParameterValue">
+            <onNodeAdded>
+                <if>addedNode.type().equals("Precondition:node");
+                    <then>
+                        <for>
+                            var i = 0;
+                            <comma/>
+                            i != param("preconditions").childCount();
+                            <comma/>
+                            i++;
+                            <do>
+                                <if> param("preconditions").child(i).param("preconditionName").equals(addedNode.getName());
+                                    <then>
+                                        addedNode.param("preconditionName") = param("preconditions").child(i).param("preconditionName");
+                                        addedNode.param("preconditionDescription") = param("preconditions").child(i).param("preconditionDescription");
+                                        addedNode.param("preconditionExpression") = param("preconditions").child(i).param("preconditionExpression");
+                                        addedNode.setName(l("Precondition: ").toString() + addedNode.getName());
+                                        addedNode.param("preconditionScope") = param("preconditions").child(i).param("preconditionScope");
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+
+                        var row = editor.findRowByPreconditionName(addedNode.param("preconditionName"), addedNode.parent().param("validationPreconditions") );
+
+                        <if>row == null
+                            <then>
+                                var line = addedNode.parent().param("validationPreconditions").addLine();
+                                line.param("validationPrecondition") = addedNode.param("preconditionName");
+                            </then>
+                        </if>
+                    </then>
+                </if>
+                <if>addedNode.type().equals("Validation:node")
+                    <then>
+                        <if>!addedNode.param("name").equals(addedNode.getName())
+                            <then>
+                                addedNode.param("name") = addedNode.getName();
+                            </then>
+                        </if>
+                    </then>
+                </if>
+            </onNodeAdded>
+
+            <onNodeDeleted>
+                <if>deletedNode.type().equals("Precondition:node");
+                    <then>
+                        var validation = deletedNode.parent();
+
+                        var row = editor.findRowIndexByPreconditionName(editor.getNameWithoutPrefix(deletedNode.getName()), validation.param("validationPreconditions"));
+                        <if> row != -1
+                            <then>
+                                validation.param("validationPreconditions").remove(row);
+                            </then>
+                        </if>
+                    </then>
+                </if>
+            </onNodeDeleted>
+
+            <onNodeRenamed>
+                <if>renamedNode.type().equals("Validation:node")
+                    <then>
+                        <if>!renamedNode.param("name").equals(renamedNode.getName())
+                            <then>
+                                renamedNode.param("name") = renamedNode.getName();
+                            </then>
+                        </if>
+                    </then>
+                </if>
+
+                <if>renamedNode.type().equals("Variable:node")
+                    <then>
+                        <if>!renamedNode.param("variableName").equals(renamedNode.getName())
+                            <then>
+                                renamedNode.param("variableName") = editor.getNameWithoutPrefix(renamedNode.getName());
+                            </then>
+                        </if>
+                    </then>
+                </if>
+
+            </onNodeRenamed>
+
+            <nodeType name="Validation:node" description="Validation" icon="image.xbrl.validation" renameAllowed="true" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="Variable:node, Precondition:node" namesAreGloballyUnique="false">
+                <parameter name="name" description="Validation Name" type="String" defaultValue="" group="Validation Parameters" length="20">
+                    <onParameterChange>
+                        <if>!newValue.equals(currentNode.getName())
+                            <then>
+                                currentNode.setName(newValue);
+                            </then>
+                        </if>
+                    </onParameterChange>
+                    <default>
+                        currentNode.getName();
+                    </default>
+                    <validation>
+                        editor.validateNodeName(currentNode, newValue);
+                    </validation>
+                </parameter>
+                <parameter name="description" description="Description" type="String" length="30" group="Validation Parameters">
+                    <attribute name="multiLine"> 2 </attribute>
+                    <attribute name="lineWrap"> true </attribute>
+                </parameter>
+                <parameter name="expression" description="Expression" type="String" length="27" group="Validation Parameters"
+                           plugInClass="axiomsl.gui.xbrl.editor.validation_set.ExpressionParameterValue">
+                    <attribute name="multiLine"> 2 </attribute>
+                    <attribute name="lineWrap"> true </attribute>
+                    <attribute name="lookupAppend">true</attribute>
+                    <attribute name="lookupFromValues"> l("Expression") <comma/>
+                        var l = list();
+                        <for>var i = 0;
+                            <comma/>
+                            i != currentNode.childCount();
+                            <comma/>
+                            i++;
+                            <do>
+                                <if>currentNode.child(i).type().equals("Variable:node")
+                                    <then>
+                                        l.add(ndo("$" + editor.getNameWithoutPrefix(currentNode.child(i).getName()), currentNode.child(i).param("variableDescription")));
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+                        ;new("axiomsl.util.ui.NamedList", "Variables", l("Variables"), l.toArray()),
+                        macro("validationFunctions"),
+                        macro("axiomExpressionLanguage")
+                    </attribute>
+                </parameter>
+                <parameter name="validationPreconditions" description="Preconditions" type="table" keyParameter="validationPrecondition" length="3" autoSortRows="true" group="Validation Parameters">
+                    <onRowAdded>
+                        var prec = editor.findPreconditionByName(addedRow.param("validationPrecondition"), param("preconditions"));
+
+                        <if>prec != null
+                            <then>
+                                var precNode = currentNode.createChild("Precondition:node", l("Precondition: ").toString() + prec.param("preconditionName"));
+                                precNode.param("preconditionName") = prec.param("preconditionName");
+                                precNode.param("preconditionExpression") = prec.param("preconditionExpression");
+                                precNode.param("preconditionDescription") = prec.param("preconditionDescription");
+
+                                precNode.param("preconditionScope") = prec.param("preconditionScope");
+
+                                precNode.addToParent();
+                            </then>
+                        </if>
+                    </onRowAdded>
+
+                    <onRowDeleted>
+                        var removed = currentNode.findNodeByName(l("Precondition: ").toString() + deletedRow.param("validationPrecondition"));
+                        <if>removed != null;
+                            <then>
+                                removed.remove();
+                            </then>
+                        </if>
+                    </onRowDeleted>
+
+                    <parameter name="validationPrecondition" description="Precondition" type="String" length="20" group="Validation Parameters">
+                        <attribute name="lookupFromValues"> l("Preconditions").toString() <comma/>
+                            var l = list();
+                            <for>var i = 0;
+                                <comma/>
+                                i != param("preconditions").childCount();
+                                <comma/>
+                                i++;
+                                <do>
+                                    l.add(ndo(param("preconditions").child(i).param("preconditionName"), param("preconditions").child(i).param("preconditionDescription")));
+                                </do>
+                            </for>
+                            l;
+                        </attribute>
+                        <readonly/>
+                    </parameter>
+                    <parameter name="validationPreconditionDescription" description="Description" type="String" length="20" group="Validation Parameters" defaultValue="">
+                        <readonly/>
+
+                        <equals>
+                            <if>param("validationPrecondition") == ""
+                                <then>""</then>
+                                <else>
+                                    var prec = editor.findPreconditionByName(param("validationPrecondition"), param("preconditions"));
+                                    <if>prec != null
+                                        <then>
+                                            prec.param("preconditionDescription");
+                                        </then>
+                                    </if>
+                                </else>
+                            </if>
+                        </equals>
+                    </parameter>
+                </parameter>
+                <parameter name="validationErrorMessage" description="Error Message" type="String" length="27" group="Validation Parameters">
+                    <attribute name="multiLine"> 2 </attribute>
+                    <attribute name="lineWrap"> true </attribute>
+                </parameter>
+
+                <parameter name="scope" description="Conditions" type="condition" group="Validation Scope"
+                        plugInClass="axiomsl.gui.xbrl.editor.validation_set.VariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("EXTERNAL_LIST");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>   <attribute name="disabledOperations">
+                    var l = list();
+                    l.add("NOT");
+                    ;l
+                </attribute>
+                </parameter>
+
+                <parameter name="view" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.ViewDocFileButton"</attribute>
+                </parameter>
+                <parameter name="upload" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.UploadHelpButton"</attribute>
+                </parameter>
+
+                <parameter name="docFile" description="Documentation File" type="string" length="40" group="Documentation" row="0" freehand="no">
+                </parameter>
+
+                <parameter name="comment" description="Notes" type="String" length="7" group="Documentation" freehand="no">
+                    <attribute name="multiLine">3</attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+                </parameter>
+
+            </nodeType>
+
+            <nodeType name="Precondition:node" description="Precondition" icon="image.xbrl.precondition" renameAllowed="false" deleteAllowed="true" hasChildren="false" alphaNumericName="false" namesAreGloballyUnique="false">
+                <parameter name="edit" description="" type="Component" group="Precondition Parameters" noSerialization="yes">
+                    <attribute name="componentClass">"axiomsl.gui.xbrl.editor.validation_set.EditPreconditionButton"</attribute>
+                </parameter>
+                <parameter name="preconditionName" description="Precondition Name" type="String" defaultValue="" group="Precondition Parameters" length="20">
+                    <onParameterChange>
+                        var precRow = editor.findRowByPreconditionName(oldValue, currentNode.parent().param("validationPreconditions"));
+
+                        <if>precRow != null
+                            <then>
+                                precRow.param("validationPrecondition") = newValue;
+                            </then>
+                        </if>
+                    </onParameterChange>
+                    <default>
+                        currentNode.getName();
+                    </default>
+                    <readonly/>
+                </parameter>
+                <parameter name="preconditionDescription" description="Description" type="String" length="20" group="Precondition Parameters">
+                    <readonly/>
+                    <onParameterChange>
+                        var precRow = editor.findRowByPreconditionName(currentNode.param("preconditionName"), currentNode.parent().param("validationPreconditions"));
+                        <if>precRow != null
+                            <then>
+                                precRow.param("validationPreconditionDescription") = newValue;
+                            </then>
+                        </if>
+                    </onParameterChange>
+                </parameter>
+                <parameter name="preconditionExpression" description="Expression" type="String" length="27" group="Precondition Parameters">
+                    <readonly/>
+                    <attribute name="multiLine"> 2 </attribute>
+                    <attribute name="lineWrap"> true </attribute>
+                </parameter>
+
+                <parameter name="preconditionScope" description="" type="condition" group="Precondition Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.validation_set.VariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("LIST");
+                        l.add("EXTERNAL_LIST");
+                        l.add("SINGULAR_WILDCARD");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("ALWAYS_TRUE");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("OR");
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+                    <readonly/>
+                </parameter>
+
+                <nodeNameLookup>
+                    editor.getPreconditionNames(param("preconditions"));
+                </nodeNameLookup>
+            </nodeType>
+
+            <nodeType name="Variable:node" description="Variable" icon="image.xbrl.variable" renameAllowed="false" deleteAllowed="true" hasChildren="true" childrenTypes="Variable:node" alphaNumericName="false" namesAreGloballyUnique="false">
+                <parameter name="variableName" description="Variable Name" type="String" defaultValue="" group="Variable Parameters" length="20">
+                    <default>
+                        editor.getNameWithoutPrefix(currentNode.getName());
+                    </default>
+
+                    <onParameterChange>
+                        <if>!newValue.equals(editor.getNameWithoutPrefix(currentNode.getName()))
+                            <then>
+                                currentNode.setName(l("Variable: ").toString() + newValue);
+                            </then>
+                        </if>
+                    </onParameterChange>
+                    <validation>
+                        editor.validateNodeName(currentNode, l("Variable: ").toString() + newValue);
+                    </validation>
+                </parameter>
+                <parameter name="variableDescription" description="Description" type="String" length="20" group="Variable Parameters">
+                </parameter>
+                <parameter name="variableBindType" description="Bind Type" type="String" length="20" group="Variable Parameters">
+                    choices(
+                    <asDescription>
+                        ndo("SINGLE_FACT", l("SINGLE_FACT")),
+                        ndo("SET_EXPRESSION", l("SET_EXPRESSION"))
+                    </asDescription>
+                    )
+                    <onParameterChange>
+                        currentNode.getNode().setAllowsChildren(newValue.equals("SET_EXPRESSION"));
+                        editor.updateTreeActions(currentNode);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="variableExpression" description="Expression" type="String" length="20" group="Variable Parameters">
+                    <if>param("variableBindType") == "SET_EXPRESSION"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                    <attribute name="multiLine"> 2 </attribute>
+                    <attribute name="lineWrap"> true </attribute>
+                    <attribute name="lookupAppend">true</attribute>
+                    <attribute name="lookupFromValues"> l("Expression") <comma/>
+                        var l = list();
+                        <for>var i = 0;
+                            <comma/>
+                            i != currentNode.childCount();
+                            <comma/>
+                            i++;
+                            <do>
+                                <if>currentNode.child(i).type().equals("Variable:node")
+                                    <then>
+                                        l.add(ndo("$" + editor.getNameWithoutPrefix(currentNode.child(i).getName()), currentNode.child(i).param("variableDescription")));
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+                        ;new("axiomsl.util.ui.NamedList", "Variables", l("Variables"), l.toArray()),
+                        macro("validationFunctions"),
+                        macro("axiomExpressionLanguage")
+                    </attribute>
+                </parameter>
+
+                <parameter name="variableBindIsMandatory" description="Bind Is Mandatory" type="Boolean" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableMustBeNonemptySequence" description="Must Be Nonempty Sequence" type="Boolean" group="Variable Parameters">
+                    <if>param("variableBindType") == "SET_EXPRESSION"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableHasFallbackValue" description="Has Fallback Value" type="Boolean" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackValueType" description="Fallback Value Type" type="String" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if> param("variableHasFallbackValue")
+                                <then>
+                                    <enabled/>
+                                    choices(
+                                    <asDescription>
+                                        ndo("VARCHAR", l("VARCHAR")),
+                                        ndo("FLOAT", l("FLOAT")),
+                                        ndo("INTEGER", l("INTEGER")),
+                                        ndo("DATE", l("DATE"))
+                                    </asDescription>
+                                    )
+                                </then>
+                                <else>
+                                    <disabled/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackVarchar" description="Fallback Value" type="String" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>!param("variableHasFallbackValue")
+                                <then>
+                                    <disabled/>
+                                </then>
+                                <else>
+                                    <if>param("variableFallbackValueType") == "VARCHAR"
+                                        <then>
+                                            <if>param("variableHasFallbackValue")
+                                                <then>
+                                                    <enabled/>
+                                                </then>
+                                                <else>
+                                                    <disabled/>
+                                                </else>
+                                            </if>
+                                        </then>
+                                        <else>
+                                            <removed/>
+                                        </else>
+                                    </if>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackDate" description="Fallback Value" type="Date" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>param("variableFallbackValueType") == "DATE"
+                                <then>
+                                    <if> param("variableHasFallbackValue")
+                                        <then>
+                                            <enabled/>
+                                        </then>
+                                        <else>
+                                            <disabled/>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackFloat" description="Fallback Value" type="Double" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>param("variableFallbackValueType") == "FLOAT"
+                                <then>
+                                    <if>param("variableHasFallbackValue")
+                                        <then>
+                                            <enabled/>
+                                        </then>
+                                        <else>
+                                            <disabled/>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackInt" description="Fallback Value" type="Integer" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>param("variableFallbackValueType") == "INTEGER"
+                                <then>
+                                    <if>param("variableHasFallbackValue")
+                                        <then>
+                                            <enabled/>
+                                        </then>
+                                        <else>
+                                            <disabled/>
+                                        </else>
+                                    </if>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+
+                <parameter name="singleFactScope" description="Conditions" type="condition" group="Single Fact Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.validation_set.VariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("LIST");
+                        l.add("EXTERNAL_LIST");
+                        l.add("SINGULAR_WILDCARD");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("ALWAYS_TRUE");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("OR");
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+                    <if>param("variableBindType") == "SINGLE_FACT"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+
+                <parameter name="sequenceScope" description="Conditions" type="condition" group="Set Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.validation_set.VariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("EXTERNAL_LIST");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                    var l = list();
+                    l.add("NOT");
+                    ;l
+                </attribute>
+                    <if>param("variableBindType") == "SET_EXPRESSION"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="iterationScope" description="Conditions" type="condition" group="Iteration Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.validation_set.VariableScopeParametersValue" >
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("EXTERNAL_LIST");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="ValidationRoot:node" description="Validation Node" icon="image.xbrl.validation" renameAllowed="false" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="Validation:node" namesAreGloballyUnique="false">
+            </nodeType>
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        var validationSet = <originalAxiom/>;
+        macro("fillGUI", validationSet);
+    </loadCode>
+
+    <saveCode>
+
+        var accessor = new("axiomsl.accessors.ValidationSetAccessor", <axiomForSave/>, editor.getAxiomEnvironment());
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor);
+
+        var preconditions = <axiomForSave/>.getTable("preconditions");
+        <for>
+            var i = 0;
+            <comma/>
+            i != param("preconditions").childCount();
+            <comma/>
+            i++;
+            <do>
+                var precondition = preconditions.addRow("ValidationSet:precondition");
+                var preconditionNode = param("preconditions").child(i);
+
+                precondition.setProperty("name", preconditionNode.param("preconditionName"));
+                precondition.setProperty("id", preconditionNode.getID());
+                precondition.setProperty("description", preconditionNode.param("preconditionDescription"));
+
+                precondition.setProperty("expression", preconditionNode.param("preconditionExpression"));
+
+
+                <if>!preconditionNode.param("comment").isEmpty()
+                    <then>
+                        precondition.setProperty("comment", preconditionNode.param("comment"));
+                    </then>
+                </if>
+                <if>!preconditionNode.param("docFile").isEmpty()
+                    <then>
+                        precondition.setProperty("docFile", preconditionNode.param("docFile"));
+                    </then>
+                </if>
+
+                var variables = precondition.getTable("variables");
+                <for>
+                    var j = 0;
+                    <comma/>
+                    j != param("preconditions").child(i).childCount();
+                    <comma/>
+                    j++;
+                    <do>
+                        var variable = variables.addRow("ValidationSet:variable");
+
+                        editor.recursiveSaveVariable(param("preconditions").child(i).child(j), variable, accessor);
+                    </do>
+                </for>
+                <!--save scopes -->
+                var conditionSequence = new("axiomsl.util.condition.ConditionSequence", param("preconditions").child(i).param("preconditionScope"));
+                var conditionTree = precondition.createTreePropertyValue("Condition");
+
+                precondition.setProperty("scopeForEach", conditionTree);
+                conditionSequence.assembleCondition(conditionTree.getRootNode(), parser);
+            </do>
+        </for>
+
+        <axiomForSave/>.setProperty("preconditions", preconditions);
+
+        var validations = <axiomForSave/>.getTable("validations");
+        <for>
+            var i = 0;
+            <comma/>
+            i != param("validations").childCount();
+            <comma/>
+            i++;
+            <do>
+                var validation = validations.addRow("ValidationSet:validation");
+                var validationNode = param("validations").child(i);
+
+                validation.setProperty("name", validationNode.param("name"))
+                validation.setProperty("id", validationNode.param("name"));
+                validation.setProperty("expression", validationNode.param("expression"));
+
+                <if>!validationNode.param("description").isEmpty()
+                    <then>
+                        validation.setProperty("description", validationNode.param("description"));
+                    </then>
+                </if>
+
+                <if>!validationNode.param("validationErrorMessage").isEmpty()
+                    <then>
+                        validation.setProperty("errorMessage", validationNode.param("validationErrorMessage"));
+                    </then>
+                </if>
+
+                <if>!validationNode.param("comment").isEmpty()
+                    <then>
+                        validation.setProperty("comment", validationNode.param("comment"));
+                    </then>
+                </if>
+                <if>!validationNode.param("docFile").isEmpty()
+                    <then>
+                        validation.setProperty("docFile", validationNode.param("docFile"));
+                    </then>
+                </if>
+
+                var conditionSequence = new("axiomsl.util.condition.ConditionSequence", param("validations").child(i).param("scope"));
+                var conditionTree = validation.createTreePropertyValue("Condition");
+
+                validation.setProperty("scopeForEach", conditionTree);
+                conditionSequence.assembleCondition(conditionTree.getRootNode(), parser);
+
+                var validationPreconditions = validation.getTable("preconditions");
+                var validationVariables = validation.getTable("variables");
+
+                <for>
+                    var j = 0;
+                    <comma/>
+                    j != validationNode.childCount();
+                    <comma/>
+                    j++;
+                    <do>
+
+                        <if>param("validations").child(i).child(j).type().equals("Precondition:node");
+                            <then>
+                                var preconditionIndex = editor.findPreconditionIndexByName(param("validations").child(i).child(j).param("preconditionName"), param("preconditions"));
+                                var link = validationPreconditions.addRow("ValidationSet:localPreconditionReference");
+                                link.setProperty("value", validation.createReferencePropertyValue(dataSet.getRouteFromCurrentBranch(), array(<axiomForSave/>, "preconditions", <axiomForSave/>.getTable("preconditions").get(preconditionIndex))));
+                            </then>
+                            <else>
+                                var variable = validationVariables.addRow("ValidationSet:variable");
+
+                                editor.recursiveSaveVariable(param("validations").child(i).child(j), variable, accessor);
+                            </else>
+                        </if>
+                    </do>
+                </for>
+            </do>
+        </for>
+
+        <axiomForSave/>.setProperty("validations", validations);
+    </saveCode>
+
+    <macros>
+        <macro name="fillGUI" arguments="axiomObject">
+            var accessor = new("axiomsl.accessors.ValidationSetAccessor", validationSet, editor.getAxiomEnvironment());
+            var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor);
+
+            param("preconditions");
+            <for>
+                var i = 0;
+                <comma/>
+                i != validationSet.getTable("preconditions").size();
+                <comma/>
+                i++;
+                <do>
+                    var precondition = validationSet.getTable("preconditions").get(i);
+                    var prec = param("preconditions").createChild("Precondition:node", precondition.getString("name"));
+
+                    prec.param("comment") = validationSet.getTable("preconditions").get(i).getOptionalValue("comment", "");
+                    prec.param("docFile") = validationSet.getTable("preconditions").get(i).getOptionalValue("docFile", "");
+
+                    prec.setID(precondition.getString("id"));
+                    prec.param("preconditionDescription") = precondition.getString("description");
+                    prec.param("preconditionExpression") = precondition.getString("expression");
+                    prec.param("preconditionName") = precondition.getString("name");
+                    prec.param("preconditionScope") =  new("axiomsl.util.condition.ConditionSequence", precondition.getTree("scopeForEach").getRootNode(), parser);
+
+                    <for>
+                        var j = 0;
+                        <comma/>
+                        j != precondition.getTable("variables").size();
+                        <comma/>
+                        j++;
+                        <do>
+                            var variable = precondition.getTable("variables").get(j);
+                            var precVar = prec.createChild("Variable:node", l("Variable: ").toString() + variable.getString("name"));
+                            editor.recursiveLoadVariables(precVar, variable, accessor);
+                            precVar.addToParent();
+                        </do>
+                    </for>
+                    prec.addToParent();
+                </do>
+            </for>
+
+            param("validations");
+            <for>
+                var i = 0;
+                <comma/>
+                i != validationSet.getTable("validations").size();
+                <comma/>
+                i ++;
+                <do>
+                    var validation = validationSet.getTable("validations").get(i);
+                    var validationNode = param("validations").createChild("Validation:node", validation.getString("name"));
+
+                    validationNode.param("expression") = validation.getString("expression");
+                    validationNode.param("description") = validation.getString("description");
+                    validationNode.param("name") = validation.getString("name");
+
+                    validationNode.param("comment") = validation.getOptionalValue("comment", "");
+                    validationNode.param("docFile") = validation.getOptionalValue("docFile", "");
+                    validationNode.param("validationErrorMessage") = validation.getOptionalValue("errorMessage", "");
+                    validationNode.param("validationPreconditions");
+                    validationNode.param("scope") = new("axiomsl.util.condition.ConditionSequence", validation.getTree("scopeForEach").getRootNode(), parser);;
+                    <for>
+                        var j = 0;
+                        <comma/>
+                        j != validation.getTable("preconditions").size();
+                        <comma/>
+                        j++;
+                        <do>
+                            var validationPrec = validation.getTable("preconditions").get(j).getReference("value").getTargetObject();
+
+                            var line = validationNode.param("validationPreconditions").addLine();
+                            line.param("validationPrecondition") = validationPrec.getString("name");
+                            line.param("validationPreconditionDescription") = validationPrec.getOptionalValue("description", "");
+
+                            var validationPrecNode = validationNode.createChild("Precondition:node", l("Precondition: ").toString() + validationPrec.getString("name"));
+                            validationPrecNode.param("preconditionName") = validationPrec.getString("name");
+                            validationPrecNode.param("preconditionExpression") = validationPrec.getString("expression");
+                            validationPrecNode.param("preconditionDescription") = validationPrec.getString("description");
+
+                            validationPrecNode.param("preconditionScope") = new("axiomsl.util.condition.ConditionSequence", validationPrec.getTree("scopeForEach").getRootNode(), parser);
+
+                            validationPrecNode.addToParent();
+                        </do>
+                    </for>
+
+                    <for>
+                        var j = 0;
+                        <comma/>
+                        j != validation.getTable("variables").size();
+                        <comma/>
+                        j++;
+                        <do>
+                            var variable = validation.getTable("variables").get(j);
+                            var valVar = validationNode.createChild("Variable:node", l("Variable: ").toString() + variable.getString("name"));
+                            editor.recursiveLoadVariables(valVar, variable, accessor);
+                            valVar.addToParent();
+                        </do>
+                    </for>
+                    validationNode.addToParent();
+                </do>
+            </for>
+        </macro>
+
+        <macro name="validationFunctions">
+            var validationsFunctions = list();
+            <!--"containReport" done like in axiomsl.xbrl.validation.tag.ContainsReportTag.getSupportedTagNames-->
+            validationsFunctions.add(ndo("containReport(reportName)", l("Contains Report Function")));
+            validationsFunctions.add(ndo("iaf:sum(list_of_facts)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-equal(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-less-than(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-less-equal-than(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-greater-than(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-greater-equal-than(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-add(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-subtract(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-divide(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-multiply(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:abs(fact)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-unary-minus(fact)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:min(list_of_facts)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:max(list_of_facts)", l("Custom Function")));
+            validationsFunctions.add(ndo("xs:QName(name)", l("Custom Function")));
+            validationsFunctions.add(ndo("matches(fact, regex)", l("Custom Function. Checks if fact's value matches 'regex'")));
+
+
+            ;new("axiomsl.util.ui.NamedList", "Validation Functions", l("Validation Functions"), validationsFunctions.toArray())
+        </macro>
+   </macros>
+
+</data_set_category>

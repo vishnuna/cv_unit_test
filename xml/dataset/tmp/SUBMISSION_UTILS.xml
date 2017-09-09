@@ -1,0 +1,243 @@
+<data_set_category name="SUBMISSION_UTILS"
+                   description="Submission Utils"
+                   windowTitle=""
+                   objectType="">
+
+    <macros>
+        <macro name="safeParamInit" arguments="paramName, object, propertyName, defaultValue">
+            <if><object/>.propertyIsSet(<propertyName/>)
+                <then>
+                    param(<paramName/>) = <object/>.getProperty(<propertyName/>);
+                </then>
+                <else>
+                    param(<paramName/>) = <defaultValue/>;
+                </else>
+            </if>
+        </macro>
+
+        <macro name="safeRowParamInit" arguments="rowName, paramName, object, propertyName, defaultValue">
+            <if><object/>.propertyIsSet(<propertyName/>)
+                <then>
+                    <rowName/>.param(<paramName/>) = <object/>.getProperty(<propertyName/>);
+                </then>
+                <else>
+                    <rowName/>.param(<paramName/>) = <defaultValue/>;
+                </else>
+            </if>
+        </macro>
+
+        <macro name="checkObjectExists" arguments="objectType, objectName, needReturn">
+            var errorMsg = null;
+            <if>!macro("isEmpty",<objectName/>)
+                <then>
+                    var name = macro("getName",<objectName/>);
+                    var resolver = editor.getAxiomObjectManager().getResolver();
+                    var branchId = resolver.resolve(editor.createNameId("Branch", param("project") + "!" + param("branch")));
+
+                    var objectId = function("axiomsl.server.object_framework.ObjectID", "createNameId",<objectType/>, branchId.getDbId(), name);
+                    <if>!editor.getAxiomObjectManager().objectExists(objectId, editor.getAxiomEnvironment())
+                        <then>
+                            errorMsg = l("%1 '%2' doesn't exist!",<objectType/>, param("project") + "!" + param("branch") + ":" + name);
+                        </then>
+                        <else>
+                            <if>resolver.getObjectEntry(resolver.resolve(objectId)).isInvalid()
+                                <then>
+                                    errorMsg = l("%1 '%2' is invalid!",<objectType/>, param("project") + "!" + param("branch") + ":" + name);
+                                </then>
+                                <else>
+                                    errorMsg = null;
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </then>
+            </if>
+            <if>errorMsg != null
+                <then>
+                    <if>
+                        <needReturn/>
+                        <then>
+                            return errorMsg;
+                        </then>
+                        <else>
+                            errorMessage(errorMsg);
+                            false
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    true
+                </else>
+            </if>
+        </macro>
+
+        <macro name="checkGlobalObjectExists" arguments="objectType, objectName, needReturn">
+            var errorMsg = null;
+            <if>!macro("isEmpty",<objectName/>)
+                <then>
+                    var name = macro("getName",<objectName/>);
+                    var resolver = editor.getAxiomObjectManager().getResolver();
+
+                    var objectId = function("axiomsl.server.object_framework.ObjectID", "createNameId",<objectType/>, null, name);
+                    <if>!editor.getAxiomObjectManager().objectExists(objectId, editor.getAxiomEnvironment())
+                        <then>
+                            errorMsg = l("%1 '%2' doesn't exist!",<objectType/>, name);
+                        </then>
+                        <else>
+                            <if>resolver.getObjectEntry(resolver.resolve(objectId)).isInvalid()
+                                <then>
+                                    errorMsg = l("%1 '%2' is invalid!",<objectType/>, name);
+                                </then>
+                                <else>
+                                    errorMsg = null;
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </then>
+            </if>
+            <if>errorMsg != null
+                <then>
+                    <if>
+                        <needReturn/>
+                        <then>
+                            return errorMsg;
+                        </then>
+                        <else>
+                            errorMessage(errorMsg);
+                            false
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    true
+                </else>
+            </if>
+        </macro>
+
+
+        <macro name="checkNonEmpty" arguments="object, objectDescription">
+            <case>
+                <object/>
+                == "" or (
+                <object/>
+                instanceof "axiomsl.server.object_framework.FreehandPropertyValue" and <object/>.getExpression() == "")
+                <then>
+                    errorMessage(l("%1 cannot be empty",<objectDescription/>));
+                    false
+                </then>
+                <else>
+                    true
+                </else>
+            </case>
+        </macro>
+
+        <macro name="validateEntityName">
+            var name = newValue;
+            <case>
+                name == ""
+                <then>return l("%1 cannot be empty", currentParameter.getDescription(false))</then>
+
+                <!--!isAnIdentifier(name)-->
+                <!--<then>return l("%1 must be alphanumeric and start with a letter", currentParameter.getDescription(false))</then>-->
+            </case>
+        </macro>
+
+        <macro name="isAlphaNumeric" arguments="value, result">
+            <if>
+                <value/> != null
+                <then>
+                    var j = 0;
+                    <for>
+                        <comma/>
+                        j &lt;<value/>.length()
+                        <comma/>
+                        j++
+                        <do>
+                            var c = "" +<value/>.charAt(j);
+                            <if>!((c &gt;= 'a' and c &lt;= 'z') || (c &gt;= 'A' and c &lt;= 'Z') || (c &gt;= '0' and c &lt;= '9') || c == '_')
+                                <then>
+                                    break;
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+                    <if>j ==<value/>.length()
+                        <then>
+                            <result/> = true;
+                        </then>
+                        <else>
+                            <result/> = false;
+                        </else>
+                    </if>
+
+                </then>
+                <else>
+                    <result/> = false;
+                </else>
+            </if>
+        </macro>
+
+        <macro name="validateListOfNumbers" arguments="numberList">
+            <if><numberList/> != null and <numberList/>.length() &gt; 0
+                <then>
+                    var numberArray = <numberList/>.split(",");
+                    <for>var j = 0
+                        <comma/>
+                        j &lt; numberArray.size()
+                        <comma/>
+                        j++
+                        <do>
+                            <try>
+                                function("java.lang.Integer", "parseInt", numberArray.get(j).trim());
+                                <catch>var e</catch>
+                                return l("%1 must contain a list of numbers divided by ','", currentParameter.getDescription(false))
+                            </try>
+                        </do>
+                    </for>
+                </then>
+            </if>
+        </macro>
+
+        <macro name="checkNodeIsUnique" arguments="nodeName, needReturn">
+            var parent = currentNode.parent();
+            var message = null;
+            <for>var i = 0
+                <comma/>
+                i &lt; parent.childCount();
+                <comma/>
+                i++
+                <do>
+                    <if>parent.child(i) != currentNode and parent.child(i).getName().equals(<nodeName/>)
+                        <then>
+                            message = l("There are several %1 nodes %2 in %3", currentNode.getNode().m_Type.m_sDescription, <nodeName/>, parent);
+                        </then>
+                    </if>
+                </do>
+            </for>
+            <if>
+                <needReturn/>
+                <then>
+                    return message;
+                </then>
+                <else>
+                    <if>message != null
+                        <then>
+                            errorMessage(message);
+                            false
+                        </then>
+                        <else>
+                            true
+                        </else>
+                    </if>
+                </else>
+            </if>
+        </macro>
+
+        <macro name="isReportingSystemDisabled" arguments="name">
+            ; !function("axiomsl.util.ReportingSystems", "isReportingSystemEnabled", param("enabledReportingSystems"), <name/>)
+        </macro>
+        
+    </macros>
+
+</data_set_category>

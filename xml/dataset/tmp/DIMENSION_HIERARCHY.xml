@@ -1,0 +1,409 @@
+<data_set_category name="DIMENSION_HIERARCHY" description="Dimension Hierarchy Setup"
+                   windowTitle="Dimension Hierarchy Setup" entityName="DimensionHierarchy"
+                   icon="dimension" screenWidth="800" screenHeight="500" objectType="DimensionHierarchy"
+                   extends="COMMON_UTILS, DOC_DATA">
+    <parameters>
+        <parameter name="longName" description="Long Name" type="String" group="Parameters" length="50">
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+
+            <validation>
+                <if>newValue == ""
+                    <then>
+                        return l("%1 cannot be empty", currentParameter.getDescription(false));
+                    </then>
+                </if>
+            </validation>
+        </parameter>
+
+        <parameter name="domainId" description="Domain ID" type="String" group="Parameters" length="50">
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+
+            <validation>
+                <if>newValue == ""
+                    <then>
+                        return l("%1 cannot be empty", currentParameter.getDescription(false));
+                    </then>
+                </if>
+            </validation>
+        </parameter>
+
+        <parameter name="dimensionId" description="Dimension ID" type="String" group="Parameters" length="50">
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+
+            <validation>
+                <if>newValue == ""
+                    <then>
+                        return l("%1 cannot be empty", currentParameter.getDescription(false));
+                    </then>
+                </if>
+            </validation>
+        </parameter>
+
+        <parameter name="dimensionType" description="Dimension Type" type="String" group="Parameters">
+            <choices>
+                <asDescription>
+                    ndo("FIXED", "Fixed"),
+                    ndo("DATA_DRIVEN", "Data-Driven")
+                </asDescription>
+            </choices>
+
+            <onParameterChange>
+                <if>newValue == "FIXED" and oldValue == "DATA_DRIVEN"
+                   <then>
+                       var rootMember = param("hierarchy");
+                       rootMember.param("id") = "root";
+                       rootMember.param("longName") = "root";
+                       rootMember.setName("root");
+                       rootMember.setID("root");
+                   </then>
+                </if>
+            </onParameterChange>
+        </parameter>
+
+        <parameter name="dataType" description="Data Type" group="Parameters" type="String">
+            <if>param("dimensionType") == "FIXED"
+                <then>
+                    <removed/>
+                </then>
+                <else>
+                    <enabled/>
+                    <choices>
+                        "VARCHAR", "INTEGER", "FLOAT", "DATE"
+                    </choices>
+                </else>
+            </if>
+        </parameter>
+
+        <parameter name="hierarchy" description="Hierarchy" type="tree" group="Hierarchy" rootNodeType="memberNode" showsRoot="false" showsLeftBottomPanel="true"> <!--  -->
+            <additionalActions>
+                <action name="addRoot" componentClass="axiomsl.gui.xbrl.editor.dimension.AddHierarchyButton"/>
+                <separator/>
+                <action name="expandAll" componentClass="axiomsl.gui.xbrl.editor.dimension.ExpandAllButton"/>
+                <separator/>
+                <action name="showShortNames" componentClass="axiomsl.gui.xbrl.editor.dimension.ShowMemberIdsButton"/>
+            </additionalActions>
+
+            <if>param("dimensionType") == "DATA_DRIVEN"
+                <then>
+                    <removed/>
+                </then>
+                <else>
+                    <enabled/>
+                </else>
+            </if>
+
+            <nodeType name="memberNode" description="Member" renameAllowed="true" deleteAllowed="true"
+                      hasChildren="true" childrenAreFixed="false" alphaNumericName="false"
+                      childrenTypes="memberNode" iconFactory="axiomsl.gui.xbrl.editor.dimension.MemberIconFactory" childrenNamesAreUnique="false">
+                <parameter name="childCount" description="Child Count" type="integer" group="Dev" defaultValue="0"
+                           hidden="true">
+                </parameter>
+
+                <parameter name="longName" description="Long Name" type="string" group="Member Properties" length="30">
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+
+                    <validation>
+                        <if>newValue == ""
+                            <then>
+                                return l("%1 cannot be empty", currentParameter.getDescription(false));
+                            </then>
+                        </if>
+                    </validation>
+
+                    <onParameterChange>
+                        currentNode.setName(newValue);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="id" description="ID" type="string" group="Member Properties" length="30">
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+
+                    <validation>
+                        <if>newValue == ""
+                            <then>
+                                return l("%1 cannot be empty", currentParameter.getDescription(false));
+                            </then>
+                        </if>
+                    </validation>
+
+                    <onParameterChange>
+                        currentNode.setID(newValue);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="description" description="Description" type="string" group="Member Properties"
+                           length="30"/>
+
+                <parameter name="hasHiddenOrphans" description="Contains More Than its Children" type="boolean"
+                           group="Member Properties" defaultValue="false">
+                    <!-- before new way of DH impl: -->
+                    <!--<if>param("childCount") == 0-->
+                        <!--<then>-->
+                            <!--<removed/>-->
+                        <!--</then>-->
+                        <!--<else>-->
+                            <!--<enabled/>-->
+                        <!--</else>-->
+                    <!--</if>-->
+                    <!-- new way of DH impl: -->
+                    <if>param("childCount") == 0 or currentNode.parent() == null
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+
+                <parameter name="isCompleteBreakdown" description="Is Complete Breakdown" type="boolean"
+                           group="Member Properties" defaultValue="true">
+                    <!-- before new way of DH impl: -->
+                    <!--<if>currentNode.parent() == null-->
+                        <!--<then>-->
+                            <!--<removed/>-->
+                        <!--</then>-->
+                    <!--</if>-->
+                    <!-- new way of DH impl: -->
+                    <if>currentNode.parent() == null or (currentNode.parent() != null and currentNode.parent().parent() == null)
+                        <then>
+                            <removed/>
+                        </then>
+                    </if>
+                </parameter>
+
+                <parameter name="isUsedInStandardReports" description="Is Used in Standard Reports" type="boolean"
+                           group="Member Properties" defaultValue="true">
+                    <onParameterChange>
+                        <if>newValue
+                            <then>
+                                currentNode.setForeground("0,0,0");
+                            </then>
+                            <else>
+                                currentNode.setForeground("128,128,128");
+                            </else>
+                        </if>
+                    </onParameterChange>
+                </parameter>
+
+                <!--documentation-->
+                <parameter name="view" description="ads" type="Component" noSerialization="yes" group="Documentation"
+                           row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.ViewDocFileButton"</attribute>
+                </parameter>
+                <parameter name="upload" description="ads" type="Component" noSerialization="yes" group="Documentation"
+                           row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.UploadHelpButton"</attribute>
+                </parameter>
+
+                <parameter name="docFile" description="Documentation File" type="string" length="30"
+                           group="Documentation" row="0"/>
+
+                <parameter name="comment" description="Notes" type="String" length="7" group="Documentation">
+                    <attribute name="multiLine">3</attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+                </parameter>
+            </nodeType>
+
+            <onNodeAdded>
+                <if>addedNode.parent() != null
+                    <then>
+                        addedNode.parent().param("childCount") = addedNode.parent().childCount();
+                    </then>
+                </if>
+                addedNode.param("longName") = addedNode.getName();
+            </onNodeAdded>
+
+            <onNodeDeleted>
+                <if>deletedNode.parent() != null
+                    <then>
+                        deletedNode.parent().param("childCount") = deletedNode.parent().childCount();
+                    </then>
+                </if>
+            </onNodeDeleted>
+
+            <onNodeRenamed>
+                renamedNode.param("longName") = renamedNode.getName();
+            </onNodeRenamed>
+        </parameter>
+    </parameters>
+
+    <loadCode>
+        var dimension=<originalAxiom/>;
+
+        param("longName") = dimension.getString("longName");
+        param("dimensionId") = dimension.getString("xbrlDimensionId");
+        param("domainId") = dimension.getString("xbrlDomainId");
+        param("dimensionType") = dimension.getString("dimensionType");
+
+        <if>param("dimensionType") == "DATA_DRIVEN" and dimension.propertyIsSet("dataType")
+            <then>
+                param("dataType") = dimension.getOptionalString("dataType");
+            </then>
+            <else>
+                param("dataType") = "VARCHAR";
+            </else>
+        </if>
+
+        <if>param("dimensionType") == "FIXED"
+            <then>
+                var rootMember = param("hierarchy");
+                var hierarchy = dimension.getTree("hierarchy");
+
+                rootMember.name() = hierarchy.getRootNode().getProperty("longName");
+
+                var allNodes = hierarchy.getAllNodes();
+                <for>var i = 0
+                    <comma/>
+                    i &lt; allNodes.size()
+                    <comma/>
+                    i++
+                    <do>
+                        var propertyNode = allNodes.get(i);
+                        var memberNode;
+                        var parentNode = null;
+                        <if>i == 0
+                            <then>
+                                memberNode = rootMember;
+                            </then>
+                            <else>
+                                var parentID = propertyNode.getParentNode().getProperty("id");
+                                parentNode = rootMember.findNodeByID(parentID);
+                                memberNode = parentNode.createChild("memberNode", propertyNode.getProperty("longName"));
+                            </else>
+                        </if>
+
+                        memberNode.setID(propertyNode.getProperty("id"));
+                        memberNode.param("description") = propertyNode.getProperty("description");
+                        memberNode.param("longName") = propertyNode.getProperty("longName");
+                        memberNode.param("id") = propertyNode.getProperty("id");
+                        memberNode.param("isCompleteBreakdown") = propertyNode.getOptionalValue("isCompleteBreakdown",
+                        true);
+                        memberNode.param("isUsedInStandardReports") =
+                        !propertyNode.getOptionalValue("isNotUsedInStandardReports", false);
+                        <if>!memberNode.param("isUsedInStandardReports")
+                            <then>
+                                memberNode.setForeground("128,128,128");
+                            </then>
+                        </if>
+
+                        memberNode.param("comment") = propertyNode.getOptionalValue("comment", "");
+                        memberNode.param("docFile") = propertyNode.getOptionalValue("docFile", "");
+                        memberNode.param("childCount") = propertyNode.getChildCount();
+                        memberNode.param("hasHiddenOrphans") = propertyNode.getOptionalValue("hasHiddenOrphans", false);
+
+                        <if>parentNode!= null
+                            <then>
+                                memberNode.addToParent();
+                            </then>
+                        </if>
+                    </do>
+                </for>
+            </then>
+        </if>
+
+    </loadCode>
+
+    <saveCode>
+        var dimension=<axiomForSave/>;
+
+        dimension.setProperty("longName", param("longName"));
+        dimension.setProperty("xbrlDimensionId", param("dimensionId"));
+        dimension.setProperty("xbrlDomainId", param("domainId"));
+        dimension.setProperty("dimensionType", param("dimensionType"));
+        <if>param("dimensionType") == "DATA_DRIVEN"
+            <then>
+                dimension.setProperty("dataType", param("dataType"));
+            </then>
+
+        </if>
+
+        <if>param("dimensionType") == "FIXED"
+            <then>
+                var rootMember = param("hierarchy");
+                var allTreeNodes = rootMember.getAllNodes();
+                var propertyTree = dimension.createTreePropertyValue("DimensionHierarchy:member");
+                dimension.setProperty("hierarchy", propertyTree);
+
+                <for>var i = 0
+                    <comma/>
+                    i &lt; allTreeNodes.size()
+                    <comma/>
+                    i ++
+                    <do>
+                        var memberNode = allTreeNodes.get(i);
+                        var parentNode = null;
+                        var node;
+                        <if>i != 0
+                            <then>
+                                parentNode = propertyTree.locate(memberNode.parent().param("id"), null);
+                                node = parentNode.addChild("DimensionHierarchy:member");
+                                <!-- the below fork is temporary! the root node must be excluded -->
+                                <if>memberNode.param("isCompleteBreakdown") == null
+                                    <then>node.setProperty("isCompleteBreakdown", false);</then>
+                                    <else>node.setProperty("isCompleteBreakdown", memberNode.param("isCompleteBreakdown"));</else>
+                                </if>
+                            </then>
+                            <else>
+                                node = propertyTree.getRootNode();
+                            </else>
+                        </if>
+
+                        node.setProperty("id", memberNode.param("id"));
+                        node.setProperty("longName", memberNode.param("longName"));
+                        node.setProperty("description", memberNode.param("description"));
+                        node.setProperty("name", memberNode.param("id"));
+                        node.setProperty("longName", memberNode.param("longName"));
+                        <if>memberNode.param("childCount") > 0 and memberNode.param("hasHiddenOrphans") != null
+                            <then>
+                                node.setProperty("hasHiddenOrphans", memberNode.param("hasHiddenOrphans"));
+                            </then>
+                        </if>
+                        node.setProperty("isNotUsedInStandardReports", !memberNode.param("isUsedInStandardReports"));
+
+                        <if>memberNode.param("comment") != ""
+                            <then>
+                                node.setProperty("comment", memberNode.param("comment"));
+                            </then>
+                        </if>
+                        <if>memberNode.param("docFile") != ""
+                            <then>
+                                node.setProperty("docFile", memberNode.param("docFile"));
+                            </then>
+                        </if>
+                    </do>
+                </for>
+            </then>
+        </if>
+    </saveCode>
+
+    <newCode>
+
+        trace("     DIMENSION_HIERARCHY.xml");
+
+        var rootMember = param("hierarchy");
+        rootMember.param("id") = "root";
+        rootMember.param("longName") = "root";
+        rootMember.setName("root");
+        rootMember.setID("root");
+
+        <!-- the below is for way of DH impl -->
+        var memberNode = rootMember.createChild("memberNode", "root_1");
+        memberNode.param("id") = "root_1";
+        memberNode.param("longName") = "root_1";
+        memberNode.setName("root_1");
+        memberNode.setID("root_1");
+        memberNode.addToParent();
+    </newCode>
+
+</data_set_category>

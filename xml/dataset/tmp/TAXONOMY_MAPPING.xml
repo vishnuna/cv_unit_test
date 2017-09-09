@@ -1,0 +1,284 @@
+<data_set_category name="TAXONOMY_MAPPING" description="Taxonomy Mapping Setup" windowTitle="Taxonomy Mapping Setup"
+                   entityName="Taxonomy Mapping" icon="measure" screenWidth="800" screenHeight="500"
+                   objectType="TaxonomyMapping" singleDataSet="TaxonomyMapping" fixedNameMode="true" extends="COMMON_UTILS"> <!--DOC_DATA-->
+    <parameters>
+
+        <parameter name="maxContextNameLength" description="Maximum Context Name Length" type="Integer" group="General"/>
+        <parameter name="maxReportZAxesInModel" description="Maximum number of Z axes on reports used for querying coordinates" type="Integer" group="General"/>
+        <parameter name="varcharFactValueSize" description="Varchar Fact Value Size" type="Integer" group="General"/>
+        <parameter name="freezeLevel" description="Freeze level" type="integer" group="General" length="20"  optional="true" defaultValue="1">
+            <validation>
+                <if>newValue &lt; 1
+                    <then>
+                        return l("Freeze Level must be greater than or equal to 1");
+                    </then>
+                </if>
+            </validation>
+        </parameter>
+        <!--
+            instance keys
+        -->
+        <parameter name="instanceKeys" description="Instance Keys" type="table" length="5" keyParameter="name" group="General" tableTransposed="true" compareByID="true">
+            <parameter name="name" description="Key Name" type="String">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="description" description="Key Description" type="String"/>
+            <parameter name="type" description="Key Type" type="String">
+                choices(<asDescription>
+                ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE"))
+            </asDescription>)
+                <default>
+                    'VARCHAR'
+                </default>
+            </parameter>
+            <parameter name="size" description="Key Size" type="Integer">
+                <if>
+                    <param name="type"/> not in ("VARCHAR", "UNICODE")
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        <default>10</default>
+                    </else>
+                </if>
+            </parameter>
+        </parameter>
+
+        <!--
+            stream keys
+        -->
+        <parameter name="streamKeys" description="Stream Keys" type="table" length="5" keyParameter="streamKeyName" group="General" tableTransposed="true" compareByID="true">
+            <parameter name="streamKeyName" description="Stream Key Name" type="String">
+                <!--<validation>-->
+                    <!--macro("validateColumnName");-->
+                    <!--macro("checkUniquenessIgnoreCase", list());-->
+                <!--</validation>-->
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+
+                <attribute name="lookupFromValues"> l("Stream Key Name") <comma/>
+                    <!-- fills TaxonomyMappingDataSetEditor.streamsMap btw -->
+                    editor.getStreams();
+                </attribute>
+
+                <onParameterChange>
+                    <!-- res is of TaxonomyMappingDataSetEditor.StreamKeyResultWrapper type -->
+                    var res = editor.streamLookupFire(param("streamKeyName"));
+
+                    <!-- res == null if the stream was not looked up, but it was typed there manually. -->
+                    <if> res != null
+                        <then>
+
+                            <if> res.lookupSourceName != null
+                                <then>
+                                    param("lookupSource") = res.lookupSourceName;
+                                    param("lookupCodeField") = res.codeField;
+                                    param("lookupDescriptionField") = res.descriptionField;
+                                </then>
+                            </if>
+
+                            param("streamKeyType") = res.streamKeyType;
+                            <if> res.streamKeyType == "VARCHAR"
+                                <then>
+                                    param("size") = res.streamKeySize;
+                                </then>
+                            </if>
+
+                            <if> res.dpe != null
+                                <then>
+                                    param("dataPermissionEntity") = res.dpe;
+                                </then>
+                            </if>
+                            <if> res.dpJoinSource != null
+                                <then>
+                                    param("dataPermissionJoinSource") = res.dpJoinSource;
+                                    param("dataPermissionJoinField") = res.dpJoinField;
+                                </then>
+                            </if>
+                        </then>
+                    </if>
+                </onParameterChange>
+
+            </parameter>
+            <parameter name="streamKeyDescription" description="Key Description" type="String"/>
+            <parameter name="streamKeyType" description="Key Type" type="String">
+                choices(<asDescription>
+                ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE"))
+            </asDescription>)
+                <default>
+                    'VARCHAR'
+                </default>
+            </parameter>
+            <parameter name="size" description="Key Size" type="Integer">
+                <if>
+                    <param name="streamKeyType"/> not in ("VARCHAR", "UNICODE")
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        <default>10</default>
+                    </else>
+                </if>
+            </parameter>
+            <parameter name="lookupSource" description="Lookup Source" type="String" isDataSet="DataSource" canClearDataSet="true"/>
+
+            <parameter name="lookupCodeField" description="Value Field" type="String">
+                <if>
+                    <param name="lookupSource"/> == ""
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        <if> param("lookupSource").indexOf("!!!") &lt; 0
+                            <then>
+                                <choices>
+                                    editor.getRemoteProxy().lookupFieldsInDataSource(<param name="lookupSource"/>, editor.getBranchId());
+                                </choices>
+                            </then>
+                        </if>
+                    </else>
+                </if>
+            </parameter>
+            <parameter name="lookupDescriptionField" description="Description Field" type="String">
+                <if>
+                    <param name="lookupSource"/> == ""
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        <if> param("lookupSource").indexOf("!!!") &lt; 0
+                            <then>
+                                <choices>
+                                    editor.getRemoteProxy().lookupFieldsInDataSource(<param name="lookupSource"/>, editor.getBranchId());
+                                </choices>
+                            </then>
+                        </if>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="dataPermissionEntity" description="Data Permission Entity" type="String">
+                <attribute name="lookupFromValues">l("Data Permission Entity")
+                    <comma/>
+                    var lookupList = list();
+                    var entityList = editor.getRemoteProxy().lookupObjects("DataPermissionEntity");
+
+                    <for>var i = 0<comma/>i &lt; entityList.size()<comma/>i ++
+                        <do>
+                            var entityName = entityList.get(i).getName();
+
+                            trace("     " + entityName);
+
+                            var dataPermissionEntity = editor.locateObjectByName("DataPermissionEntity", entityName);
+
+                            <if>param("streamKeyType") == dataPermissionEntity.getString("type")
+                                <then>
+                                    lookupList.add(entityName);
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+
+                    lookupList
+
+                </attribute>
+                <attribute name="lookupMultipleSelect">false</attribute>
+                <verifyForSave>
+                    var entityName = param("dataPermissionEntity");
+
+                    <if> entityName.length() == 0 or entityName.indexOf("!!!") &gt; -1
+                        <then>
+                            true
+                        </then>
+                        <else>
+                            var dataPermissionEntity = editor.locateObjectByName("DataPermissionEntity",
+                            param("dataPermissionEntity"));
+
+                            <if>param("streamKeyType") != dataPermissionEntity.getString("type")
+                                <then>
+                                    errorMessage(l("Data permission entity type should match with column type."));
+                                    false
+                                </then>
+                                <else>
+                                    true
+                                </else>
+                            </if>
+
+                        </else>
+                    </if>
+
+                </verifyForSave>
+            </parameter>
+            <parameter name="dataPermissionJoinSource" description="Join Source For Permissions" type="String" isDataSet="DataSource" canClearDataSet="true"/>
+            <parameter name="dataPermissionJoinField" description="Join Field For Permissions" type="String">
+                <if>
+                    <param name="dataPermissionJoinSource"/> == ""
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        <if> param("dataPermissionJoinSource").indexOf("!!!") &lt; 0
+                            <then>
+                                <choices>
+                                    editor.getRemoteProxy().lookupFieldsInDataSource(<param name="dataPermissionJoinSource"/>, editor.getBranchId());
+                                </choices>
+                            </then>
+                        </if>
+                    </else>
+                </if>
+            </parameter>
+        </parameter>
+
+        <parameter name="showTotalsInBold" description="Show Total cells in bold" type="boolean" group="Mapped Report Viewer" optional="true" defaultValue="false"/>
+    </parameters>
+
+    <loadCode>
+        param("maxContextNameLength") =<originalAxiom/>.getInteger("maxContextNameLength");
+        param("maxReportZAxesInModel") =<originalAxiom/>.getInteger("maxReportZAxesInModel");
+        param("varcharFactValueSize") =<originalAxiom/>.getInteger("varcharFactValueSize");
+        param("freezeLevel") =<originalAxiom/>.getOptionalValue("freezeLevel",1);
+        param("showTotalsInBold") =<originalAxiom/>.getOptionalValue("showTotalsInBold", false);
+        <!--
+            populate "instanceKeys"/"streamKeys".
+        -->
+        var route = dataSet.getRouteFromCurrentBranch();
+        var templates = array("default(streamKeys.dataPermissionEntity)", "default(streamKeys.dataPermissionJoinSource)", "default(streamKeys.dataPermissionJoinField)");
+        var params = array("instanceKeys", "streamKeys");
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(<originalAxiom/>, currentParameters, params, array("keyParameters.lookupFormula", "nonKeyParameters.lookupFormula"), templates, null, route);
+    </loadCode>
+
+    <saveCode>
+        <!--var matcher = new("axiomsl.gui.util.MatchingSaveUtil");-->
+
+        <!--<axiomForSave/>.setProperty("dbSourceForResults",<axiomForSave/>.createReferencePropertyValue("DBSource",-->
+        <!--param("dbSource")));-->
+        <!--<axiomForSave/>.setProperty("storageType", param("storageType"));-->
+
+        <axiomForSave/>.setProperty("maxContextNameLength", param("maxContextNameLength"));
+        <axiomForSave/>.setProperty("maxReportZAxesInModel", param("maxReportZAxesInModel"));
+        <axiomForSave/>.setProperty("varcharFactValueSize", param("varcharFactValueSize"));
+        <axiomForSave/>.setProperty("freezeLevel", param("freezeLevel"));
+        <axiomForSave/>.setProperty("showTotalsInBold", param("showTotalsInBold"));
+
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var templates = array("dictionaryReference(streamKeys.lookupCodeField, lookupSource, layout)", "dictionaryReference(streamKeys.lookupDescriptionField, lookupSource, layout)", "dictionaryReference(streamKeys.dataPermissionJoinField, dataPermissionJoinSource, layout)");
+        var params = array("instanceKeys", "streamKeys");
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(<axiomForSave/>, currentParameters, params, array("keyParameters.lookupFormula", "nonKeyParameters.lookupFormula"), templates, null, route);
+
+    </saveCode>
+
+</data_set_category>

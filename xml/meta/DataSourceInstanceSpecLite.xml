@@ -1,0 +1,8 @@
+<!-- object passed as parameter to instance management functions -->
+<metadata>
+	<object type="DataSourceInstanceSpecLite" version="1">
+		<property name="underlyingObject" valueType="url" targetObjectType="DataSource"/>
+		<property name="instanceDate" optional="true" valueType="date"/>
+		<property name="instanceKeyValues" optional="true" valueType="table" rowTypes="InstanceObject:instanceKeyValue"/>
+	</object>
+</metadata>

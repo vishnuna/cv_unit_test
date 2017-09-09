@@ -1,0 +1,129 @@
+<metadata>
+    <object type="TabularReport" extends="ModelBasedReport" version="10">
+        <property name="fields" valueType="table" canBeEmpty="false" rowTypes="TabularReport:field"/>
+        <property name="syntheticFields" valueType="table" rowTypes="TabularReport:syntheticField"/>
+        <property name="subTotalFields" valueType="table" rowTypes="TabularReport:subTotalField"/>
+        <property name="auxFields" valueType="table" rowTypes="TabularReport:auxField"/>
+        <property name="mappings" valueType="table" rowTypes="TabularReport:mapping"/>
+        <property name="condition" valueType="tree" optional="true" rootNodeType="Condition"/>
+        <property name="xslTransformationFile" valueType="string"/>
+        <property name="postProcessingCode" valueType="string" optional="true"/>
+        <property name="xmlHeader" valueType="string" optional="true"/>
+        <property name="xmlHeaderIsExpression" valueType="boolean" optional="true"/>
+        <property name="totalsBeforeDetails" valueType="boolean" defaultValue="false"/>
+        <property name="groupHeadersOnEachPage" valueType="boolean" defaultValue="true"/>
+        <property name="aggregateRecords" valueType="boolean" defaultValue="true"/>
+        <property name="subtotalsInData" valueType="boolean" defaultValue="false"/>
+        <property name="detailSet" valueType="url" targetObjectType="DetailSet" optional="true"/>
+        <property name="printSetup" valueType="object" objectType="PrintSetup"/>        
+        <property name="parameterValuesForPreview" valueType="table" optional="true" rowTypes="Task:parameterValue"/>
+        <property name="submissionFileEncoding" valueType = "string" optional="true" defaultValue="UTF-8" canBeEmpty="false"/>
+        <property name="disableDataTypeValidation" valueType="boolean" optional="true" defaultValue="true"/>
+
+        <property name="schemaBasedXMLGeneration" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="xsdSchema" valueType="string" optional="true"/>
+        <property name="xsdSchemaAdditional" valueType="table" optional="true" rowTypes="TabularReport:additionalSchema"/>
+        <property name="xsdRootElementName" valueType="string" optional="true"/>
+        <property name="xsdSchemaNameSpacePrefixes" valueType="table" optional="true" rowTypes="TabularReport:schemaPrefixNamespaceMapping"/>
+        <property name="xsdSchemaMappings" valueType="table" optional="true" rowTypes="TabularReport:schemaCycleMapping"/>
+        <property name="xsdSchemaElementNameField" valueType="url" optional="true" urlStructure="TabularReport[this].fields[*]" targetObjectType="TabularReport:field"/>
+        <property name="xsdSchemaElementValueField" valueType="url" optional="true" urlStructure="TabularReport[this].fields[*]" targetObjectType="TabularReport:field"/>
+        <property name="xsdSchemaSkipParentIfSubelementIsMissing" valueType="boolean" optional="true"/>
+        <property name="readyToSignOffVariable" valueType="string" optional="true"/>
+        <property name="readyToSignOffCompleteValue" valueType="string" defaultValue="OK" optional="true" />
+        <property name="enableTxtFileDelimiter" valueType="boolean" defaultValue="false" optional="true" />
+        <property name="delimiter" valueType="string" optional="true" />
+        <property name="addColumnNamesInTabDelimitedReport" valueType="boolean" defaultValue="false" optional="true" />
+        <property name="useQuotesForValueWithDelimiter" valueType="boolean" defaultValue="false" optional="true" />
+        <property name="delimitedTextBufferSize" valueType="integer" defaultValue="10000" optional="true" />
+        <property name="loaderBufferSize" valueType="integer" defaultValue="200" optional="true" />
+        <property name="lineSeparator" valueType="string" choices="system, dos, unix" defaultValue="system" optional="true" />
+        <property name="allowExternalDataPermissions" valueType="boolean" optional="true" defaultValue="false"/>
+    </object>
+    <object type="TabularReport:field" extends="ReferencibleSubobject" version="6">
+        <property name="aggrType" valueType="string" canBeEmpty="false"
+                  choices="NA, SUM, AVG, MIN, MAX" defaultValue="SUM"/>
+        <property name="calcTotal" valueType="boolean" defaultValue="false" optional="true"/>
+        <property name="calcFormula" valueType="table"
+                  rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, TabularReport:localFieldReference, TabularReport:localSubTotalFieldReference, TabularReport:localAuxFieldReference"/>
+        <property name="displayNullAs" valueType="string" optional="true" defaultValue="[NULL]"/>
+        <property name="autoWidth" valueType="boolean" defaultValue="true"/>
+        <property name="columnWidth" valueType="integer" defaultValue="0"/>
+        <property name="valueFormat" valueType="string" optional="true"/>
+        <property name="sortOrder" valueType="string" canBeEmpty="false"
+                  choices="NONE, ASCENDING, DESCENDING" defaultValue="NONE"/>
+        <property name="sortingSequenceNumber" valueType="integer" defaultValue="0"/>
+    </object>
+    <object type="TabularReport:syntheticField" extends="ReferencibleSubobject" version="6">
+        <property name="showInTotals" valueType="boolean" defaultValue="false"/>  <!-- todo: wtf the name is different -->
+        <property name="calcFormula" valueType="table"
+                  rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, TabularReport:localFieldReference, TabularReport:localSubTotalFieldReference, TabularReport:localSyntheticFieldReference"/>
+        <property name="displayNullAs" valueType="string" optional="true" defaultValue=""/>
+        <property name="autoWidth" valueType="boolean" defaultValue="true"/>
+        <property name="columnWidth" valueType="integer" defaultValue="10"/>
+        <property name="valueFormat" valueType="string" optional="true"/>
+        <property name="sortOrder" valueType="string" canBeEmpty="false"
+                  choices="NONE, ASCENDING, DESCENDING" defaultValue="NONE"/>
+        <property name="sortingSequenceNumber" valueType="integer" defaultValue="0"/>
+    </object>
+    <object type="TabularReport:subTotalField" extends="ReferencibleSubobject" version="6">
+        <property name="displayValueAs" valueType="string" canBeEmpty="false"
+                  choices="VALUE, DESCRIPTION, VALUE_AND_DESCRIPTION" defaultValue="VALUE_AND_DESCRIPTION"/>
+        <property name="valueFormula" valueType="table"
+                  rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, TabularReport:localSubTotalFieldReference, TabularReport:localAuxFieldReference"/>
+        <property name="descFormula" valueType="table"
+                  rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, TabularReport:localSubTotalFieldReference, TabularReport:localAuxFieldReference"/>
+        <property name="indentation" valueType="integer"/>
+        <property name="valueFormat" valueType="string"/>
+        <property name="displayNullAs" valueType="string" optional="true" defaultValue=""/>
+        <property name="hideSubtotalName" valueType="boolean" optional="true" defaultValue="false"/>
+        <property name="sortOrder" valueType="string" canBeEmpty="false"
+                  choices="NONE, ASCENDING, DESCENDING" defaultValue="NONE"/>
+    </object>
+    <object type="TabularReport:auxField" extends="ReferencibleSubobject" version="6">
+    </object>
+    <object type="TabularReport:mapping" version="6">
+        <property name="field" valueType="object"
+                  objectType="TabularReport:localFieldReference,TabularReport:localSubTotalFieldReference,TabularReport:localAuxFieldReference"/>
+        <property name="fieldMapping" valueType="table" rowType="TabularReport:fieldMapping" canBeEmpty="false"/>
+    </object>
+    <object type="TabularReport:fieldMapping" version="6">
+        <property name="model" valueType="object" objectType="DataModel:reference" canBeEmpty="false"/>
+        <property name="expression" valueType="table" rowType="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, DataModel:fieldReference"
+                  canBeEmpty="false"/>
+        <property name="valueSize" valueType="integer" optional="true"/>
+        <property name="valueNullable" valueType="boolean" optional="true"/>
+        <property name="valueType" canBeEmpty="false" valueType="string" optional="true"
+                  choices="VARCHAR, INTEGER, FLOAT, DATE, UNICODE" defaultValue="FLOAT"/>
+    </object>
+    <object type="TabularReport:localFieldReference" version="6">
+        <property name="value" valueType="url" urlStructure="TabularReport[this].fields[*]"
+                  targetObjectType="TabularReport:field"/>
+    </object>
+    <object type="TabularReport:localSubTotalFieldReference" version="6">
+        <property name="value" valueType="url" urlStructure="TabularReport[this].subTotalFields[*]"
+                  targetObjectType="TabularReport:subTotalField"/>
+    </object>
+    <object type="TabularReport:localAuxFieldReference" version="6">
+        <property name="value" valueType="url" urlStructure="TabularReport[this].auxFields[*]"
+                  targetObjectType="TabularReport:auxField"/>
+    </object>
+    <object type="TabularReport:localSyntheticFieldReference" version="6">
+        <property name="value" valueType="url" urlStructure="TabularReport[this].syntheticFields[*]"
+                  targetObjectType="TabularReport:syntheticField"/>
+    </object>
+    <object type="TabularReport:schemaPrefixNamespaceMapping" version="1">
+        <property name="nameSpacesValue" valueType="string" canBeEmpty="false"/>
+        <property name="nameSpacePrefix" valueType="string" canBeEmpty="true"/>
+    </object>
+    <object type="TabularReport:schemaCycleMapping" version="1">
+        <property name="cycleName" valueType="string" canBeEmpty="false"/>
+        <property name="field" valueType="url" urlStructure="TabularReport[this].fields[*]"
+                  targetObjectType="TabularReport:field" canBeEmpty="true"/>
+    </object>
+    <object type="TabularReport:additionalSchema" version="6">
+        <property name="name" valueType="string" canBeEmpty="false"/>
+        <property name="value" valueType="string" canBeEmpty="false"/>
+    </object>
+
+</metadata>

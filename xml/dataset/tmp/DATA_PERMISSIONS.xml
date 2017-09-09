@@ -1,0 +1,387 @@
+<data_set_category name="DATA_PERMISSIONS" description="Data Permissions Setup" windowTitle="Data Permissions" entityName="DataPermissions" screenWidth="800" screenHeight="500"
+                   objectType="ObjectList" extends="COMMON_UTILS" fixedNameMode="true" singleDataSet=" ">
+
+    <parameters>
+        <parameter name="dataPermissionEntities" description="Data Permission Entity Editor" type="table" group="Data Permission Entity Editor" allowAddRemove="true"
+                   keyParameter="name" reorder="false">
+            <parameter name="entityChanged" type="boolean" hidden="true" defaultValue="false"/>
+
+            <parameter name="name" description="Name" type="String">
+                <onParameterChange>
+                    editor.permissionEntityChanged(oldValue, "name", newValue);
+                    param("entityChanged") = true;
+                </onParameterChange>
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniqueness", list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="description" description="Description" type="String">
+                <onParameterChange>
+                    editor.permissionEntityChanged(param("name"), "description", newValue);
+                    param("entityChanged") = true;
+                </onParameterChange>
+            </parameter>
+            <parameter name="type" description="Data Type" type="String">
+                choices(<asDescription>
+                ndo("VARCHAR", l("VARCHAR")),
+                ndo("INTEGER", l("INTEGER")),
+                ndo("FLOAT", l("FLOAT")),
+                ndo("DATE", l("DATE")),
+                ndo("TEXT", l("TEXT")),
+                ndo("UNICODE", l("UNICODE")),
+                ndo("UNICODE_TEXT", l("UNICODE_TEXT")),
+                ndo("DB_SPECIFIC", l("DB_SPECIFIC"))
+            </asDescription>)
+                <default>
+                    'VARCHAR'
+                </default>
+                <onParameterChange>
+                    editor.permissionEntityChanged(param("name"), "type", newValue);
+                    param("entityChanged") = true;
+                </onParameterChange>
+            </parameter>
+
+            <parameter name="lookupProject" description="Lookup Project" type="String">
+                choices(editor.getRemoteProxy().lookupObjects("Project"));
+            </parameter>
+
+            <parameter name="lookupBranch" description="Lookup Branch" type="String">
+                <if>macro("isEmpty", param("lookupProject"))
+                    <then>
+                        choices(list());
+                    </then>
+                    <else>
+                        <enabled/>
+                        <if>param("lookupProject").indexOf("!!!") &gt;= 0
+                            <then>
+                                choices(list());
+                            </then>
+                            <else>
+                                choices(macro("branchChoices", param("lookupProject")));
+                            </else>
+                        </if>
+                    </else>
+                </if>
+            </parameter>
+
+            <parameter name="lookupSource" description="Lookup Source" type="String" lookupInPlace="yes">
+                <if>
+                    param("lookupBranch") == null || param("lookupBranch").length() == 0
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        <equals>param("lookupBranch");""</equals>
+                    </else>
+                </if>
+                <attribute name="lookupFromValues">l("Data Source")
+                    <comma/>
+                    editor.getRemoteProxy().lookupObjects("DataSource", editor.getObjectIdFromName("Branch", param("lookupProject") + "!" + param("lookupBranch")));
+                </attribute>
+                <convertInputValue>
+                    inputValue.getName();
+                </convertInputValue>
+                <onParameterChange>
+                    <if>
+                        newValue == null || newValue.length() == 0
+                        <then>
+                            editor.permissionEntityChanged(param("name"), "lookupSource", newValue);
+                            param("entityChanged") = true;
+                        </then>
+                        <else>
+                            var branchName = param("lookupProject") + "!" + param("lookupBranch");
+                            var branchId = editor.getAxiomObjectManager().getResolver().resolve(editor.createNameId("Branch", branchName));
+
+                            <if>editor.getRemoteProxy().isObjectValid("DataSource", newValue, branchId.getDbId())
+                                <then>
+                                    var dataSourceID = function("axiomsl.server.object_framework.ObjectID", "createNameId", "DataSource", branchId.getDbId(), newValue);
+                                    var routeToDS = function("axiomsl.server.object_framework.RouteToObject", "createDirectRoute", editor.getAxiomObjectManager().locate(dataSourceID)).getNameRoute();
+                                    editor.permissionEntityChanged(param("name"), "lookupSource", routeToDS + newValue);
+                                    param("entityChanged") = true;
+                                </then>
+                            </if>
+                         </else>
+                    </if>
+
+                </onParameterChange>
+                <validation>
+                    var isValidDataSource = true;
+                    macro("isValidDataSource", param("lookupProject"), param("lookupBranch"), newValue, isValidDataSource);
+                    <if>!isValidDataSource
+                        <then>
+                            return l("DataSource '%1' is invalid!", param("lookupProject") + "!" + param("lookupBranch") + ":" + newValue);
+                        </then>
+                    </if>
+                </validation>
+            </parameter>
+
+            <parameter name="codeField" description="Value Field" type="String">
+                <if>
+                    param("lookupSource") == null || param("lookupSource").length() == 0
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        <if>param("lookupSource").indexOf("!!!") &lt; 0
+                            <then>
+                                <try>
+                                    var branchName = param("lookupProject") + "!" + param("lookupBranch");
+                                    var branchId = editor.getAxiomObjectManager().getResolver().resolve(editor.createNameId("Branch", branchName));
+
+                                    var fields = editor.getRemoteProxy().lookupFieldsInDataSource(<param
+                                        name="lookupSource"/>, branchId.getDbId());
+                                    var choices = list();
+                                    <for>var i = 0
+                                        <comma/>
+                                        i &lt; fields.size()
+                                        <comma/>
+                                        i ++
+                                        <do>
+                                            <if>fields.get(i).type.equals(param("type"))
+                                                <then>
+                                                    choices.add(fields.get(i));
+                                                </then>
+                                            </if>
+                                        </do>
+                                    </for>
+                                    <choices>
+                                        choices;
+                                    </choices>
+                                    <catch>var e</catch>
+                                    trace(e);
+                                    <choices></choices>
+                                </try>
+                            </then>
+                        </if>
+                    </else>
+                </if>
+
+                <onParameterChange>
+                    editor.permissionEntityChanged(param("name"), "valueField", newValue);
+                    param("entityChanged") = true;
+                </onParameterChange>
+            </parameter>
+
+            <parameter name="descriptionField" description="Description Field" type="String">
+                <if>
+                    param("lookupSource") == null || param("lookupSource").length() == 0
+                    <then>
+                        <disabled/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        <if>param("lookupSource").indexOf("!!!") &lt; 0
+                            <then>
+                                <try>
+                                    var branchName = param("lookupProject") + "!" + param("lookupBranch");
+                                    var branchId = editor.getAxiomObjectManager().getResolver().resolve(editor.createNameId("Branch", branchName));
+
+                                    var fields = editor.getRemoteProxy().lookupFieldsInDataSource(<param
+                                        name="lookupSource"/>, branchId.getDbId());
+                                    <choices>
+                                        fields;
+                                    </choices>
+                                    <catch>var e</catch>
+                                    trace(e);
+                                </try>
+                            </then>
+                        </if>
+                    </else>
+                </if>
+                <onParameterChange>
+                    editor.permissionEntityChanged(param("name"), "descriptionField", newValue);
+                    param("entityChanged") = true;
+                </onParameterChange>
+            </parameter>
+
+            <onRowDeleted>
+                var deletedName = deletedRow.param("name").toString();
+                editor.permissionEntityDeleted(deletedName);
+            </onRowDeleted>
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirm", list());
+            </confirmAddRow>
+            <onRowAdded>
+                addedRow.param("name") = editor.createUniqueEntityName();
+                addedRow.param("entityChanged") = true;
+            </onRowAdded>
+        </parameter>
+    </parameters>
+
+    <newCode>
+        var permissionEntities = editor.getAxiomObjectManager().getResolver().lookupObjects("DataPermissionEntity", null);
+        <for>var i = 0
+            <comma/>
+            i &lt; permissionEntities.size()
+            <comma/>
+            i ++
+            <do>
+                <try>
+                    var objectID = function("axiomsl.server.object_framework.ObjectID", "createId", "DataPermissionEntity", null, permissionEntities.get(i).getObjectId());
+                    var permissionEntity = editor.locateInvalid("DataPermissionEntity", permissionEntities.get(i).getName());
+
+                    var row = param("dataPermissionEntities").addLine();
+                    row.setID(permissionEntity.getId());
+                    row.param("name") = permissionEntity.getString("name");
+                    row.param("description") = permissionEntity.getString("description");
+                    row.param("type") = permissionEntity.getString("type");
+                    <if>permissionEntity.propertyIsSet("lookupSource") &amp;&amp; !permissionEntity.propertyIsEmpty("lookupSource");
+                        <then>
+                            var dataSourceName = permissionEntity.getProperty("lookupSource").getTargetObjectName();
+                            var ind = dataSourceName.indexOf(':');
+                            <if>ind &gt; 0
+                                <then>
+                                    var fullBranchName = dataSourceName.substring(0, ind);
+                                    dataSourceName = dataSourceName.substring(ind + 1);
+                                    ind = fullBranchName.indexOf('!');
+                                    <if>ind &gt; 0 || ind == 0
+                                        <then>
+                                            row.param("lookupProject") = fullBranchName.substring(0, ind);
+                                            row.param("lookupBranch") = fullBranchName.substring(ind + 1);
+                                            row.param("lookupSource") = dataSourceName;
+                                        </then>
+                                    </if>
+                                </then>
+                            </if>
+
+                            <if>permissionEntity.propertyIsSet("codeField") &amp;&amp;
+                                !permissionEntity.propertyIsEmpty("codeField");
+                                <then>
+                                    row.param("codeField") = permissionEntity.getProperty("codeField").getTargetObjectNativeName();
+                                </then>
+                            </if>
+                            <if>permissionEntity.propertyIsSet("descriptionField") &amp;&amp;
+                                !permissionEntity.propertyIsEmpty("descriptionField");
+                                <then>
+                                    row.param("descriptionField") = permissionEntity.getProperty("descriptionField").getTargetObjectNativeName();
+                                </then>
+                            </if>
+                        </then>
+                    </if>
+                    <catch>var e</catch>
+                    errorMessage(e.getMessage());
+                </try>
+            </do>
+        </for>
+    </newCode>
+
+    <loadCode>
+    </loadCode>
+
+    <saveCode>
+        var permissionEntities = editor.getAxiomObjectManager().getResolver().lookupObjects("DataPermissionEntity", null);
+        var sources = param("dataPermissionEntities");
+
+        <!-- remove data permissions deleted from table  -->
+        <for>var i = 0 <comma/> i &lt; permissionEntities.size() <comma/> i ++
+            <do>
+                var permissionEntity = permissionEntities.get(i);
+                var found = false;
+                <for>var j = 0 <comma/> j &lt; sources.size() <comma/> j ++
+                    <do>
+                        <if>sources.get(j).param("name").equals(permissionEntity.getName())
+                            <then>
+                                found = true;
+                                break;
+                            </then>
+                        </if>
+                    </do>
+                </for>
+
+                <if>!found
+                    <then>
+                        var objectID = function("axiomsl.server.object_framework.ObjectID", "createNameId", "DataPermissionEntity", null, permissionEntity.getName());
+                        editor.getAxiomObjectManager().remove(objectID, editor.getAxiomEnvironment());
+                    </then>
+                </if>
+            </do>
+        </for>
+
+        <!-- save data permissions table -->
+        <for>var i = 0 <comma/> i &lt; sources.size() <comma/> i ++
+            <do>
+                var source = sources.get(i);
+                <if> source.param("entityChanged")
+                    <then>
+                        var permissionEntity = editor.getAxiomObjectManager().create("DataPermissionEntity");
+                        <if>editor.getRemoteProxy().isObjectExists("DataPermissionEntity", source.param("name"), null)
+                            <then>
+                                var oldObject = editor.locateInvalid("DataPermissionEntity", source.param("name"));
+                                permissionEntity.setProperty("objectId", oldObject.getProperty("objectId"));
+                                permissionEntity.setProperty("dbId", oldObject.getProperty("dbId"));
+                            </then>
+                            <else>
+                                var id = function("axiomsl.util.UUID", "randomUUID").toString();
+                                permissionEntity.setProperty("objectId", id);
+                                permissionEntity.setProperty("dbId", id);
+                            </else>
+                        </if>
+                        permissionEntity.setProperty("name", source.param("name"));
+                        permissionEntity.setProperty("description", source.param("description"));
+                        permissionEntity.setProperty("type", source.param("type"));
+
+                        <if>source.param("lookupSource") == null || source.param("lookupSource").length() == 0
+                            <else>
+                                var fullDSName = source.param("lookupProject") + "!" + source.param("lookupBranch")+":"+source.param("lookupSource");
+                                var dataSourceID = function("axiomsl.server.object_framework.ObjectID", "createNameId", "DataSource", null, fullDSName);
+
+                                var dataSource = editor.getRemoteProxy().getAxiomObjectManager().locate(dataSourceID);
+                                var emptyRoute = function("axiomsl.server.object_framework.RouteToObject", "createEmptyRoute");
+                                permissionEntity.setProperty("lookupSource", new("axiomsl.server.object_framework.ObjectReferenceImpl", permissionEntity, emptyRoute, dataSourceID));
+                                <if>
+                                    source.param("codeField").length() == 0
+                                    <else>
+                                        var fieldObject = dataSource.getTable("layout").locate(source.param("codeField"));
+                                        var route = function("axiomsl.server.object_framework.RouteToObject", "createDirectRoute", dataSource);
+                                        permissionEntity.setProperty("codeField", permissionEntity.createReferencePropertyValue(route, array(dataSource, "layout", fieldObject)));
+                                    </else>
+                                </if>
+                                <if>
+                                    source.param("descriptionField").length() == 0
+                                    <else>
+                                        var fieldObject = dataSource.getTable("layout").locate(source.param("descriptionField"));
+                                        var route = function("axiomsl.server.object_framework.RouteToObject", "createDirectRoute", dataSource);
+                                        permissionEntity.setProperty("descriptionField", permissionEntity.createReferencePropertyValue(route, array(dataSource, "layout", fieldObject)));
+                                    </else>
+                                </if>
+                            </else>
+                        </if>
+                        var comment = editor.getComment();
+                        var envmt = editor.getAxiomEnvironment();
+                        <if>comment != null
+                            <then>
+                                envmt = envmt.clone();
+                                envmt.setProperty(AxiomEnvironment.COMMENT, comment);
+                            </then>
+                        </if>
+                        editor.getAxiomObjectManager().put(permissionEntity, envmt);
+                    </then>
+                </if>
+            </do>
+        </for>
+    </saveCode>
+
+    <macros>
+        <macro name="isValidDataSource" arguments="project, branch, dataSource, result">
+            <result/> = true;
+            <if><dataSource/> != null and <dataSource/>.length() > 0
+                <then>
+                    var branchName = <project/> + "!" + <branch/>;
+                    var branchId = editor.getAxiomObjectManager().getResolver().resolve(editor.createNameId("Branch", branchName));
+
+                    <if>editor.getRemoteProxy().isObjectValid("DataSource", <dataSource/>, branchId.getDbId())
+                        <else>
+                            <result/> = false;
+                        </else>
+                    </if>
+                </then>
+            </if>
+        </macro>
+    </macros>
+</data_set_category>

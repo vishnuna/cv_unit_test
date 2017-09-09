@@ -1,0 +1,16 @@
+<metadata>
+	<object type="Project" extends="Groups, DocData" version="7" downgraderClass="axiomsl.metadata_downgraders.ProjectDowngrader">
+        <!--id of the Groups:node to which the project belongs, if any-->
+        <property name="groupNodeId" valueType="string" optional="true"/>
+
+		<property name="branches" valueType="table" rowTypes="Project:branch"/>
+
+        <property name="defaultDBSource" valueType="url" targetObjectType="DBSource" optional="true"/>
+	</object>
+	<object type="Project:branch" extends="ReferencibleSubobject" version="2">
+		<property name="reference" valueType="url" targetObjectType="Branch"/>
+		<property name="isFrozen" valueType="boolean"/>
+        <!--id of the Groups:node to which the branch belongs, if any-->
+        <property name="groupNodeId" valueType="string" optional="true"/>
+	</object>
+</metadata>

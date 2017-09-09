@@ -1,0 +1,21 @@
+<metadata>
+	<object type="InstanceObject" extends="ReferencibleSubobject,InstanceParameters" version="3">
+		<!-- name and id of this instance subobject should match instance AxiomObject's name and id.
+			Name is a concatenation of data source/data model/task name, instance date value and 
+			instance key values -->
+		<!-- for a permanent instance, instanceDate and instanceKeyValues are not used -->
+	</object>
+
+	<object type="InstanceObject:instanceKeyValue" version="2">
+		<property name="name" valueType="string" canBeEmpty="false"/>
+		<property name="keyValueType" valueType="string" canBeEmpty="false" choices="VARCHAR, INTEGER, FLOAT, DATE"/>
+		<!-- question: do we need it here or we can take datatype from data source? (just like we do with values
+			  		in conditions)
+				do whatever is more convenient -->
+		<!-- value is in the natural format for a datatype: 
+			strings without quotes, 
+			numbers in their natural form, 
+			and dates in odbc format: yyyy-MM-dd HH:mm:ss.SSS (milliseconds part - optional) -->
+		<property name="keyValue" valueType="string"/>
+	</object>
+</metadata>

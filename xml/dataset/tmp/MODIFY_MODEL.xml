@@ -1,0 +1,588 @@
+<data_set_category name="MODIFY_MODEL"
+	description="Modify Model Setup"
+	windowTitle="Modify Model Setup"
+	entityName="Modify Model"
+	icon="modifymodel"
+	screenWidth="800"
+	screenHeight="500"
+    objectType="ModifyModel"
+    extends="COMMON_UTILS, DOC_DATA, FREEZE_PROPERTIES">
+
+<parameters>
+    <parameter name="isDataModelLoading" type="boolean" hidden="true" group="Parameters"/>
+    <parameter name="data_model_name" description="Data Model" group="Parameters" type="String" length="20" isDataSet="DataModel">
+        <validation>
+            var a_dataModel = editor.locateObjectByNameIfExists("DataModel", newValue);
+            <if>a_dataModel==null
+                <then>
+                    errormessage(l("Data Model %1 is invalid", newValue));
+                    return false;
+                </then>
+            </if>
+        </validation>
+        <onParameterChange>
+            param("isDataModelLoading") = true;
+            var vect_children_size = param("data_model").children().size();
+            <for>var rem_i = 0 <comma/> rem_i &lt; vect_children_size <comma/> rem_i ++
+                <do>
+                    param("data_model").remove(0);
+                </do>
+            </for>
+            <if>editor.getDataSet().getAxiomObject()!=null
+                <then>
+                    macro("load_modify_model_tree",editor.getDataSet().getAxiomObject(),newValue);
+                </then>
+                <else>
+                    var modify_modelAccessor;
+                    var a_dataModel = editor.locateObjectByNameIfExists("DataModel",newValue);
+                    <if>a_dataModel!=null
+                        <then>
+                            var a_modelAccessor = new("axiomsl.accessors.DataModelAccessor", a_dataModel);
+                            var a_route = function("axiomsl.server.object_framework.RouteToObject", "createNameRouteFromObjectName", editor.getAxiomObjectManager(),
+                                editor.getBranchId(), newValue);
+                            var a_tmp_parser = new("axiomsl.accessors.ExpressionParserImpl", a_modelAccessor, a_route);
+                            macro("loadDataModelTree",newValue, a_dataModel,a_tmp_parser, a_route);
+                        </then>
+                    </if>
+                </else>
+            </if>
+            param("isDataModelLoading") = false;
+        </onParameterChange>
+        <verifyForSave>
+            var modelName = currentParameter.getParameterValue();
+            <if>modelName == null or modelName == "" or modelName.indexOf("!!!") &gt;= 0
+                <then>
+                    errorMessage(l("Data model '%1' is invalid", modelName));
+                    return false;
+                </then>
+                <else>
+                    return true;
+                </else>
+            </if>
+        </verifyForSave>
+    </parameter>
+	<parameter name="data_model" description="Hierarchy" type="tree" group="Parameters" rootNodeType="DataModel:node" namesAreGloballyUnique="true">
+		<nodeType name="DataModel:node" description="Original DataModel Tree Node" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="false" childrenTypes="DataModel:node,ModifyModel:node" userCanAdd="ModifyModel:node">
+			<parameter name="isChanged" description="Modify node" type="boolean" length="15" group="Properties">
+				<onParameterChange>
+					<if> newValue
+					<then>
+						<currentNode/>.setForeground(macro("CHANGED_NODE_COLOR"));
+					</then>
+					<else>
+						<currentNode/>.setForeground(macro("DEFAULT_COLOR"));
+					</else>
+					</if>
+				</onParameterChange>
+			</parameter>
+			<macro name="dataModelNodeType"/>
+		</nodeType>
+		<nodeType name="ModifyModel:node" description="Modify Model node" renameAllowed="true" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="ModifyModel:node">
+			<macro name="dataModelNodeType"/>
+		</nodeType>
+        <onNodeAdded>
+            <if>"ModifyModel:node".equals(addedNode.type())
+                <then>
+                    addedNode.setForeground(macro("NEW_NODE_COLOR"));
+                </then>
+            </if>
+            <!-- param("isDataModelLoading") - hidden flag indicating Data Model loading.
+                    In Data Model loading process nodes are added programmatically,
+                    but the below parent coloring and isChanged flag setting are implied to be used while nodes adding manually.-->
+            <if>param("isDataModelLoading") == false and "DataModel:node".equals(addedNode.parent().type()) and addedNode.parent().param("isChanged") == false
+                <then>
+                    addedNode.parent().setForeground(macro("CHANGED_NODE_COLOR"));
+                    addedNode.parent().param("isChanged") = true;
+                </then>
+            </if>
+        </onNodeAdded>
+	</parameter>
+
+    <parameter name="newStreamKeys" description="Stream Keys" type="table" length="10" keyParameter="name" group="Stream Setup" row="0">
+        <macro name="streamKeysTable"/>
+        <confirmAddRow>
+            var list_params = list(list(),param("streamKeys"),param("instanceKeys"));
+
+            <if>param("newInstanceKeys") != null
+                <then>
+                    list_params.add(param("newInstanceKeys"));
+                </then>
+            </if>
+            macro("checkUniquenessOnConfirmIgnoreCase",list_params);
+        </confirmAddRow>
+    </parameter>
+
+    <parameter name="streamKeys" description="Existing Stream Keys" type="table" length="10" keyParameter="name" group="Stream Setup" row="0">
+        <readonly/>
+        <macro name="streamKeysTable"/>
+        <confirmAddRow>
+            var list_params = list(list(),param("newStreamKeys"),param("instanceKeys"));
+
+            <if>param("newInstanceKeys") != null
+                <then>
+                    list_params.add(param("newInstanceKeys"));
+                </then>
+            </if>
+            macro("checkUniquenessOnConfirmIgnoreCase",list_params);
+        </confirmAddRow>
+    </parameter>
+
+    <parameter name="newInstanceKeys" description="Instance Keys" type="table" length="10" keyParameter="name" group="Instance Keys" rowType="InstanceKey">
+        <macro name="instanceKeysTable"/>
+        <confirmAddRow>
+            var list_params = list(list(),param("streamKeys"),param("newStreamKeys"),param("instanceKeys"));
+            macro("checkUniquenessOnConfirmIgnoreCase",list_params);
+        </confirmAddRow>
+        <parameter name="defaultInstanceKeyValueFormula" description="Default Instance Key Value Formula" type="String">
+            <attribute name="lookupAppend">true</attribute>
+            <attribute name="lookupFromValues"> l("Field/Variable") <comma/>
+                macro("defaultInstanceKeyValueFormula", "instanceKeys", "newInstanceKeys", "name", null)
+            </attribute>
+        </parameter>
+    </parameter>
+
+    <parameter name="instanceKeys" description="Existing Instance Keys" type="table" length="10" keyParameter="name" group="Instance Keys" rowType="InstanceKey">
+        <macro name="instanceKeysTable"/>
+        <confirmAddRow>
+            var list_params = list(list(),param("streamKeys"),param("newStreamKeys"));
+
+            <if>param("newInstanceKeys") != null
+                <then>
+                    list_params.add(param("newInstanceKeys"));
+                </then>
+            </if>
+            macro("checkUniquenessOnConfirmIgnoreCase",list_params);
+        </confirmAddRow>
+        <readonly/>
+        <parameter name="defaultInstanceKeyValueFormula" description="Default Instance Key Value Formula" type="String"/>
+    </parameter>
+</parameters>
+
+
+    <loadCode>
+        var modModel =<originalAxiom/>;
+        param("isDataModelLoading") = false;
+        <if>modModel.propertyIsSet("model")
+            <then>
+                var dataModelRef = modModel.getReference("model");
+                param("data_model_name") = dataModelRef.getTargetObjectName(dataSet.getRouteFromCurrentBranch());
+                macro("load_modify_model_tree", modModel, dataModelRef.getTargetObjectName(dataSet.getRouteFromCurrentBranch()));
+            </then>
+            <else>
+                param("data_model_name") = "???";
+            </else>
+        </if>
+
+    </loadCode>
+
+<saveCode>
+	var modify_model = <axiomForSave/>;
+
+    var model = editor.locateObjectByName("DataModel", param("data_model_name"));
+
+    var dm_Route;
+
+        <if> param("data_model_name") != ""
+            <then>
+                dm_Route = function("axiomsl.server.object_framework.RouteToObject", "createNameRouteFromObjectName", editor.getAxiomObjectManager(), editor.getBranchId(), param("data_model_name"));
+                trace("@@@@@@@@@@ROUT=" + dm_Route.getNameRoute())
+                modify_model.setProperty("model", modify_model.createReferencePropertyValue(dm_Route, model));
+            </then>
+       </if>
+
+	var rootTreeNode = param("data_model");
+
+    var modify_modelAccessor = new("axiomsl.accessors.ModifyModelAccessor",modify_model);
+    var parser = new("axiomsl.accessors.ExpressionParserImpl", modify_modelAccessor);
+    var allNodes = rootTreeNode.getAllNodes();
+	var modificationsTree = modify_model.getTree("modifications");
+	var emptyRoot = modificationsTree.getRootNode();
+	emptyRoot.setProperty("name","modificationsRoot");
+	emptyRoot.setProperty("id","modificationsRoot");
+	var instanceSelectionRule;
+	var newInstanceKeys = param("newInstanceKeys");
+	var oldInstanceKeys = param("instanceKeys");
+	var isPermanent = rootTreeNode.param("isPermanent");
+    	var defaultRule;
+    	<if> isPermanent
+        <then>
+            defaultRule = "LATEST";
+        </then>
+	<else>
+            defaultRule = "EQUAL";
+        </else>
+	</if>
+
+
+    	<for> var i = 0 <comma/> i &lt; allNodes.size() <comma/> i ++
+        <do>
+
+		var aNode = allNodes.get(i);
+		<if> "DataModel:node".equals(aNode.type())
+		<then>
+
+			<if>aNode.param("isChanged")
+			<then>
+				var localSourceDataNode = model.getTree("hierarchy").locate(aNode.name());
+
+				var modifNode = emptyRoot.addChild("ModifyModel:modification");
+				modifNode.setProperty("name",aNode.name());
+				modifNode.setProperty("id",aNode.getID());
+				modifNode.setProperty("existingNode", modifNode.createReferencePropertyValue(dm_Route, array(model, "hierarchy", localSourceDataNode)));
+
+				<if> aNode.param("add_join") !=null
+				<then>
+					modifNode.setProperty("additionalJoinExpression", parser.parseExpression(aNode.param("add_join")));
+				</then>
+				</if>
+				modifNode.setProperty("additionalConstraint", parser.parseExpression(aNode.param("data_constraint")));
+                <if> aNode.param("man_in_join") !=null
+                    <then>
+                        modifNode.setProperty("mandatoryInJoin", aNode.param("man_in_join"));
+                    </then>
+                </if>
+			</then>
+			</if>
+		</then>
+		<else>
+			var parentNode = aNode.parent();
+			var parentMMNode;
+			<if> "DataModel:node".equals(parentNode.type())
+			<then>
+				var localSourceDataNode = model.getTree("hierarchy").locate(parentNode.name());
+				var modifNode = modify_modelAccessor.findTreeForExistingNode(localSourceDataNode);
+				<if> modifNode==null
+				<then>
+					modifNode = emptyRoot.addChild("ModifyModel:modification");
+					modifNode.setProperty("name",parentNode.name());
+					modifNode.setProperty("id",parentNode.getID());
+					modifNode.setProperty("existingNode", modifNode.createReferencePropertyValue(dm_Route, array(model, "hierarchy", localSourceDataNode)));
+				</then>
+				</if>
+				parentMMNode = modifNode;
+
+			</then>
+			<else>
+				parentMMNode = modificationsTree.locate(parentNode.name(),null);
+			</else>
+			</if>
+
+			macro("save_datamodel_node", aNode, modificationsTree, parentMMNode, parser,"ModifyModel:node");
+		</else>
+		</if>
+        </do>
+    	</for>
+	param("newInstanceKeys");
+	param("newStreamKeys");
+    	var route = new("axiomsl.server.object_framework.RouteToObject");
+        <!--var vRoute = function("axiomsl.server.object_framework.RouteToObject", "createNameRouteFromObjectName", editor.getAxiomObjectManager(), editor.getBranchId(), param("data_model_name"));-->
+    	var templates = array(
+			"forward(instanceKeys, newInstanceKeys)",
+			"forward(streamKeys, newStreamKeys)",
+                        "forward(streamKeys.streamKeyName, name)",
+                        "object2expression(streamKeys.streamKeyColumn)",
+			"table2string(streamKeys.additionalStreamColumns)",
+			"object2expression(streamKeys.additionalStreamColumns.*)");
+    	var params;
+    	<if> operationType != editor.getManager().GENERATE
+        <then>
+            params = array("instanceKeys", "streamKeys");
+        </then>
+	<else>
+            params = array("instanceKeys");
+        </else>
+	</if>
+    	var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+    	matcher.match(modify_model, currentParameters, params, null, templates, parser, route);
+</saveCode>
+
+
+
+<macros>
+
+    <macro name="rulesConstraints" arguments="node, treeNode">
+	instanceSelectionRule = <node/>.getObject("instanceSelectionRule");
+        instanceSelectionRule.getObject("instanceDateRule").setProperty("type", <treeNode/>.param("default_rule"));
+        <if> newInstanceKeys!=null
+            <then>
+                var instanceKeyRule;
+                var instanceKeyRules = instanceSelectionRule.getTable("instanceKeyRules");
+                <for> var j = 0 <comma/> j &lt; newInstanceKeys.size() <comma/> j ++
+                    <do>
+                        instanceKeyRule = instanceKeyRules.addRow("InstanceSelectionRule:instanceKeyRule");
+                        instanceKeyRule.setProperty("instanceKeyName", newInstanceKeys.get(j).param("name"));
+                        instanceKeyRule.setProperty("type", defaultRule);
+                    </do>
+                </for>
+            </then>
+        </if>
+	<if> oldInstanceKeys!=null
+            <then>
+                var instanceKeyRule;
+                var instanceKeyRules = instanceSelectionRule.getTable("instanceKeyRules");
+                <for> var j = 0 <comma/> j &lt; oldInstanceKeys.size() <comma/> j ++
+                    <do>
+                        instanceKeyRule = instanceKeyRules.addRow("InstanceSelectionRule:instanceKeyRule");
+                        instanceKeyRule.setProperty("instanceKeyName", oldInstanceKeys.get(j).param("name"));
+                        instanceKeyRule.setProperty("type", defaultRule);
+                    </do>
+                </for>
+            </then>
+        </if>
+        <node/>.setProperty("additionalConstraint", parser.parseExpression(<treeNode/>.param("data_constraint")));
+    </macro>
+
+
+    <macro name="load_modify_model_tree" arguments="modModel, dataModelName">
+        var name = <dataModelName/>.substring(<dataModelName/>.lastIndexOf('!') + 1);
+        var env = axiomEnvironment.clone();
+        env.setProperty(class("axiomsl.server.AxiomEnvironment").ALLOW_LOCATE_INVALID, true);
+        trace("dataModelName=" + <dataModelName/>);
+        trace("name=" + name);
+        var tmp_dataModel = null;
+        var modelID = editor.createNameId("DataModel", name);
+        <if> axiomObjectManager.objectExists(modelID, env)
+            <then>
+                tmp_dataModel = axiomObjectManager.locate(modelID, env);
+            </then>
+        </if>
+
+        var route = function("axiomsl.server.object_framework.RouteToObject", "createNameRouteFromObjectName", editor.getAxiomObjectManager(), editor.getBranchId(), name);
+        var modify_modelAccessor = new("axiomsl.accessors.ModifyModelAccessor",<modModel/>);
+        var modify_model_parser = new("axiomsl.accessors.ExpressionParserImpl", modify_modelAccessor, route);
+
+        <if>tmp_dataModel != null
+            <then>
+                var modelAccessor = new("axiomsl.accessors.DataModelAccessor", tmp_dataModel);
+                macro("loadDataModelTree", name, tmp_dataModel, modify_model_parser, route);
+            </then>
+        </if>
+
+        param("newInstanceKeys"); <!-- because it's optional, initialize value -->
+        var templates = array(
+            "forward(streamKeys, newStreamKeys)",
+            "forward(instanceKeys, newInstanceKeys)",
+            "forward(streamKeys.streamKeyName, name)",
+            "forward(streamKeys.additionalStreamColumns.*, zaq)",
+            "object2expression(streamKeys.streamKeyColumn)",
+            "table2string(streamKeys.additionalStreamColumns)",
+            "object2expression(streamKeys.additionalStreamColumns.*)");
+        var params = array("instanceKeys", "streamKeys");
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(<modModel/>, currentParameters, params, null, templates, modify_model_parser, route);
+    </macro>
+
+     <macro name="load_data_model_node" arguments="param_parentNode,treeNode">
+
+	var var_childNode = <param_parentNode/>;
+
+	var_childNode.setID(<treeNode/>.getProperty("id"));
+
+        var_childNode.param("data_source") = <treeNode/>.getReference("dataSource").getTargetObjectName(dataSet.getRouteFromCurrentBranch());
+
+    var_childNode.param("relationship") = <treeNode/>.getProperty("relationshipToParent");
+	var_childNode.param("man_in_join") = <treeNode/>.getProperty("mandatoryInJoin");
+	var_childNode.param("default_rule") = <treeNode/>.getObject("instanceSelectionRule").getProperty("instanceDateRule").getString("type");
+	var_childNode.param("data_constraint") = parser.getExpressionString(<treeNode/>.getTable("additionalConstraint"));
+	var_childNode.param("add_join") = parser.getExpressionString(<treeNode/>.getTable("additionalJoinExpression"));
+
+	joinColumns = <treeNode/>.getTable("join");
+	joinParams = var_childNode.param("column_for_join");
+	<for> var k = 0 <comma/> k &lt; joinColumns.size() <comma/> k ++
+	<do>
+		row = joinParams.addLine();
+		row.param("source_column") = joinColumns.get(k).getReference("sourceField").getTargetObjectNativeName();
+		row.param("parent_column") = joinColumns.get(k).getReference("parentField").getTargetObjectNativeName();
+	</do>
+	</for>
+
+	<!--childNode.addToParent();-->
+    </macro>
+
+
+    <macro name="setVisibility" arguments="currentNode, paramName">
+        var paramName = <paramName/>;
+        var tempNode = <currentNode/>;
+        var toChangeVisibility = false;
+        var toKeepPermanentlyReadonly = false;
+        <if>!"ModifyModel:node".equals(tempNode.type())
+            <then>
+                <if>tempNode.parent()==null
+                    <then>
+                        toChangeVisibility = "data_constraint".equals(paramName );
+                        toKeepPermanentlyReadonly = "data_source".equals(paramName) || "isPermanent".equals(paramName) || "default_rule".equals(paramName);
+                    </then>
+                    <else>
+                        toChangeVisibility = "data_constraint".equals(paramName ) || ("add_join".equals(paramName ));
+                        toKeepPermanentlyReadonly = "data_source".equals(paramName) || "relationship".equals(paramName) || "man_in_join".equals(paramName) ||
+                        "default_rule".equals(paramName) || "column_for_join".equals(paramName) || "column_for_join".equals(paramName);
+                    </else>
+                </if>
+                <if>(!param("isChanged") &amp;&amp; toChangeVisibility) || toKeepPermanentlyReadonly
+                    <then>
+                        <readonly/>
+                    </then>
+                </if>
+            </then>
+        </if>
+    </macro>
+
+    <macro name="DEFAULT_COLOR">
+        "0, 0, 0"
+    </macro>
+
+
+    <macro name="CHANGED_NODE_COLOR">
+        "255, 0, 0"
+    </macro>
+
+
+    <macro name="NEW_NODE_COLOR">
+        "0, 255, 0"
+    </macro>
+
+    <!-- called from COMMON_UTILS; has empty impl for DATA_MODEL -->
+    <macro name="addionalDataModelNodeLoadingActions" arguments="curNode,propertyNode">
+	var temp_curNode = <curNode/>;
+    trace("temp_curNode = " + temp_curNode);
+    trace("modify_modelAccessor = "  +modify_modelAccessor);
+	<if> modify_modelAccessor!=null
+	<then>
+		var modifNode = modify_modelAccessor.findTreeForExistingNode(<propertyNode/>);
+        trace("modifNode = " + modifNode);
+		<if> modifNode != null
+		<then>
+			temp_curNode.param("isChanged") = true;
+			temp_curNode.setForeground(macro("CHANGED_NODE_COLOR"));
+			temp_curNode.param("data_constraint") = parser.getExpressionString(modifNode.getTable("additionalConstraint"));
+			<if> temp_curNode.parent()!=null
+			<then>
+				temp_curNode.param("add_join") = parser.getExpressionString(modifNode.getTable("additionalJoinExpression"));
+                temp_curNode.param("man_in_join") = modifNode.getProperty("mandatoryInJoin");
+			</then>
+			</if>
+
+			var allNodesVector =  modifNode.getAllNodes();
+            trace("allNodesVector = " + allNodesVector);
+			var temp_curNode_parent = temp_curNode.parent();
+
+			<for> var j = 0 <comma/> j &lt; allNodesVector.size() <comma/> j ++
+			<do>
+				var newNode = allNodesVector.get(j);
+
+				var parentForNewNode = null;
+
+
+				<if> "modificationsRoot".equals(newNode.getParentNode().getParentNode().getProperty("name"))
+				<then>
+					parentForNewNode = temp_curNode;
+				</then>
+				<else>
+					parentForNewNode = param("data_model").findNodeByName(newNode.getParentNode().getProperty("name"));
+				</else>
+				</if>
+				<if>parentForNewNode.parent() != null and parentForNewNode.getNode().getParent() == null
+				<then>
+					parentForNewNode.addToParent();
+				</then>
+				</if>
+
+				var newTreeNode =  parentForNewNode.createChild("ModifyModel:node",newNode.getProperty("name"));
+				newTreeNode.setForeground(macro("NEW_NODE_COLOR"));
+
+				macro("load_data_model_node",newTreeNode,newNode);
+				newTreeNode.addToParent();
+			</do>
+			</for>
+
+		</then>
+		<else>
+			temp_curNode.param("isChanged") = false;
+ 		</else>
+		</if>
+	</then>
+	</if>
+    </macro>
+
+    <macro name="streamKeyTableAccessorName">
+    	"axiomsl.accessors.ModifyModelAccessor"
+    </macro>
+
+    <macro name="checkUniqueness_streams">
+	var list_params = list(param("streamKeys"));
+	<if>param("instanceKeys") != null
+	<then>
+		list_params.add(param("instanceKeys"));
+	</then>
+	</if>
+	<if>param("newInstanceKeys") != null
+	<then>
+		list_params.add(param("newInstanceKeys"));
+	</then>
+	</if>
+    	macro("checkUniquenessIgnoreCase", list_params);
+    </macro>
+
+
+    <macro name="checkUniqueness_instanceKeys">
+    	var list_params = list(param("newStreamKeys"),param("streamKeys"));
+	<if>param("instanceKeys") != null
+	<then>
+		list_params.add(param("instanceKeys"));
+	</then>
+	</if>
+    	macro("checkUniquenessIgnoreCase", list_params);
+    </macro>
+
+    <macro name="lookupModelFields">
+        var name = param("data_model_name").substring(param("data_model_name").lastIndexOf('!') + 1);
+        var env = axiomEnvironment.clone();
+        env.setProperty(class("axiomsl.server.AxiomEnvironment").ALLOW_LOCATE_INVALID, true);
+        var dataModel = axiomObjectManager.locate(editor.createNameId("DataModel", name), env);
+
+        <if>
+            dataModel == null
+            <then>
+                null
+            </then>
+            <else>
+                var fieldList = list();
+                <if> param("data_model_name").lastIndexOf('!') &lt; 0
+                    <then>
+                        var fields = new("axiomsl.accessors.DataModelAccessor", dataModel).lookupFieldsInModel(dataModel);
+                        <for>var i = 0<comma/>i &lt; fields.size()<comma/>i ++
+                            <do>
+                                var column = fields.get(i);
+                                fieldList.add(ndo(column.getAlias() + "." + column.getName(), column.getDescription()));
+                            </do>
+                        </for>
+                    </then>
+                </if>
+                
+                var rootTreeNode = param("data_model");
+                var allNodes = rootTreeNode.getAllNodes();
+                <for> var i = 0 <comma/> i &lt; allNodes.size() <comma/> i ++
+                    <do>
+                        var aNode = allNodes.get(i);
+                        var ds = aNode.param("data_source");
+
+		                <if> "ModifyModel:node".equals(aNode.type()) and ds != null and ds != "" and ds.indexOf("!") &lt; 0
+                            <then>
+                                var dsFields = editor.getRemoteProxy().lookupFieldsInDataSource(aNode.param("data_source"), editor.getBranchId());
+                                <for>var j = 0<comma/>j &lt; dsFields.size()<comma/>j ++
+                                    <do>
+                                        var column = dsFields.get(j);
+                                        fieldList.add(ndo(aNode.getName() + "." + column.getName(), column.getDescription()));
+                                    </do>
+                                </for>
+                            </then>
+                        </if>
+                    </do>
+                </for>
+                fieldList
+            </else>
+        </if>
+    </macro>
+
+    </macros>
+</data_set_category>

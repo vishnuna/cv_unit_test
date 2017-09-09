@@ -1,0 +1,1578 @@
+<data_set_category name="TABULAR_REPORT" description="TABULAR_REPORT" windowTitle="Tabular Report Setup"
+                   entityName="Tabular Report"
+                   icon="tabular_report_writer" screenWidth="600" screenHeight="600" objectType="TabularReport"
+                   extends="MODEL_DATES,COMMON_UTILS, DOC_DATA, MAPPING">
+<parameters>
+    <macro name="modelParameter"/>
+    <parameter name="subTotalFields" description="Subtotals by" type="table" length="7" group="Subtotals by..." keyParameter="name" tableTransposed="true" compareByID="true" freehand="no">
+			<parameter name="name" description="Field Name" type="String" length="20" freehand="no">
+				<attribute name="lookupFromFieldList"> l("Select Detail") <comma/>
+                    editor.getRemoteProxy().lookupFieldsInModelsAsStrings(macro("getResolvedModels"), editor.getBranchId());
+                </attribute>
+				<convertInputValue>
+                    inputValue.get(1);
+                </convertInputValue>
+				<validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("fields"), param("syntheticFields"), param("auxFields")));
+                </validation>
+				<verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+				<onParameterChange>
+                    macro("onFieldNameChange", "valueFormula", "subTotalGroup");
+				</onParameterChange>
+			</parameter>
+			<parameter name="description" description="Field Title" type="String" freehand="no"/>
+			<parameter name="displayValueAs" description="Display Value as..." type="string" length="20" freehand="no">
+				<choices>
+					<asDescription>
+                        ndo('VALUE',l('Value')), ndo('DESCRIPTION',l('Description')), ndo('VALUE_AND_DESCRIPTION',l('Value and Description'))
+                    </asDescription>
+				</choices>
+				<default>'VALUE_AND_DESCRIPTION'</default>
+			</parameter>
+            <parameter name="hideSubtotalName" description="Hide Subtotal Name" type="boolean" length="20" freehand="no"/>
+			<parameter name="valueFormula" description="Value Formula" type="string" freehand="no">
+				<attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues"> l("Field/Variable") <comma/>
+                    var tables = array("auxFields", "subTotalFields");
+                    var fields = macro("parametricLookup", tables, "subTotalFields", null, <currentParameters/>.getID(), "name", null, null);
+                    macro("expressionsLookup", fields)
+                </attribute>
+				<convertInputValue>
+                    macro("getConvertedInputValue", inputValue)
+                </convertInputValue>
+				<onParameterChange>
+                    macro("onFormulaChange", "subTotalGroup");
+				</onParameterChange>
+			</parameter>
+			<parameter name="descFormula" description="Description Formula" type="string" freehand="no">
+				<attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues"> l("Field") <comma/>
+                    var tables = array("auxFields", "subTotalFields");
+                    var fields = macro("parametricLookupAddCurrent", tables, "subTotalFields", null, <currentParameters/>.getID());
+                    macro("expressionsLookup", fields)
+                </attribute>
+				<convertInputValue>
+                    macro("getConvertedInputValue", inputValue)
+                </convertInputValue>
+				<if>
+                    param("displayValueAs") == "VALUE"
+                    <then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+					</else>
+				</if>
+			</parameter>
+            <parameter name="displayNullAs" description="Display NULL As" type="String" freehand="no" defaultValue=""/>
+			<parameter name="indentation" description="Indentation (chars)" type="integer" defaultValue="3" freehand="no">
+				<!--<if>-->
+				<!--param("subTotalFields").size() &gt; 0 &amp;&amp; <currentParameters/>.getID() == param("subTotalFields").get(0).getID()-->
+				<!--<then>-->
+				<!--<disabled/>-->
+				<!--</then>-->
+				<!--</if>-->
+			</parameter>
+			<parameter name="valueFormat" description="Value Format" type="string" freehand="no">
+                macro("valueFormat", "subTotalGroup");
+            </parameter>
+			<parameter name="sortOrder" description="Sort Order" type="string" freehand="no">
+                macro("sortOrderPart");
+            </parameter>
+			<confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("fields"), param("syntheticFields"), param("auxFields")));
+            </confirmAddRow>
+			<onRowAdded>
+                macro("onFieldRowAdded", "valueFormula", "subTotalGroup");
+			</onRowAdded>
+			<onRowDeleted>
+                macro("onFieldRowDeleted", "subTotalGroup");
+            </onRowDeleted>
+			<onRowMoved>
+                macro("onFieldRowMoved", "valueFormula", "subTotalGroup");
+			</onRowMoved>
+		</parameter>
+		<parameter name="help_info_detail" description="" type="Component" group="Subtotals by..." noSerialization="yes" freehand="no">
+			<attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+			<attribute name="text">l("Excel-like syntax must be used in formulas")</attribute>
+			<attribute name="color">macro("LIGHT_BLUE")</attribute>
+		</parameter>
+		<parameter name="totalsBeforeDetails" description="Totals line goes before the details" type="boolean" length="7" group="Subtotals by..." defaultValue="false" freehand="no"/>
+		<parameter name="groupHeadersOnEachPage" description="Display group headers on each page" type="boolean" length="7" group="Subtotals by..." defaultValue="true" freehand="no"/>
+		<parameter name="fields" description="Fields" type="table" length="7" group="Fields" keyParameter="name" tableTransposed="true" compareByID="true" freehand="no">
+			<parameter name="name" description="Field Name" type="String" length="20" freehand="no">
+				<attribute name="lookupFromFieldList"> l("Select Detail") <comma/>
+                    editor.getRemoteProxy().lookupFieldsInModelsAsStrings(macro("getResolvedModels"), editor.getBranchId());
+                </attribute>
+				<convertInputValue>
+                    inputValue.get(1);
+                </convertInputValue>
+				<validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("subTotalFields"), param("syntheticFields"), param("auxFields")));
+                </validation>
+				<verifyForSave>
+                    macro("verifyNonEmpty");
+
+                    var type1 = macro("getFieldType", currentParameters.getID(), "fieldGroup");
+                    macro("verifyAggregationType", currentParameters.param("name"), type1, currentParameters.param("aggrType"), false);
+                </verifyForSave>
+				<onParameterChange>
+                    macro("onFieldNameChange", "calcFormula", "fieldGroup");
+				</onParameterChange>
+			</parameter>
+			<parameter name="description" description="Field Title" type="String" freehand="no"/>
+			<parameter name="aggrType" description="Aggregation Type" type="string" length="20" freehand="no">
+				<choices>
+					<asDescription>
+                        ndo('NA',l('Not Aggregated')), ndo('SUM',l('Sum')), ndo('AVG',l('Average')), ndo('MAX',l('Maximum')),
+                        ndo('MIN',l('Minimum'))
+                    </asDescription>
+				</choices>
+				<default>'NA'</default>
+                <onParameterChange>
+                    <if>
+                        param("aggrType") == "NA" &amp;&amp; param("displayNullAs") == ""
+                        <then>
+                            param("displayNullAs") = "[NULL]";
+                        </then>
+                        <else>
+                            <if>
+                                param("aggrType") != "NA" &amp;&amp; param("displayNullAs") == "[NULL]"
+                                <then>
+                                    param("displayNullAs") = "";
+                                </then>
+                            </if>
+                        </else>
+                    </if>
+                </onParameterChange>
+			</parameter>
+			<parameter name="calcTotal" description="Calc. Total?" type="boolean" defaultValue="false" freehand="no">
+				<if>
+                    param("aggrType") == "NA"
+                    <then>
+						<disabled/>
+					</then>
+					<else>
+						<enabled/>
+					</else>
+				</if>
+			</parameter>
+			<parameter name="calcFormula" description="Calc. Formula" type="string" freehand="no">
+				<attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues"> l("Field") <comma/>
+                    var tables = array("subTotalFields", "auxFields", "fields");
+                    var fields = macro("parametricLookup", tables, "fields", <currentParameters/>.getID(), null, "name", null, "$");
+                    macro("expressionsLookup", fields)
+                </attribute>
+				<convertInputValue>
+                    macro("getConvertedInputValue", inputValue)
+                </convertInputValue>
+				<onParameterChange>
+                    macro("onFormulaChange", "fieldGroup");
+				</onParameterChange>
+			</parameter>
+            <parameter name="displayNullAs" description="Display NULL As" type="String" freehand="no">
+                <if>param('aggrType') == 'NA'
+                    <then>
+                        <default>"[NULL]"</default>
+                    </then>
+                    <else>
+                        <default>""</default>
+                    </else>
+                </if>
+            </parameter>
+			<parameter name="autoWidth" description="Auto Width" type="boolean" defaultValue="true" freehand="no"/>
+			<parameter name="columnWidth" description="Column Width (chars)" type="integer" freehand="no"/>
+			<parameter name="valueFormat" description="Value Format" type="string" freehand="no">
+                macro("valueFormat", "fieldGroup");
+            </parameter>
+			<parameter name="sortOrder" description="Sort Order" type="string" freehand="no">
+                macro("sortOrderFull");
+            </parameter>
+			<parameter name="sortingSequenceNumber" description="Sorting Sequence No" type="integer" defaultValue="0" freehand="no"/>
+			<confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("subTotalFields"), param("syntheticFields"), param("auxFields")));
+            </confirmAddRow>
+            <onRowAdded>
+                macro("onFieldRowAdded", "calcFormula", "fieldGroup");
+            </onRowAdded>
+            <onRowDeleted>
+                macro("onFieldRowDeleted", "fieldGroup");
+            </onRowDeleted>
+            <onRowMoved>
+                macro("onFieldRowMoved", "calcFormula", "fieldGroup");
+            </onRowMoved>
+		</parameter>
+		<parameter name="help_info" description="" type="Component" group="Fields" noSerialization="yes" freehand="no">
+			<attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+			<attribute name="text">l("Fields' formulas are evaluated prior to aggregation. Excel-like syntax must be used.")</attribute>
+			<attribute name="color">macro("LIGHT_BLUE")</attribute>
+		</parameter>
+		<parameter name="aggregateRecords" description="Aggregate data records with identical attributes" type="boolean" length="7" group="Fields" defaultValue="true" freehand="no"/>
+		<!--<parameter name="subtotalsInData" description="Data records include all subtotal elements" type="boolean"-->
+		<!--length="7" group="Fields" defaultValue="false"/>-->
+		<!--<parameter name="detailSet" description="Detail Set" group="Fields" type="String" length="20" isDataSet="DetailSet">-->
+		<!--<if> !param("subtotalsInData")-->
+		<!--<then>-->
+		<!--<disabled/>-->
+		<!--</then>-->
+		<!--<else>-->
+		<!--<enabled/>-->
+		<!--</else>-->
+		<!--</if>-->
+		<!--</parameter>-->
+		<parameter name="syntheticFields" description="Synthetic Fields" type="table" length="7" group="Synthetic Fields" keyParameter="name" tableTransposed="true" compareByID="true" freehand="no">
+			<parameter name="name" description="Field Name" type="String" length="20" freehand="no">
+				<validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("subTotalFields"), param("fields"), param("auxFields")));
+                </validation>
+				<verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+				<onParameterChange>
+					<if> inputValue != null &amp;&amp; !(inputValue instanceof "java.lang.String")
+                        <then>
+                            param("description") =  inputValue.get(2);
+                        </then>
+					</if>
+				</onParameterChange>
+			</parameter>
+			<parameter name="description" description="Field Title" type="String" freehand="no"/>
+			<parameter name="showInTotals" description="Calc. Total?" type="boolean" defaultValue="false" freehand="no"/>
+			<parameter name="calcFormula" description="Calc. Formula" type="string" freehand="no">
+				<attribute name="lookupAppend">true</attribute>
+				<attribute name="lookupFromValues"> l("Field") <comma/>
+                    var tables = array("subTotalFields", "fields", "syntheticFields");
+                    var fields = macro("parametricLookup", tables, "syntheticFields", null, <currentParameters/>.getID(), "name", null, "$");
+                    macro("expressionsLookup", fields)
+                </attribute>
+                <convertInputValue>
+                    macro("getConvertedInputValue", inputValue)
+                </convertInputValue>
+			</parameter>
+            <parameter name="displayNullAs" description="Display NULL As" type="String" freehand="no" defaultValue=""/>
+			<parameter name="autoWidth" description="Auto Width" type="boolean" defaultValue="true" freehand="no"/>
+			<parameter name="columnWidth" description="Column Width (chars)" type="integer" defaultValue="10" freehand="no"/>
+			<parameter name="valueFormat" description="Value Format" type="string" freehand="no">
+				<choices>
+					<asDescription>
+                        macro("getFormatChoices", "ALL")
+                    </asDescription>
+				</choices>
+				<editable/>
+			</parameter>
+			<parameter name="sortOrder" description="Sort Order" type="string" freehand="no">
+                macro("sortOrderFull");
+            </parameter>
+			<parameter name="sortingSequenceNumber" description="Sorting Sequence No" type="integer" defaultValue="0" freehand="no"/>
+			<confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("subTotalFields"), param("fields"), param("auxFields")));
+            </confirmAddRow>
+		</parameter>
+		<parameter name="help_info_synt" description="" type="Component" group="Synthetic Fields" noSerialization="yes" freehand="no">
+			<attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+			<attribute name="text">l("Synthetic Fields' formulas are evaluated post-aggregation. Excel-like syntax must be used.")</attribute>
+			<attribute name="color">macro("LIGHT_YELLOW")</attribute>
+		</parameter>
+		<parameter name="auxFields" description="Auxiliary Fields" type="table" length="7" group="Auxiliary Fields" keyParameter="name" freehand="no">
+			<parameter name="name" description="Auxiliary Field Name" type="String" length="20" freehand="no">
+				<attribute name="lookupFromFieldList"> l("Select Auxiliary Field") <comma/>
+                    editor.getRemoteProxy().lookupFieldsInModelsAsStrings(macro("getResolvedModels"), editor.getBranchId());
+                </attribute>
+				<convertInputValue>
+                    inputValue.get(1);
+                </convertInputValue>
+				<validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("subTotalFields"), param("syntheticFields"), param("fields")));
+                </validation>
+				<verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+				<onParameterChange>
+                    macro("onFieldNameChange", null, "auxGroup");
+				</onParameterChange>
+			</parameter>
+			<parameter name="description" description="Auxiliary Field Description" type="String" wrapOnReport="true" freehand="no"/>
+			<confirmAddRow>
+                macro("checkUniquenessOnConfirmIgnoreCase", list(param("subTotalFields"), param("syntheticFields"), param("fields")));
+            </confirmAddRow>
+            <onRowAdded>
+                macro("onFieldRowAdded", null, "auxGroup");
+            </onRowAdded>
+            <onRowDeleted>
+                macro("onFieldRowDeleted", "auxGroup");
+            </onRowDeleted>
+            <onRowMoved>
+                macro("onFieldRowMoved", null, "auxGroup");
+            </onRowMoved>
+		</parameter>
+		<parameter name="mappings" description="Mapping" type="tree" group="Fields Mapping" rootNodeType="rootMappingNode" tableTransposed="true" compareByID="true" freehand="no">
+			<nodeType name="rootMappingNode" description="Mapping" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="fieldGroup, auxGroup, subTotalGroup"/>
+			<nodeType name="fieldGroup" description="Field Mapping" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="fieldMappingNode"/>
+			<nodeType name="auxGroup" description="Auxiliary Fields Mapping" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="fieldMappingNode"/>
+			<nodeType name="subTotalGroup" description="'Subtotals by...' Fields Mapping" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="true" childrenTypes="fieldMappingNode"/>
+			<!--hasID = true to facilitate comparison of mapping nodes by id -->
+			<nodeType name="fieldMappingNode" description="Field" renameAllowed="false" deleteAllowed="false" hasChildren="false" childrenAreFixed="false" hasID="true">
+				<parameter name="fieldMapping" description="Field Mapping" type="table" allowAddRemove="false" reorder="false" length="5" keyParameter="model" tableTransposed="true" mergeOnComparison="true" freehand="no">
+					<!--modified externally, never thru equals() -->
+					<parameter name="model" description="Model" type="string" wrapOnReport="true" freehand="no">
+						<readonly/>
+					</parameter>
+					<parameter name="expression" description="Expression" type="string" wrapOnReport="true" freehand="no">
+                        <attribute name="allowAppend"/>
+						<attribute name="lookupFromValues"> l("Expression") <comma/>
+                            ;macro("trExpressionAndMappingLookup")
+                        </attribute>
+						<convertInputValue>
+                            <if> inputValue instanceof "[Ljava.lang.String;"
+                                <then>
+                                    <!--field-->
+                                    ;"$" + inputValue.get(0) +  "." + inputValue.get(1)
+                                </then>
+                                <else>
+                                    <!--macro-->
+                                    ;inputValue.getName()
+                                </else>
+                            </if>
+                        </convertInputValue>
+						<if>
+                            param("model") == "UNRESOLVED"
+                            <then>
+								<disabled/>
+							</then>
+							<else>
+								<enabled/>
+							</else>
+						</if>
+						<validation>
+                            macro("validateMappingExpression");
+                        </validation>
+						<verifyForSave>
+                            macro("verifyMappingExpression");
+                        </verifyForSave>
+					</parameter>
+					<parameter name="valueType" description="Value Type" type="string" freehand="no">
+						<if>
+                            param("model") == "UNRESOLVED" || macro("isSingleFieldReference")
+                            <then>
+								<equals>
+									<if> param("model") != "UNRESOLVED"
+                                        <then>
+                                            var model = editor.getAxiomObjectManager().locate(function("axiomsl.server.object_framework.ObjectID", "createNameId", "DataModel", editor.getBranchId(), param("model")));
+                                            var accessor = new("axiomsl.accessors.DataModelAccessor", model);
+                                            var route = function("axiomsl.server.object_framework.RouteToObject", "createNameRouteFromObjectName", editor.getAxiomObjectManager(), editor.getBranchId(), param("model"));
+                                            var parser = new("axiomsl.accessors.ExpressionParserImpl", editor.createObject("DataModel"), accessor, route);
+                                            var table = parser.parseExpression(param("expression"));
+                                            var type = table.get(0).getProperty("value").getTargetObject().getString("type");
+                                            return case(type == "TEXT", "VARCHAR", type == "UNICODE_TEXT", "UNICODE", type);
+                                        </then>
+									</if>
+								</equals>
+								<readonly/>
+							</then>
+							<else>
+								<enabled/>
+							</else>
+						</if>
+                        macro("valueType", "FLOAT");
+                    </parameter>
+					<parameter name="valueSize" description="Value Size" type="integer" freehand="no">
+						<if>
+                            param("model") == "UNRESOLVED" || macro("isSingleFieldReference")
+                            <then>
+								<disabled/>
+							</then>
+							<else>
+								<enabled/>
+                                macro("valueSize");
+                            </else>
+						</if>
+					</parameter>
+					<parameter name="valueNullable" description="Value Nullable?" type="boolean" freehand="no">
+						<if>
+                            param("model") == "UNRESOLVED" || macro("isSingleFieldReference")
+                            <then>
+								<disabled/>
+							</then>
+							<else>
+								<enabled/>
+							</else>
+						</if>
+					</parameter>
+				</parameter>
+				<parameter name="help_info_mapping" description="" type="Component" noSerialization="yes" freehand="no">
+					<attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+					<attribute name="text">l("SQL syntax must be used in expressions")</attribute>
+					<attribute name="color">macro("LIGHT_GREEN")</attribute>
+				</parameter>
+			</nodeType>
+		</parameter>
+
+        <parameter name="parameters" description="Variable Definitions" type="table" length="4" keyParameter="name" group="Variables" freehand="no">
+            <parameter name="name" description="Variable Name" type="String" freehand="no">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniqueness", list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="description" description="Description" type="String" freehand="no"/>
+            <parameter name="dataType" description="Type" type="String" freehand="no">
+                choices(<asDescription>
+                    ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE"))
+                </asDescription>)
+                <default>
+                'VARCHAR'
+                </default>
+            </parameter>
+            <!--<parameter name="lookupFormula" description="Lookup Expression" type="String" wrapOnReport="true" freehand="yes"/>-->
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirm", list());
+            </confirmAddRow>
+        </parameter>
+
+        <parameter name="parameterValuesForPreview" description="Variable Values for Preview" type="table" keyParameter="name" length="4" reorder="false" allowAddRemove="false" group="Variables" freehand="no">
+            <parameter name="name" description="Variable Name" type="String">
+                <readonly/>
+            </parameter>
+            <parameter name="value" description="Variable Value" noTypeConversions="true" type="axiomsl.gui.batch.execution.Dummy" freehand="no"> <!-- dummy type-->
+                <default>macro("getDefalutVarValue", param("parameters"), param("name"), "")</default>;
+            </parameter>
+            <equals>
+                macro("loadTable", <forTable name="parameters">param("name")</forTable>, <forTable name="parameters">param("dataType")</forTable>, if(paramIsSet("parameterValuesForPreview"), param("parameterValuesForPreview"), null))
+            </equals>
+        </parameter>
+
+        <!--conditions properties-->
+		<parameter name="condition" description="Conditions" type="Condition" length="7" group="Conditions" freehand="no">
+			<attribute name="models">
+                var l = list();
+                var models = param("models");
+                <for>var i = 0
+                        <comma/>
+                        i &lt; models.size()
+                        <comma/>
+                        i ++
+                        <do>
+                            var model = models.get(i);
+                            l.add(model.param("name"));
+                        </do>
+				</for>
+                l
+            </attribute>
+            <attribute name="fields">
+                var l = list();
+
+                <if>!param("models").isEmpty()
+                    <then>
+                        var fieldFactory = new("axiomsl.util.condition.FieldFactory");
+                        var fields = param("fields");
+                        var auxFields = param("auxFields");
+
+                        <for>var n = 0;
+                            <comma/>
+                            n &lt; fields.size()
+                            <comma/>
+                            n ++
+                            <do>
+                                l.add(fieldFactory.createField("", fields.get(n).param("name"), fields.get(n).param("description"), macro("getFieldTypeFromMapping", fields.get(n).getID(), "fieldGroup"), false, false));
+                            </do>
+                        </for>
+                        <for>var n = 0;
+                            <comma/>
+                            n &lt; auxFields.size()
+                            <comma/>
+                            n ++
+                            <do>
+                                l.add(fieldFactory.createField("", auxFields.get(n).param("name"), auxFields.get(n).param("description"), macro("getFieldTypeFromMapping", auxFields.get(n).getID(), "auxGroup"), false, false));
+                            </do>
+                        </for>
+
+
+                        var modelName = param("models").get(0).param("name");
+                        var env = axiomEnvironment.clone();
+                        env.setProperty(class("axiomsl.server.AxiomEnvironment").ALLOW_LOCATE_INVALID, true);
+                        var dataModel = null;
+                        <if> modelName != null and !modelName.equals("") and !modelName.startsWith("!!!")
+                            <then>
+                                dataModel = axiomObjectManager.locate(editor.createNameId("DataModel", modelName), env);
+                            </then>
+                        </if>
+
+                        <if>
+                            dataModel == null
+                            <then>
+                                null
+                            </then>
+                            <else>
+                                var fieldList = list();
+                                var modelFields = new("axiomsl.accessors.DataModelAccessor", dataModel).lookupFieldsInModel(dataModel);
+                                <for>var i = 0<comma/>i &lt; modelFields.size()<comma/>i ++
+                                    <do>
+                                        var column = modelFields.get(i);
+                                        l.add(fieldFactory.createField(column.getAlias(), column.getName(), column.getDescription(), column.type, false, false));
+                                    </do>
+                                </for>
+
+                            </else>
+                        </if>
+                    </then>
+                </if>
+                ; l
+
+            </attribute>
+		</parameter>
+
+        <parameter name="submissionFileEncoding" description="Submission File Encoding" group="XML Parameters" type="String" defaultValue="UTF8" length="20" freehand="no">
+            <editable/>
+            macro("encodingChoices")
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+        </parameter>
+
+		<parameter name="xslTransformationFile" description="XSL Transformation File" type="String" group="XML Parameters" freehand="no">
+			<attribute name="multiLine">5</attribute>
+            <attribute name="unlimitedSize"> true </attribute>
+		</parameter>
+        <parameter name="xmlHeader" description="Additional XML Header" type="String" group="XML Parameters" freehand="no">
+            <attribute name="multiLine">5</attribute>
+            <attribute name="unlimitedSize"> true </attribute>
+            <validation>
+                macro("validateXML")
+            </validation>
+            <attribute name="lookupAppend">true</attribute>
+            <attribute name="lookupFromValues"> l("Variable") <comma/>
+                <forTable name="parameters">ndo("@" + param("name"), param("description"))</forTable>
+            </attribute>
+        </parameter>
+        <parameter name="xmlHeaderIsExpression" description="Header is an evaluated expression" type="Boolean" group="XML Parameters" freehand="no"/>
+
+        <parameter name="schemaBasedXMLGeneration" description="Enable Schema based XML generation" type="Boolean" group="Schema XML Generation" freehand="no"/>
+        <parameter name="xsdSchema" description="XSD Schema" type="String" group="Schema XML Generation" freehand="no">
+            <attribute name="multiLine">20</attribute>
+            <if>
+                <param name="schemaBasedXMLGeneration"/>
+            <then>
+                <enabled/>
+            </then>
+            <else>
+                <removed/>
+            </else>
+            </if>
+        </parameter>
+        <parameter name="xsdRootElementName" description="Root element name (will pick first available if left blank)" type="String" group="Schema XML Generation" freehand="no">
+            <if>
+                <param name="schemaBasedXMLGeneration"/>
+            <then>
+                <enabled/>
+            </then>
+            <else>
+                <removed/>
+            </else>
+            </if>
+        </parameter>
+        <parameter name="uploadSchemaAdditional" description="ads" type="Component" noSerialization="yes" row="0" group="Schema XML Generation">
+            <attribute name="componentClass">"axiomsl.gui.tabular_report.setup.UploadSchemaFileButton"</attribute>
+            <if>
+                <param name="schemaBasedXMLGeneration"/>
+            <then>
+                <enabled/>
+            </then>
+            <else>
+                <removed/>
+            </else>
+            </if>
+        </parameter>
+        <parameter name="xsdSchemaAdditional" description="Additional XSD Schema files (if used in include declarations)" type="tree" length="200" rootNodeType="rootSchemaNode" group="Schema XML Generation">
+            <if>
+                <param name="schemaBasedXMLGeneration"/>
+            <then>
+                <enabled/>
+            </then>
+            <else>
+                <removed/>
+            </else>
+            </if>
+            <nodeType name="rootSchemaNode" description="Additional schema files" renameAllowed="false" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="TabularReport:additionalSchema"/>
+            <nodeType name="TabularReport:additionalSchema" description="Schema file" renameAllowed="true" deleteAllowed="true" hasChildren="false" childrenAreFixed="false" alphaNumericName="false" >
+                <parameter name="value" description="Value" type="String" defaultValue="" length="20" freehand="no">
+                    <attribute name="multiLine"> 15 </attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+                </parameter>
+            </nodeType>
+        </parameter>
+        <parameter name="xsdSchemaSkipParentIfSubelementIsMissing" description="Skip parent elements if mandatory sub-elements are missing" type="Boolean" group="Schema XML Generation" freehand="no">
+            <if>
+                <param name="schemaBasedXMLGeneration"/>
+            <then>
+                <enabled/>
+            </then>
+            <else>
+                <removed/>
+            </else>
+            </if>
+        </parameter>
+        <parameter name="analyzeSchemaButton" type="Component" description="" group="Schema XML Generation" noSerialization="yes" row="0" freehand="no">
+            <attribute name="componentClass">"axiomsl.gui.tabular_report.setup.AnalyzeSchemaButton"</attribute>
+            <if>
+                <param name="schemaBasedXMLGeneration"/>
+            <then>
+                <enabled/>
+            </then>
+            <else>
+                <removed/>
+            </else>
+            </if>
+        </parameter>
+        <parameter name="xsdSchemaElementNames" description="Expected element names" type="String" group="Schema XML Generation" noSerialization="true" freehand="no">
+            <attribute name="multiLine">20</attribute>
+            <if>
+                <param name="schemaBasedXMLGeneration"/>
+            <then>
+                <enabled/>
+                <readonly/>
+            </then>
+            <else>
+                <removed/>
+            </else>
+            </if>
+        </parameter>
+        <parameter name="xsdSchemaNameSpacePrefixes" description="Name-space Prefix to Name mapping" type="table" group="Schema XML Generation" reorder="false" allowAddRemove="false" keyParameter="nameSpacesValue" freehand="no">
+            <parameter name="nameSpacePrefix" description="Prefix" type="String" freehand="no"/>
+            <parameter name="nameSpacesValue" description="NameSpace" type="String" freehand="no">
+                <readonly/>
+            </parameter>
+            <if>
+                <param name="schemaBasedXMLGeneration"/>
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="xsdSchemaMappings" description="Cycle to field mapping" type="table" group="Schema XML Generation" reorder="false" allowAddRemove="false" keyParameter="cycleName" freehand="no">
+            <parameter name="field" description="Cycle field" type="String" freehand="no">
+                <attribute name="lookupFromValues"> l("Field") <comma/>
+                    <forTable name="fields">
+                                ndo(<param name="name"/>,
+                                    <param name="description"/>)
+                    </forTable>
+                </attribute>
+            </parameter>
+            <parameter name="cycleName" description="Cycle element name" type="String" freehand="no">
+                <readonly/>
+            </parameter>
+            <if>
+                <param name="schemaBasedXMLGeneration"/>
+            <then>
+                <enabled/>
+            </then>
+            <else>
+                <removed/>
+            </else>
+            </if>
+        </parameter>
+        <parameter name="xsdSchemaElementNameField" description="Element name field" type="String" group="Schema XML Generation" freehand="no">
+            <if>
+                <param name="schemaBasedXMLGeneration"/>
+            <then>
+                <enabled/>
+                <choices>
+                    <forTable name="fields">
+                                <param name="name"/>
+                    </forTable>
+                </choices>
+            </then>
+            <else>
+                <removed/>
+            </else>
+            </if>
+        </parameter>
+        <parameter name="xsdSchemaElementValueField" description="Element value field" type="String" group="Schema XML Generation" freehand="no">
+            <if>
+                <param name="schemaBasedXMLGeneration"/>
+            <then>
+                <enabled/>
+                <choices>
+                    <forTable name="fields">
+                                <param name="name"/>
+                    </forTable>
+                </choices>
+            </then>
+            <else>
+                <removed/>
+            </else>
+            </if>
+        </parameter>
+
+        <parameter name="postProcessingCode" description="Post Processing Code (After XSL transformation)" type="String" group="Post Processing Code" freehand="no">
+			<attribute name="multiLine">10</attribute>
+            <attribute name="unlimitedSize"> true </attribute>
+            <attribute name="lookupAppend">true</attribute>
+			<attribute name="lookupFromValues"> l("Macro") <comma/>
+                var reportConstants = list();
+                reportConstants.add(ndo("@USER_NAME", l("User Name")));
+                reportConstants.add(ndo("dataStore", l("DataStore")));
+                reportConstants.add(ndo("transformedFileName", l("FileName")));
+                reportConstants.add(ndo("UNIX_LINE_BREAK", l("Unix style line separator")));
+                reportConstants.add(ndo("DOS_LINE_BREAK", l("DOS style line separator")));
+                reportConstants.add(ndo("out", l("Out stream")));
+                new("axiomsl.util.ui.NamedList", "Parameters", l("Parameters"), reportConstants.toArray()),
+                macro("reportLookup");
+            </attribute>
+            <validation>
+                macro("validateXML")
+            </validation>
+		</parameter>
+
+        <parameter name="requiresAllModels" description="Requires all models for execution" group="Models" type="Boolean" optional="true" defaultValue="true" freehand="no"/>
+
+        <parameter name="ready_to_sign_off_variable" description="Ready to sign off variable" group="Dates/Streams for Preview" type="String" length="20" freehand="no">
+            <attribute name="lookupFromNamedList"> l("Select Detail") <comma/>
+                macro("lookupVariables");
+            </attribute>
+            <verifyForSave>
+                var res = list();
+                <if> currentParameter.getParameterValue() == null OR "".equals(currentParameter.getParameterValue())
+                    <then>
+                        return true;
+                    </then>
+                </if>
+                var table = param("parameters");
+                var k = 0;
+                var found = false;
+                <for><comma/> k &lt;table.size() <comma/> k++
+                    <do>
+                        var row = table.get(k);
+                        <if> row.param("name") == currentParameter.getParameterValue()
+                            <then>
+                                found = true;
+                                break;
+                            </then>
+                        </if>
+                    </do>
+                </for>
+                <if> !found
+                    <then>
+                        errorMessage(l("Selected 'ready to sign off' variable doesn't exist."));
+                        return false;
+                    </then>
+                </if>
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="ready_to_sign_off_complete_value" description="Ready to sign off 'complete' value" group="Dates/Streams for Preview" defaultValue="OK" type="String" length="20" freehand="no"/>
+
+        <parameter name="loaderBufferSize" description="Loader Buffer Size" group="Text File Parameters" type="Integer" defaultValue="200" length="20" freehand="no">
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+        </parameter>
+        <parameter name="lineSeparator" description="Line Separator" group="Text File Parameters" type="String" defaultValue="system" length="20" freehand="no">
+            choices(<asDescription>ndo('system', l('System')), ndo('dos', l('Dos')), ndo('unix', l('Unix'))</asDescription>)
+        </parameter>
+        <parameter name="enableTxtFileDelimiter" description="Write Text Output File with Delimiter" type="Boolean" group="Text File Parameters" freehand="no"/>
+        <parameter name="delimiter" description="Delimiter" type="String" group="Text File Parameters" defaultValue="\t" length="20" freehand="no">
+            <if><param name="enableTxtFileDelimiter"/>
+                <then>
+                    <enabled/>
+                    choices(<asDescription>ndo('\t', l('TAB')), ndo(',', l('COMMA')),ndo(';', l('SEMICOLON')),ndo('|', l('PIPE')),ndo(':', l('COLON')),ndo('\none', l('NONE')),ndo('\space', l('SPACE'))</asDescription>)
+                    <editable/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+        </parameter>
+        <parameter name="addColumnNamesInTabDelimitedReport" description="Add Column Names in Delimited File" type="Boolean" group="Text File Parameters" freehand="no">
+            <if><param name="enableTxtFileDelimiter"/>
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="useQuotesForValueWithDelimiter" description="Use Quotes For Values that Contain Delimiter" type="Boolean" group="Text File Parameters" freehand="no">
+            <if><param name="enableTxtFileDelimiter"/>
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+        </parameter>
+        <parameter name="delimitedTextBufferSize" description="Delimited Writer Buffer Size" group="Text File Parameters" type="Integer" defaultValue="10000" length="20" freehand="no">
+            <if><param name="enableTxtFileDelimiter"/>
+                <then>
+                    <enabled/>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+            <verifyForSave>
+                macro("verifyNonEmpty");
+            </verifyForSave>
+        </parameter>
+        <parameter name="allowExternalDataPermissions" description="Allow External Data Permissions" group="Parameters" type="Boolean" optional="true" defaultValue="true" freehand="no"/>
+    </parameters>
+	<loadCode>
+        var report = <originalAxiom/>;
+
+        <!--model setup -->
+        var models = report.getTable("models");
+        <for>var i = 0
+            <comma/>
+            i &lt; models.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("models").addLine();
+                var modelRef = models.get(i).getReference("dataModel");
+                row.param("name") = modelRef.getTargetObjectName(dataSet.getRouteFromCurrentBranch());
+                row.setID(modelRef.getTargetObjectID(dataSet.getRouteFromCurrentBranch(), editor.getBranchId()).getObjectId());
+            </do>
+		</for>
+
+        var accessor = new("axiomsl.accessors.TabularReportAccessor", report);
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor, dataSet.getRouteFromCurrentBranch());
+        <!--fields setup -->
+        var fields = report.getTable("fields");
+        <for>var i = 0
+            <comma/>
+            i &lt; fields.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("fields").addLine();
+                var field = fields.get(i);
+                row.param("name") = field.getString("name");
+                row.param("description") = field.getString("description");
+                row.param("aggrType") = field.getString("aggrType");
+                macro("setIfExists", field, "calcTotal", row);
+                parser.setContext(field);
+                row.param("calcFormula") = parser.getExpressionString(field.getTable("calcFormula"));
+                row.param("displayNullAs") = field.getOptionalValue("displayNullAs",if(row.param("aggrType")=="NA","[NULL]",""));
+                row.param("autoWidth") = field.getBoolean("autoWidth");
+                row.param("columnWidth") = field.getInteger("columnWidth");
+                macro("setIfExists", field, "valueFormat", row);
+                row.param("sortOrder") = field.getString("sortOrder");
+                row.param("sortingSequenceNumber") = field.getInteger("sortingSequenceNumber");
+
+                row.setID(field.getString("id"));
+            </do>
+		</for>
+		<!--syntheticFields setup -->
+        var syntheticFields = report.getTable("syntheticFields");
+        param("syntheticFields");<!--deserializing-->
+		<for>var i = 0
+            <comma/>
+            i &lt; syntheticFields.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("syntheticFields").addLine();
+                var syntheticField = syntheticFields.get(i);
+                row.param("name") = syntheticField.getString("name");
+                row.param("description") = syntheticField.getString("description");
+                row.param("showInTotals") = syntheticField.getBoolean("showInTotals");
+                parser.setContext(syntheticField);
+                row.param("calcFormula") = parser.getExpressionString(syntheticField.getTable("calcFormula"));
+                row.param("displayNullAs") = syntheticField.getOptionalValue("displayNullAs","");
+                row.param("autoWidth") = syntheticField.getBoolean("autoWidth");
+                row.param("columnWidth") = syntheticField.getInteger("columnWidth");
+                macro("setIfExists", syntheticField, "valueFormat", row);
+                row.param("sortOrder") = syntheticField.getString("sortOrder");
+                row.param("sortingSequenceNumber") = syntheticField.getInteger("sortingSequenceNumber");
+
+                row.setID(syntheticField.getString("id"));
+            </do>
+		</for>
+		<!--subTotal fields setup -->
+        var subTotalFields = report.getTable("subTotalFields");
+        param("subTotalFields");<!--deserializing-->
+		<for>var i = 0
+            <comma/>
+            i &lt; subTotalFields.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("subTotalFields").addLine();
+                var subTotalField = subTotalFields.get(i);
+                row.param("name") = subTotalField.getString("name");
+                row.param("description") = subTotalField.getString("description");
+                
+                row.param("displayValueAs") = subTotalField.getString("displayValueAs");
+                row.param("hideSubtotalName") = subTotalField.getOptionalBoolean("hideSubtotalName");
+
+                parser.setContext(subTotalField);
+                row.param("valueFormula") = parser.getExpressionString(subTotalField.getTable("valueFormula"));
+                row.param("descFormula") = parser.getExpressionString(subTotalField.getTable("descFormula"));
+                row.param("displayNullAs") = subTotalField.getOptionalValue("displayNullAs","");
+                row.param("indentation") = subTotalField.getInteger("indentation");
+                macro("setIfExists", subTotalField, "valueFormat", row);
+                row.param("sortOrder") = subTotalField.getString("sortOrder");
+
+                row.setID(subTotalField.getString("id"));
+            </do>
+		</for>
+		<!--aux Fields setup -->
+        var auxFields = report.getTable("auxFields");
+        param("auxFields");<!--deserializing-->
+		<for>var i = 0
+            <comma/>
+            i &lt; auxFields.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("auxFields").addLine();
+                var auxField = auxFields.get(i);
+                row.param("name") = auxField.getString("name");
+                row.param("description") = auxField.getString("description");
+                row.setID(auxField.getString("id"));
+            </do>
+		</for>
+
+		<if> report.propertyIsSet("condition")
+            <then>
+                param("condition") =  new("axiomsl.util.condition.ConditionSequence", report.getTree("condition").getRootNode(), parser);
+            </then>
+			<else>
+                param("condition") =  new("axiomsl.util.condition.ConditionSequence", null, parser);
+            </else>
+		</if>
+        param("xsdSchemaElementNames") = "Press Analyze Schema button to list possible elements";
+
+        var route = dataSet.getRouteFromCurrentBranch();
+        var templates = array(
+                "default(requiresAllModels)",
+                "default(parameters)",
+                "default(xmlHeader)",
+                "default(xmlHeaderIsExpression)",
+                "default(postProcessingCode)",
+                "default(schemaBasedXMLGeneration)",
+                "default(xsdSchemaSkipParentIfSubelementIsMissing)",
+                "default(xsdRootElementName)",
+                "table2tree(xsdSchemaAdditional)",
+                "default(enableTxtFileDelimiter)",
+                "default(loaderBufferSize)",
+                "default(delimitedTextBufferSize)",
+                "default(lineSeparator)",
+                "default(xsdSchemaNameSpacePrefixes)"
+        );
+
+        var params = array(
+            "parameters",
+            "totalsBeforeDetails",
+            "groupHeadersOnEachPage",
+            "aggregateRecords",
+            "requiresAllModels",
+            "xslTransformationFile",
+            "xmlHeader",
+            "xmlHeaderIsExpression",
+            "postProcessingCode",
+            "schemaBasedXMLGeneration",
+            "xsdSchema",
+            "xsdSchemaAdditional",
+            "xsdRootElementName",
+            "xsdSchemaElementNameField",
+            "xsdSchemaElementValueField",
+            "xsdSchemaNameSpacePrefixes",
+            "xsdSchemaMappings",
+            "xsdSchemaSkipParentIfSubelementIsMissing",
+            "enableTxtFileDelimiter",
+            "delimiter",
+            "addColumnNamesInTabDelimitedReport",
+            "useQuotesForValueWithDelimiter",
+            "delimitedTextBufferSize",
+            "loaderBufferSize",
+            "lineSeparator",
+            "allowExternalDataPermissions"
+        );
+
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        matcher.match(<originalAxiom/>, currentParameters, params, array("parameters.lookupFormula"), templates, null, route);
+
+        param("xslTransformationFile") = editor.unescapeText(param("xslTransformationFile")); <!-- because converter wasn't doing it originally-->
+
+        param("parameterValuesForPreview") = macro("loadTableFromAxiomObject", <originalAxiom/>.getOptionalValue("parameterValuesForPreview", null), <originalAxiom/>.getOptionalValue("parameters", null));
+        <!--macro("copyFrom", report, "subtotalsInData");-->
+		<!--<if> report.getBoolean("subtotalsInData")-->
+		<!--<then>-->
+		<!--param("detailSet") = report.getReference("detailSet").getTargetObjectName(dataSet.getRouteFromCurrentBranch());-->
+		<!--</then>-->
+		<!--</if>-->
+		<!--deserialize data to additional panels-->
+
+        param("submissionFileEncoding") = <originalAxiom/>.getOptionalValue("submissionFileEncoding", "UTF8");
+        param("allowExternalDataPermissions") = <originalAxiom/>.getOptionalValue("allowExternalDataPermissions", false);
+        dataSet.deserializePanels(report);
+        <if><originalAxiom/>.propertyIsSet("readyToSignOffVariable")
+            <then>
+                param("ready_to_sign_off_variable") = <originalAxiom/>.getString("readyToSignOffVariable");
+                param("ready_to_sign_off_complete_value") = <originalAxiom/>.getString("readyToSignOffCompleteValue");
+            </then>
+            <else>
+                param("ready_to_sign_off_variable") = "";
+                param("ready_to_sign_off_complete_value") = "OK";
+            </else>
+        </if>
+    </loadCode>
+	<saveCode>
+        var reportForSave = <axiomForSave/>;
+        reportForSave.setProperty("readyToSignOffVariable", param("ready_to_sign_off_variable"));
+        reportForSave.setProperty("readyToSignOffCompleteValue", param("ready_to_sign_off_complete_value"));
+
+        reportForSave.setProperty("disableDataTypeValidation", false);
+
+        var accessor = new("axiomsl.accessors.TabularReportAccessor", reportForSave);
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor);
+
+
+        var toParse = list();
+        <!--model save -->
+        var modelTable = reportForSave.getTable("models");
+        var models = param("models");
+        <for>var i = 0
+            <comma/>
+            i &lt; models.size()
+            <comma/>
+            i ++
+            <do>
+                var row = models.get(i);
+                var modelName = row.param("name");
+                var modelRow = modelTable.addRow("ModelBasedTask:modelEntry");
+                modelRow.setProperty("dataModel", modelRow.createReferencePropertyValue("DataModel", modelName));
+            </do>
+		</for>
+		<!--fields save -->
+        var fieldsTable = reportForSave.getTable("fields");
+        var fields = param("fields");
+        <for>var i = 0
+            <comma/>
+            i &lt; fields.size()
+            <comma/>
+            i ++
+            <do>
+                var field = fields.get(i);
+                var fieldRow = fieldsTable.addRow("TabularReport:field");
+                macro("copyRefProperties", field, fieldRow);
+
+                fieldRow.setProperty("aggrType", field.param("aggrType"));
+                <if> field.param("calcTotal") != null
+                    <then>
+                        fieldRow.setProperty("calcTotal", field.param("calcTotal"));
+                    </then>
+				</if>
+                toParse.add(array(fieldRow, field.param("calcFormula"), "calcFormula"));  
+                <!--var formulaTable = parser.parseExpression(field.param("calcFormula"));-->
+				<!--fieldRow.setProperty("calcFormula", formulaTable);-->
+                <if> field.param("displayNullAs") != null
+                    <then>
+                        fieldRow.setProperty("displayNullAs", field.param("displayNullAs"));
+                    </then>
+                </if>
+                fieldRow.setProperty("autoWidth", field.param("autoWidth"));
+                fieldRow.setProperty("columnWidth", field.param("columnWidth"));
+                <if> field.param("valueFormat") != null
+                    <then>
+                        fieldRow.setProperty("valueFormat", field.param("valueFormat"));
+                    </then>
+				</if>
+				<!--trace(field.param("sortOrder"));-->
+                fieldRow.setProperty("sortOrder", field.param("sortOrder"));
+                fieldRow.setProperty("sortingSequenceNumber", field.param("sortingSequenceNumber"));
+                <!--trace(field.param("sortOrder"));-->
+			</do>
+		</for>
+		<!--syntheticFields save -->
+        var syntheticFieldsTable = reportForSave.getTable("syntheticFields");
+        var syntheticFields = param("syntheticFields");
+        <for>var i = 0
+            <comma/>
+            i &lt; syntheticFields.size()
+            <comma/>
+            i ++
+            <do>
+                var field = syntheticFields.get(i);
+                var fieldRow = syntheticFieldsTable.addRow("TabularReport:syntheticField");
+                macro("copyRefProperties", field, fieldRow);
+                fieldRow.setProperty("showInTotals", field.param("showInTotals"));
+                toParse.add(array(fieldRow, field.param("calcFormula"), "calcFormula"));
+                <if> field.param("displayNullAs") != null
+                    <then>
+                        fieldRow.setProperty("displayNullAs", field.param("displayNullAs"));
+                    </then>
+                </if>
+                <!--var formulaTable = parser.parseExpression(field.param("calcFormula"));-->
+				<!--fieldRow.setProperty("calcFormula", formulaTable);-->
+                fieldRow.setProperty("autoWidth", field.param("autoWidth"));
+                fieldRow.setProperty("columnWidth", field.param("columnWidth"));
+                <if> field.param("valueFormat") != null
+                    <then>
+                        fieldRow.setProperty("valueFormat", field.param("valueFormat"));
+                    </then>
+				</if>
+				<!--trace(field.param("sortOrder"));-->
+                fieldRow.setProperty("sortOrder", field.param("sortOrder"));
+                fieldRow.setProperty("sortingSequenceNumber", field.param("sortingSequenceNumber"));
+                <!--trace(field.param("sortOrder"));-->
+			</do>
+		</for>
+		<!--aux Fields save-->
+        var auxFieldsTable = reportForSave.getTable("auxFields");
+        var auxFields = param("auxFields");
+        <for>var i = 0
+            <comma/>
+            i &lt; auxFields.size()
+            <comma/>
+            i ++
+            <do>
+                var auxField = auxFields.get(i);
+                var auxFieldRow = auxFieldsTable.addRow("TabularReport:auxField");
+                macro("copyRefProperties", auxField, auxFieldRow);
+            </do>
+		</for>
+		<!--subTotal fields save -->
+        var subTotalFieldsTable = reportForSave.getTable("subTotalFields");
+        var subTotalFields = param("subTotalFields");
+        <for>var i = 0
+            <comma/>
+            i &lt; subTotalFields.size()
+            <comma/>
+            i ++
+            <do>
+                var subTotalField = subTotalFields.get(i);
+                var subTotalFieldRow = subTotalFieldsTable.addRow("TabularReport:subTotalField");
+                macro("copyRefProperties", subTotalField, subTotalFieldRow);
+
+                subTotalFieldRow.setProperty("displayValueAs", subTotalField.param("displayValueAs"));
+                <if>
+                    subTotalField.param("hideSubtotalName")
+                    <then>
+                        subTotalFieldRow.setProperty("hideSubtotalName", subTotalField.param("hideSubtotalName"));
+                    </then>
+
+                </if>
+
+                subTotalFieldRow.setProperty("indentation", subTotalField.param("indentation"));
+                <if> subTotalField.param("valueFormat") != null
+                    <then>
+                        subTotalFieldRow.setProperty("valueFormat", subTotalField.param("valueFormat"));
+                    </then>
+				</if>
+                subTotalFieldRow.setProperty("sortOrder", subTotalField.param("sortOrder"));
+
+                toParse.add(array(subTotalFieldRow, subTotalField.param("valueFormula"), "valueFormula"));
+                <!--var formulaTable = parser.parseExpression(subTotalField.param("valueFormula"));-->
+				<!--subTotalFieldRow.setProperty("valueFormula", formulaTable);-->
+				<if> subTotalField.param("descFormula") != null and subTotalField.param("descFormula") != ""
+                    <then>
+                        toParse.add(array(subTotalFieldRow, subTotalField.param("descFormula"), "descFormula"));
+                        <!--formulaTable = parser.parseExpression(subTotalField.param("descFormula"));-->
+						<!--subTotalFieldRow.setProperty("descFormula", formulaTable);-->
+					</then>
+				</if>
+                <if> subTotalField.param("displayNullAs") != null
+                    <then>
+                        subTotalFieldRow.setProperty("displayNullAs", subTotalField.param("displayNullAs"));
+                    </then>
+                </if>
+			</do>
+		</for>
+		<!--Parsing formulas-->
+		<for>var i = 0
+            <comma/>
+            i &lt; toParse.size()
+            <comma/>
+            i++
+            <do>
+                var rowOfObjects = toParse.get(i);
+                var row = rowOfObjects.get(0);
+                parser.setContext(row);
+                var formula = parser.parseExpression(rowOfObjects.get(1));
+                row.setProperty(rowOfObjects.get(2), formula);
+            </do>
+		</for>
+		<!--mapping save -->
+        var mappingsTable = reportForSave.getTable("mappings");
+        var mappingsTree = param("mappings");
+        parser.setContext(reportForSave);
+
+        <if> true;
+            <then>
+                macro("saveMappingForTable", "subTotalFields", "TabularReport:localSubTotalFieldReference", "valueFormula");
+            </then>
+        </if>
+        <if> true;
+            <then>
+                macro("saveMappingForTable", "fields", "TabularReport:localFieldReference", "calcFormula");
+            </then>
+		</if>
+		<if> true;
+            <then>
+                macro("saveMappingForTable", "auxFields", "TabularReport:localAuxFieldReference", null);
+            </then>
+		</if>
+
+        var condSeq = new("axiomsl.util.condition.ConditionSequence", param("condition"));
+        <if>
+            !condSeq.isEmpty();
+            <then>
+                var condTree = reportForSave.createTreePropertyValue("Condition");
+                reportForSave.setProperty("condition", condTree);
+                condSeq.assembleCondition(condTree.getRootNode(), parser);
+            </then>
+		</if>
+
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var templates = array("reference(xsdSchemaElementNameField,fields)",
+                              "reference(xsdSchemaElementValueField,fields)",
+                              "reference(xsdSchemaNameSpacePrefixes.field,fields)",
+                              "reference(xsdSchemaMappings.field,fields)",
+                              "table2tree(xsdSchemaAdditional)"
+        );
+
+        var params = array(
+            "parameters",
+            "totalsBeforeDetails",
+            "groupHeadersOnEachPage",
+            "aggregateRecords",
+            "requiresAllModels",
+            "xslTransformationFile",
+            "xmlHeader",
+            "xmlHeaderIsExpression",
+            "postProcessingCode",
+            "schemaBasedXMLGeneration",
+            "xsdSchema",
+            "xsdSchemaElementNameField",
+            "xsdSchemaElementValueField",
+            "xsdSchemaNameSpacePrefixes",
+            "xsdSchemaMappings",
+            "xsdSchemaSkipParentIfSubelementIsMissing",
+            "xsdSchemaAdditional",
+            "xsdRootElementName",
+            "enableTxtFileDelimiter",
+            "delimiter",
+            "addColumnNamesInTabDelimitedReport",
+            "useQuotesForValueWithDelimiter",
+            "delimitedTextBufferSize",
+            "loaderBufferSize",
+            "lineSeparator",
+            "allowExternalDataPermissions"
+        );
+
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(<axiomForSave/>, currentParameters, params, array("parameters.lookupFormula"), templates, null, route);
+        var parameterValuesTable = <axiomForSave/>.createTablePropertyValue();
+        <axiomForSave/>.setProperty("parameterValuesForPreview", parameterValuesTable);
+        macro("saveTable", param("parameterValuesForPreview"), parameterValuesTable);
+        <!--macro("copyTo", reportForSave, "subtotalsInData");-->
+		<!--<if> param("subtotalsInData")-->
+		<!--<then>-->
+		<!--reportForSave.setProperty("detailSet", reportForSave.createReferencePropertyValue("DetailSet", param("detailSet")));                -->
+		<!--</then>-->
+		<!--</if>-->
+		<!--serializing data from additional panels-->
+        <axiomForSave/>.setProperty("submissionFileEncoding", param("submissionFileEncoding"));
+        dataSet.serializePanels(reportForSave);
+    </saveCode>
+	<macros>
+
+
+		<macro name="copyRefProperties" arguments="source_xxx, dest_xxx">
+			<dest_xxx/>.setProperty("name", <source_xxx/>.param("name"));
+        <dest_xxx/>.setProperty("description", <source_xxx/>.param("description"));
+        <dest_xxx/>.setProperty("id", <source_xxx/>.getID());
+    </macro>
+
+		<macro name="valueFormat" arguments="groupType">
+			<!--var hack = <param name="mappings"/>;to bind        -->
+			<case>
+            updateInfo.isCreatingNewValues
+            <then>
+					<choices>
+                    list()
+                </choices>
+					<editable/>
+				</then>
+
+            updateInfo.isDeserialization or
+            (updateInfo.isDependencyUpdate and
+            <!--check that 1st row of the corresponding node was modified-->
+                updateInfo.getParameterChangeInfo("mappings") != null and <!-- could also use wasParameterChanged() -->
+                ((
+                    updateInfo.getParameterChangeInfo("mappings").changedNode != null and
+                    updateInfo.getParameterChangeInfo("mappings").changedNode.getID() == <currentParameters/>.getID() and
+                    updateInfo.getParameterChangeInfo("mappings").getParameterChangeInfo("fieldMapping") != null and
+                    updateInfo.getParameterChangeInfo("mappings").getParameterChangeInfo("fieldMapping").getAffectedRow() == 0
+                )
+                or
+                (
+                    updateInfo.getParameterChangeInfo("mappings").removedNode != null and
+                    updateInfo.getParameterChangeInfo("mappings").removedNode.getID() == <currentParameters/>.getID()
+                )
+                or
+                (
+                    updateInfo.getParameterChangeInfo("mappings").addedNode != null and
+                    updateInfo.getParameterChangeInfo("mappings").addedNode.getID() == <currentParameters/>.getID()
+                ))
+            )
+            <then>
+					<!--trace("Update formats for field " + param("name"));-->
+                var mappingNode = macro("getNodeInMapping", <currentParameters/>.getID(), <groupType/>);
+                <if>
+                    mappingNode != null
+                    and mappingNode.param("fieldMapping").size() &gt; 0
+                    <!--this is some dummy condition just to test the feedback-->
+						<!--todo: date formats?-->
+						<then>
+                        var fieldMappings = mappingNode.param("fieldMapping");
+                        var type = null;
+                        var firstRow = fieldMappings.get(0);
+                        <!--trace("firstRow.param(valueType) "  + firstRow.param("valueType"));-->
+							<if> firstRow.param("valueType") != null
+                            <then>
+                                type = firstRow.param("valueType");
+                            </then>
+								<!--<else>-->
+								<!--that is single field ref => try to extract type from field-->
+								<!--check consistency-->
+								<!--var modelName1 = firstRow.param("model");-->
+								<!--<if> modelName1 == null or-->
+								<!--modelName1 == "UNRESOLVED" or-->
+								<!--modelName1.indexOf("!!!") &gt;= 0 or-->
+								<!--!macro("isSingleFieldReference1", modelName1, firstRow.param("expression"))-->
+								<!--<then>-->
+								<!--type = "EMPTY";-->
+								<!--</then>-->
+								<!--<else>-->
+								<!--check: is it possible to optimize somehow!???-->
+								<!--var model = editor.locateObjectByName("DataModel", modelName1);-->
+								<!--var accessor = new("axiomsl.accessors.DataModelAccessor", model);-->
+								<!--var route = function("axiomsl.server.object_framework.RouteToObject", "createEmptyRoute");-->
+								<!--var parser = new("axiomsl.accessors.ExpressionParserImpl", editor.createObject("DataModel"), accessor, route);-->
+								<!--var table = parser.parseExpression(firstRow.param("expression"));-->
+								<!--type = table.get(0).getProperty("value").getTargetObject().getString("type");-->
+								<!--</else>-->
+								<!--</if>-->
+								<!--</else>-->
+							</if>
+
+                        var res = macro("getFormatChoices", type);
+                        <if> res != null
+                            <then>
+									<enabled/>
+									<choices>
+										<asDescription>
+                                        res
+                                    </asDescription>
+									</choices>
+									<editable/>
+								</then>
+								<else>
+									<disabled/>
+								</else>
+							</if>
+						</then>
+						<else>
+							<enabled/>
+							<choices>
+								<asDescription>
+                                macro("getFormatChoices", "ALL");
+                            </asDescription>
+							</choices>
+							<editable/>
+						</else>
+					</if>
+				</then>
+			</case>
+		</macro>
+		<macro name="sortOrderFull">
+			<choices>
+				<asDescription>
+                    ndo('NONE',l('None')), ndo('ASCENDING',l('Ascending')), ndo('DESCENDING',l('Descending'))
+            </asDescription>
+			</choices>
+			<default>'NONE'</default>
+		</macro>
+		<macro name="sortOrderPart">
+			<choices>
+				<asDescription>
+                    ndo('ASCENDING',l('Ascending')), ndo('DESCENDING',l('Descending'))
+            </asDescription>
+			</choices>
+			<default>'ASCENDING'</default>
+		</macro>
+		<macro name="copyTo" arguments="dest, name">
+			<dest/>.setProperty(<name/>, param(<name/>)); 
+    </macro>
+		<!--<macro name="localFieldsLookup">-->
+		<!--var details = param("fields");-->
+		<!--var result = list();-->
+		<!--<for>var i = 0-->
+		<!--<comma/>-->
+		<!--i &lt; details.size()-->
+		<!--<comma/>-->
+		<!--i ++-->
+		<!--<do>-->
+		<!--var detail = details.get(i);-->
+		<!--result.add(ndo(detail.param("name"), detail.param("description")));-->
+		<!--</do>-->
+		<!--</for>-->
+		<!--var calcFields = param("subTotalFields");-->
+		<!--<!-var index = macro("getEntityIndex", <currentParameters/>.getID(), calcFields);-->
+		<!--<for>var i = 0-->
+		<!--<comma/>-->
+		<!--i &lt; calcFields.size();-->
+		<!--<comma/>-->
+		<!--i ++-->
+		<!--<do>-->
+		<!--var calcField = calcFields.get(i);-->
+		<!--result.add(ndo(calcField.param("name"), calcField.param("description")));-->
+		<!--</do>-->
+		<!--</for>-->
+		<!--var auxFields = param("auxFields");-->
+		<!--<for>var i = 0-->
+		<!--<comma/>-->
+		<!--i &lt; auxFields.size();-->
+		<!--<comma/>-->
+		<!--i ++-->
+		<!--<do>-->
+		<!--var auxField = auxFields.get(i);-->
+		<!--result.add(ndo(auxField.param("name"), auxField.param("description")));-->
+		<!--</do>-->
+		<!--</for>-->
+		<!--result-->
+		<!--</macro>-->
+		<!--<macro name="updateDates" arguments="type, newName, rowId, oldIndex, newIndex">-->
+		<!--var id = <rowId/>;-->
+		<!--<case>-->
+		<!--<type/> == "ADD" || <type/>=="CHANGE"-->
+		<!--<then>-->
+		<!--var index = macro("getModelIndex", id);-->
+		<!--<if> <type/> == "ADD"-->
+		<!--<then>                        -->
+		<!--param("modelDates").addLine(index);-->
+		<!--</then>                    -->
+		<!--</if>-->
+		<!--trace(index);-->
+		<!--param("modelDates").get(index).param("modelName") = <newName/>;-->
+		<!--param("modelDates").get(index).setID(id);-->
+		<!--</then>-->
+		<!--<type/> == "REMOVE"-->
+		<!--<then>-->
+		<!--param("modelDates").remove(<oldIndex/>);-->
+		<!--</then>-->
+		<!---->
+		<!--<type/> == "MOVE"-->
+		<!--<then>-->
+		<!--var prevRow = param("modelDates").get(<oldIndex/>);-->
+		<!--param("modelDates").remove(<oldIndex/>);-->
+		<!--var newRow = param("modelDates").addLine(<newIndex/>);-->
+		<!--newRow.param("modelName") = prevRow.param("modelName");-->
+		<!--newRow.param("modelDate") = prevRow.param("modelDate");-->
+		<!--newRow.setID(prevRow.getID());-->
+		<!--</then>-->
+		<!--</case>-->
+		<!--</macro>-->
+
+        <macro name="getFieldType" arguments="fieldId, groupType">
+            var type = null;
+            var formula = currentParameters.param("calcFormula");
+            <if> formula != null and "" != formula
+                <else>                    
+                    var node = macro("getNodeInMapping", <fieldId/>, <groupType/>);
+                    <if> node != null and node.param("fieldMapping").size() != 0;
+                        <then>
+                            var row = node.param("fieldMapping").get(0);
+                            type = row.param("valueType");
+                            <if> type != null and "" != type
+                                <else>
+                                    type = macro("getFieldTypeFromModel", row.param("model"), row.param("expression"));                                    
+                                </else>
+                            </if>
+                        </then>
+                    </if>
+                </else>
+            </if>
+            ;type
+        </macro>
+
+        <macro name="getFieldTypeFromMapping" arguments="fieldId, groupType">
+            var type = null;
+            var node = macro("getNodeInMapping",<fieldId/>,<groupType/>);
+            <if>node != null and node.param("fieldMapping").size() != 0;
+                <then>
+                    var row = node.param("fieldMapping").get(0);
+                    type = row.param("valueType");
+                    <if>type != null and "" != type
+                        <else>
+                            type = macro("getFieldTypeFromModel", row.param("model"), row.param("expression"));
+                        </else>
+                    </if>
+                </then>
+            </if>
+            ;type
+        </macro>
+
+        <macro name="expressionsLookup" arguments="fields">
+            new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), <fields/>.toArray()),
+            macro("trParameters"),
+            macro("instanceDateKeysUnionFromModelsVariables", true, false, true),
+            macro("sqlMacros")
+            macro("axiomExpressionLanguage"),
+            macro("userDefinedFunctions")
+        </macro>
+
+        <macro name="trParameters">
+            var trParameters = list();
+            trParameters.add(ndo("@USER_NAME", l("User Name")));
+            new("axiomsl.util.ui.NamedList", "Parameters", l("Parameters"), trParameters.toArray())
+        </macro>
+
+        <macro name="trExpressionAndMappingLookup">
+            var modelList = list();
+            modelList.add(param("model"));
+            var fields = editor.getRemoteProxy().lookupFieldsInModelsAsStrings(modelList, editor.getBranchId());
+            macro("getFieldNamedList", fields),
+            macro("trParameters"),
+            macro("instanceDateKeysUnionFromModelsVariables", true, false, true),
+            macro("sqlMacros"),
+            macro("axiomExpressionLanguage"),
+            macro("userDefinedFunctions")
+        </macro>
+
+        <macro name="lookupVariables">
+            var res = list();
+            var table = param("parameters");
+            var k = 0;
+            <for><comma/> k &lt;table.size() <comma/> k++
+                <do>
+                    var row = table.get(k);
+                    res.add(array(row.param("name"), row.param("description")))
+                </do>
+            </for>
+            var namedList = new("axiomsl.util.ui.NamedList", res, l("Variable"));
+            ;namedList
+        </macro>
+
+    </macros>
+</data_set_category>

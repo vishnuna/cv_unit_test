@@ -1,0 +1,878 @@
+<data_set_category name="FACT_CALCULATION_RULES" description="Fact Calculation Rules" windowTitle="Fact Calculation Rules"
+                   entityName="Fact Calculation Rules " icon="calc_rule" screenWidth="800" screenHeight="500"
+                   objectType="FactCalculationRules" singleDataSet="FactCalculationRules" fixedNameMode="true" extends="COMMON_UTILS, DOC_DATA">
+    <parameters>
+        <parameter name="calculationRules" description="Calculation Rules" type="tree" length="400" group="Calculation Rules" rootNodeType="CalculationRuleRoot:node" defaultRootName="Calculation Rules" namesAreGloballyUnique="false"
+                   plugInClass="axiomsl.gui.xbrl.editor.calculation_rule.CalculationRuleTreeParameterValue">
+            <onNodeAdded>
+                <if>addedNode.type().equals("CalculationRule:node") or addedNode.type().equals("RuleGroup:node")
+                    <then>
+                        <if>!addedNode.param("name").equals(addedNode.getName())
+                            <then>
+                                addedNode.param("name") = addedNode.getName();
+                            </then>
+                        </if>
+
+                        macro("setGrey", addedNode);
+                    </then>
+                </if>
+
+                <if>addedNode.type().equals("Variable:node")
+                    <then>
+                        var ruleNode = macro("getRuleNode", addedNode);
+                        macro("setGrey", ruleNode);
+                    </then>
+                </if>
+            </onNodeAdded>
+
+            <onNodeRenamed>
+                <if>renamedNode.type().equals("CalculationRule:node") or renamedNode.type().equals("RuleGroup:node")
+                    <then>
+                        <if>!renamedNode.param("name").equals(renamedNode.getName())
+                            <then>
+                                renamedNode.param("name") = renamedNode.getName();
+                            </then>
+                        </if>
+                    </then>
+                </if>
+
+                <if>renamedNode.type().equals("Variable:node")
+                    <then>
+                        <if>!renamedNode.param("variableName").equals(renamedNode.getName())
+                            <then>
+                                renamedNode.param("variableName") = editor.getNameWithoutPrefix(renamedNode.getName());
+                            </then>
+                        </if>
+                    </then>
+                </if>
+
+            </onNodeRenamed>
+
+            <nodeType name="RuleGroup:node" description="Rule Group" icon="image.xbrl.group"
+                      renameAllowed="true" deleteAllowed="true"  hasChildren="true" childrenAreFixed="false"
+                      childrenTypes="CalculationRule:node" namesAreGloballyUnique="false">
+                <parameter name="isEnabled" description="Is Enabled" type="boolean" group="Parameters" defaultValue="true">
+                    <onParameterChange>
+                        macro("setGrey", currentNode);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="name" description="Rule Group Name" type="String" defaultValue="" group="Parameters" length="20">
+                    <onParameterChange>
+                        <if>!newValue.equals(currentNode.getName())
+                            <then>
+                                currentNode.setName(newValue);
+                            </then>
+                        </if>
+                    </onParameterChange>
+                    <default>
+                        currentNode.getName();
+                    </default>
+                    <validation>
+                        editor.validateNodeName(currentNode, newValue);
+                    </validation>
+                </parameter>
+
+                <parameter name="description" description="Description" type="String" length="30" group="Parameters">
+                    <attribute name="multiLine"> 2 </attribute>
+                    <attribute name="lineWrap"> true </attribute>
+                </parameter>
+
+                <parameter name="view" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.ViewDocFileButton"</attribute>
+                </parameter>
+                <parameter name="upload" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.UploadHelpButton"</attribute>
+                </parameter>
+
+                <parameter name="docFile" description="Documentation File" type="string" length="40" group="Documentation" row="0" freehand="no">
+                </parameter>
+
+                <parameter name="comment" description="Notes" type="String" length="7" group="Documentation" freehand="no">
+                    <attribute name="multiLine">3</attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="CalculationRule:node" description="Calculation Rule" icon="image.xbrl.calc_rule"
+                      renameAllowed="true" deleteAllowed="true" hasChildren="true" childrenAreFixed="false"
+                      childrenTypes="Variable:node, TargetFact:node" userCanAdd="Variable:node"
+                      namesAreGloballyUnique="false">
+                <parameter name="isEnabled" description="Is Enabled" type="boolean" group="Calculation Rule Parameters" defaultValue="true">
+                    <onParameterChange>
+                        macro("setGrey", currentNode);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="name" description="Calculation Rule Name" type="String" defaultValue="" group="Calculation Rule Parameters" length="20">
+                    <onParameterChange>
+                        <if>!newValue.equals(currentNode.getName())
+                            <then>
+                                currentNode.setName(newValue);
+                            </then>
+                        </if>
+                    </onParameterChange>
+                    <default>
+                        currentNode.getName();
+                    </default>
+                    <validation>
+                        editor.validateNodeName(currentNode, newValue);
+                    </validation>
+                </parameter>
+                <parameter name="description" description="Description" type="String" length="30" group="Calculation Rule Parameters">
+                    <attribute name="multiLine"> 2 </attribute>
+                    <attribute name="lineWrap"> true </attribute>
+                </parameter>
+                <parameter name="expression" description="Expression" type="String" length="27" group="Calculation Rule Parameters"
+                           plugInClass="axiomsl.gui.xbrl.editor.validation_set.ExpressionParameterValue">
+                    <attribute name="multiLine"> 2 </attribute>
+                    <attribute name="lineWrap"> true </attribute>
+                    <attribute name="lookupAppend">true</attribute>
+                    <attribute name="lookupFromValues"> l("Expression") <comma/>
+                        var l = list();
+                        <for>var i = 0;
+                            <comma/>
+                            i != currentNode.childCount();
+                            <comma/>
+                            i++;
+                            <do>
+                                <if>currentNode.child(i).type().equals("Variable:node")
+                                    <then>
+                                        l.add(ndo("$" + editor.getNameWithoutPrefix(currentNode.child(i).getName()), currentNode.child(i).param("variableDescription")));
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+                        ;new("axiomsl.util.ui.NamedList", "Variables", l("Variables"), l.toArray()),
+                        macro("validationFunctions"),
+                        macro("axiomExpressionLanguage")
+                    </attribute>
+                </parameter>
+
+                <parameter name="scope" description="Conditions" type="condition" group="Calculation Rule Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.calculation_rule.CalcRulesVariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("EXTERNAL_LIST");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>   <attribute name="disabledOperations">
+                    var l = list();
+                    l.add("NOT");
+                    ;l
+                </attribute>
+                </parameter>
+
+                <parameter name="view" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.ViewDocFileButton"</attribute>
+                </parameter>
+                <parameter name="upload" description="ads" type="Component" noSerialization="yes" group="Documentation" row="0">
+                    <attribute name="componentClass">"axiomsl.gui.project.UploadHelpButton"</attribute>
+                </parameter>
+
+                <parameter name="docFile" description="Documentation File" type="string" length="40" group="Documentation" row="0" freehand="no">
+                </parameter>
+
+                <parameter name="comment" description="Notes" type="String" length="7" group="Documentation" freehand="no">
+                    <attribute name="multiLine">3</attribute>
+                    <attribute name="unlimitedSize"> true </attribute>
+                </parameter>
+
+            </nodeType>
+
+            <nodeType name="Variable:node" description="Variable" icon="image.xbrl.variable" renameAllowed="false" deleteAllowed="true" hasChildren="true" childrenTypes="Variable:node" alphaNumericName="false" namesAreGloballyUnique="false">
+                <parameter name="variableName" description="Variable Name" type="String" defaultValue="" group="Variable Parameters" length="20">
+                    <default>
+                        editor.getNameWithoutPrefix(currentNode.getName());
+                    </default>
+
+                    <onParameterChange>
+                        <if>!newValue.equals(editor.getNameWithoutPrefix(currentNode.getName()))
+                            <then>
+                                currentNode.setName(l("Variable: ").toString() + newValue);
+                            </then>
+                        </if>
+                    </onParameterChange>
+                    <validation>
+                        editor.validateNodeName(currentNode, l("Variable: ").toString() + newValue);
+                    </validation>
+                </parameter>
+                <parameter name="variableDescription" description="Description" type="String" length="20" group="Variable Parameters">
+                </parameter>
+                <parameter name="variableBindType" description="Bind Type" type="String" length="20" group="Variable Parameters">
+                    choices(
+                    <asDescription>
+                        ndo("SINGLE_FACT", l("SINGLE_FACT")),
+                        ndo("SET_EXPRESSION", l("SET_EXPRESSION"))
+                    </asDescription>
+                    )
+                    <onParameterChange>
+                        currentNode.getNode().setAllowsChildren(newValue.equals("SET_EXPRESSION"));
+                        editor.updateTreeActions(currentNode);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="variableExpression" description="Expression" type="String" length="20" group="Variable Parameters">
+                    <if>param("variableBindType") == "SET_EXPRESSION"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                    <attribute name="multiLine"> 2 </attribute>
+                    <attribute name="lineWrap"> true </attribute>
+                    <attribute name="lookupAppend">true</attribute>
+                    <attribute name="lookupFromValues"> l("Expression") <comma/>
+                        var l = list();
+                        <for>var i = 0;
+                            <comma/>
+                            i != currentNode.childCount();
+                            <comma/>
+                            i++;
+                            <do>
+                                <if>currentNode.child(i).type().equals("Variable:node")
+                                    <then>
+                                        l.add(ndo("$" + editor.getNameWithoutPrefix(currentNode.child(i).getName()), currentNode.child(i).param("variableDescription")));
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+                        ;new("axiomsl.util.ui.NamedList", "Variables", l("Variables"), l.toArray()),
+                        macro("validationFunctions"),
+                        macro("axiomExpressionLanguage")
+                    </attribute>
+                </parameter>
+
+                <parameter name="variableBindIsMandatory" description="Bind Is Mandatory" type="Boolean" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableMustBeNonemptySequence" description="Must Be Nonempty Sequence" type="Boolean" group="Variable Parameters">
+                    <if>param("variableBindType") == "SET_EXPRESSION"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableHasFallbackValue" description="Has Fallback Value" type="Boolean" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <enabled/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackValueType" description="Fallback Value Type" type="String" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if> param("variableHasFallbackValue")
+                                <then>
+                                    <enabled/>
+                                    choices(
+                                    <asDescription>
+                                        ndo("VARCHAR", l("VARCHAR")),
+                                        ndo("FLOAT", l("FLOAT")),
+                                        ndo("INTEGER", l("INTEGER")),
+                                        ndo("DATE", l("DATE"))
+                                    </asDescription>
+                                    )
+                                </then>
+                                <else>
+                                    <disabled/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackVarchar" description="Fallback Value" type="String" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>!param("variableHasFallbackValue")
+                                <then>
+                                    <disabled/>
+                                </then>
+                                <else>
+                                    <if>param("variableFallbackValueType") == "VARCHAR"
+                                        <then>
+                                            <if>param("variableHasFallbackValue")
+                                                <then>
+                                                    <enabled/>
+                                                </then>
+                                                <else>
+                                                    <disabled/>
+                                                </else>
+                                            </if>
+                                        </then>
+                                        <else>
+                                            <removed/>
+                                        </else>
+                                    </if>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackDate" description="Fallback Value" type="Date" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>param("variableFallbackValueType") == "DATE"
+                                <then>
+                                    <if> param("variableHasFallbackValue")
+                                        <then>
+                                            <enabled/>
+                                        </then>
+                                        <else>
+                                            <disabled/>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackFloat" description="Fallback Value" type="Double" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>param("variableFallbackValueType") == "FLOAT"
+                                <then>
+                                    <if>param("variableHasFallbackValue")
+                                        <then>
+                                            <enabled/>
+                                        </then>
+                                        <else>
+                                            <disabled/>
+                                        </else>
+                                    </if>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="variableFallbackInt" description="Fallback Value" type="Integer" length="20" group="Variable Parameters">
+                    <if>param("variableBindType").equals("SET_EXPRESSION")
+                        <then>
+                            <removed/>
+                        </then>
+                        <else>
+                            <if>param("variableFallbackValueType") == "INTEGER"
+                                <then>
+                                    <if>param("variableHasFallbackValue")
+                                        <then>
+                                            <enabled/>
+                                        </then>
+                                        <else>
+                                            <disabled/>
+                                        </else>
+                                    </if>
+                                    <enabled/>
+                                </then>
+                                <else>
+                                    <removed/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </parameter>
+
+                <parameter name="singleFactScope" description="Conditions" type="condition" group="Single Fact Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.calculation_rule.CalcRulesVariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("LIST");
+                        l.add("EXTERNAL_LIST");
+                        l.add("SINGULAR_WILDCARD");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("ALWAYS_TRUE");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("OR");
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+                    <if>param("variableBindType") == "SINGLE_FACT"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+
+                <parameter name="sequenceScope" description="Conditions" type="condition" group="Set Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.calculation_rule.CalcRulesVariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("EXTERNAL_LIST");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+                    <if>param("variableBindType") == "SET_EXPRESSION"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="iterationScope" description="Conditions" type="condition" group="Iteration Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.calculation_rule.CalcRulesVariableScopeParametersValue" >
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("EXTERNAL_LIST");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="TargetFact:node" description="Target Fact" icon="image.xbrl.variable" arbitraryNameAllowed="false"
+                      renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenTypes="Variable:node" alphaNumericName="false"
+                      namesAreGloballyUnique="false" pasteAsAllowed="false">
+                <parameter name="variableName" description="Variable Name" type="String" defaultValue=""
+                           group="Variable Parameters" length="20" hidden="true">
+                    <equals>
+                        "targetFact"
+                    </equals>
+                </parameter>
+                <parameter name="variableDescription" description="Description" type="String" length="20" group="Variable Parameters">
+                </parameter>
+                <parameter name="variableBindType" description="Bind Type" type="String" length="20" group="Variable Parameters">
+                    choices(
+                    <asDescription>
+                        ndo("SINGLE_FACT", l("SINGLE_FACT"))
+                    </asDescription>
+                    )
+                    <onParameterChange>
+                        currentNode.getNode().setAllowsChildren(newValue.equals("SET_EXPRESSION"));
+                        editor.updateTreeActions(currentNode);
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="variableExpression" description="Expression" type="String" length="20"
+                           group="Variable Parameters" hidden="true">
+                    <removed/>
+                </parameter>
+
+                <parameter name="variableBindIsMandatory" description="Bind Is Mandatory" type="Boolean"
+                           group="Variable Parameters" hidden="true">
+                    <equals>
+                        false
+                    </equals>
+                </parameter>
+                <parameter name="variableMustBeNonemptySequence" description="Must Be Nonempty Sequence" type="Boolean"
+                           group="Variable Parameters" hidden="true">
+                    <removed/>
+                </parameter>
+                <parameter name="variableHasFallbackValue" description="Has Fallback Value" type="Boolean"
+                           group="Variable Parameters" hidden="true">
+                    <equals>
+                        false
+                    </equals>
+                </parameter>
+                <parameter name="variableFallbackValueType" description="Fallback Value Type" type="String" length="20"
+                           group="Variable Parameters" hidden="true">
+                    <removed/>
+                </parameter>
+                <parameter name="variableFallbackVarchar" description="Fallback Value" type="String" length="20"
+                           group="Variable Parameters" hidden="true">
+                    <removed/>
+                </parameter>
+                <parameter name="variableFallbackDate" description="Fallback Value" type="Date" length="20"
+                           group="Variable Parameters" hidden="true">
+                    <removed/>
+                </parameter>
+                <parameter name="variableFallbackFloat" description="Fallback Value" type="Double" length="20"
+                           group="Variable Parameters" hidden="true">
+                    <removed/>
+                </parameter>
+                <parameter name="variableFallbackInt" description="Fallback Value" type="Integer" length="20"
+                           group="Variable Parameters" hidden="true">
+                    <removed/>
+                </parameter>
+
+                <parameter name="singleFactScope" description="Conditions" type="condition" group="Single Fact Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.calculation_rule.CalcRulesVariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("LIST");
+                        l.add("EXTERNAL_LIST");
+                        l.add("SINGULAR_WILDCARD");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("ALWAYS_TRUE");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("OR");
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+                    <if>param("variableBindType") == "SINGLE_FACT"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+
+                <parameter name="sequenceScope" description="Conditions" type="condition" group="Set Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.calculation_rule.CalcRulesVariableScopeParametersValue">
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("EXTERNAL_LIST");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+                    <if>param("variableBindType") == "SET_EXPRESSION"
+                        <then>
+                            <enabled/>
+                        </then>
+                        <else>
+                            <removed/>
+                        </else>
+                    </if>
+                </parameter>
+                <parameter name="iterationScope" description="Conditions" type="condition" group="Iteration Scope"
+                           plugInClass="axiomsl.gui.xbrl.editor.calculation_rule.CalcRulesVariableScopeParametersValue" >
+                    <attribute name="fields">
+                        editor.getFieldsForCondition();
+                    </attribute>
+                    <attribute name="disabledConditions">
+                        var l = list();
+                        l.add("EXTERNAL_LIST");
+                        l.add("DATE_INTERVAL_BUSINESS");
+                        l.add("DATE_INTERVAL_REGULAR");
+                        l.add("EXPRESSION_SHORTHAND");
+                        l.add("EXPRESSION_FREEHAND");
+                        l.add("EXPRESSION_SINGULAR");
+                        l.add("AGGREGATED");
+                        ;l
+                    </attribute>
+                    <attribute name="disabledOperations">
+                        var l = list();
+                        l.add("NOT");
+                        ;l
+                    </attribute>
+                </parameter>
+            </nodeType>
+
+            <nodeType name="CalculationRuleRoot:node" description="Calculation Rule Node" icon="image.xbrl.calc_rule" renameAllowed="false" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="RuleGroup:node" namesAreGloballyUnique="false">
+            </nodeType>
+        </parameter>
+
+    </parameters>
+
+    <loadCode>
+        var calculationRuleSet = <originalAxiom/>;
+
+        var accessor = new("axiomsl.accessors.CalculationRuleSetAccessor", calculationRuleSet, editor.getAxiomEnvironment());
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor);
+
+        param("calculationRules");
+        <for> var i = 0 <comma/> i &lt; calculationRuleSet.getTable("ruleGroups").size() <comma/> i ++
+            <do>
+                var ruleGroup = calculationRuleSet.getTable("ruleGroups").get(i);
+                var ruleGroupNode = param("calculationRules").createChild("RuleGroup:node", ruleGroup.getString("name"));
+
+                ruleGroupNode.param("description") = ruleGroup.getString("description");
+                ruleGroupNode.param("name") = ruleGroup.getString("name");
+                ruleGroupNode.param("comment") = ruleGroup.getOptionalValue("comment", "");
+                ruleGroupNode.param("docFile") = ruleGroup.getOptionalValue("docFile", "");
+                ruleGroupNode.param("isEnabled") = ruleGroup.getBoolean("isEnabled");
+
+                <for> var j = 0 <comma/> j &lt; ruleGroup.getTable("rules").size() <comma/> j++
+                    <do>
+                        var rule = ruleGroup.getTable("rules").get(j);
+                        var ruleNode = ruleGroupNode.createChild("CalculationRule:node", rule.getString("name"));
+
+                        ruleNode.param("expression") = rule.getString("expression");
+                        ruleNode.param("description") = rule.getString("description");
+                        ruleNode.param("name") = rule.getString("name");
+                        ruleNode.param("isEnabled") = rule.getBoolean("isEnabled");
+
+                        ruleNode.param("comment") = rule.getOptionalValue("comment", "");
+                        ruleNode.param("docFile") = rule.getOptionalValue("docFile", "");
+                        ruleNode.param("scope") = new("axiomsl.util.condition.ConditionSequence", rule.getTree("scopeForEach").getRootNode(), parser);;
+
+                        var targetFact = rule.getObject("targetFact");
+                        var targetFactNode = ruleNode.createChild("TargetFact:node", l("Target Fact").toString());
+                        editor.recursiveLoadVariables(targetFactNode, targetFact, accessor);
+                        targetFactNode.param("variableHasFallbackValue") = false;
+                        targetFactNode.addToParent();
+
+                        <for> var k = 0; <comma/> k &lt; rule.getTable("variables").size(); <comma/> k++;
+                            <do>
+                                var variable = rule.getTable("variables").get(k);
+                                var valVar = ruleNode.createChild("Variable:node", l("Variable: ").toString() + variable.getString("name"));
+                                editor.recursiveLoadVariables(valVar, variable, accessor);
+                                valVar.addToParent();
+                            </do>
+                        </for>
+                        ruleNode.addToParent();
+                        macro("setGrey", ruleNode);
+                    </do>
+                </for>
+
+                macro("setGrey", ruleGroupNode);
+                ruleGroupNode.addToParent();
+            </do>
+        </for>
+    </loadCode>
+
+    <saveCode>
+        var accessor = new("axiomsl.accessors.CalculationRuleSetAccessor", <axiomForSave/>, editor.getAxiomEnvironment());
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", accessor);
+
+        var ruleGroups = <axiomForSave/>.getTable("ruleGroups");
+        <for> var j = 0 <comma/> j &lt; param("calculationRules").childCount() <comma/> j++
+            <do>
+                var ruleGroup = ruleGroups.addRow("FactCalculationRules:ruleGroup");
+                var ruleGroupNode = param("calculationRules").child(j);
+
+                ruleGroup.setProperty("name", ruleGroupNode.param("name"));
+                ruleGroup.setProperty("description", ruleGroupNode.param("description"));
+                ruleGroup.setProperty("id", ruleGroupNode.param("name"));
+                ruleGroup.setProperty("isEnabled", ruleGroupNode.param("isEnabled"));
+
+                <if>!ruleGroupNode.param("comment").isEmpty()
+                    <then>
+                        ruleGroup.setProperty("comment", ruleGroupNode.param("comment"));
+                    </then>
+                </if>
+                <if>!ruleGroupNode.param("docFile").isEmpty()
+                    <then>
+                        ruleGroup.setProperty("docFile", ruleGroupNode.param("docFile"));
+                    </then>
+                </if>
+
+                var rules = ruleGroup.getTable("rules");
+                <for> var i = 0 <comma/> i &lt; ruleGroupNode.childCount(); <comma/> i++;
+                    <do>
+                        var rule = rules.addRow("FactCalculationRules:rule");
+                        var ruleNode = ruleGroupNode.child(i);
+
+                        rule.setProperty("name", ruleNode.param("name"))
+                        rule.setProperty("id", ruleNode.param("name"));
+                        rule.setProperty("expression", ruleNode.param("expression"));
+                        rule.setProperty("description", ruleNode.param("description"));
+                        rule.setProperty("isEnabled", ruleNode.param("isEnabled"));
+
+                        <if>!ruleNode.param("comment").isEmpty()
+                            <then>
+                                rule.setProperty("comment", ruleNode.param("comment"));
+                            </then>
+                        </if>
+                        <if>!ruleNode.param("docFile").isEmpty()
+                            <then>
+                                rule.setProperty("docFile", ruleNode.param("docFile"));
+                            </then>
+                        </if>
+
+                        var conditionSequence = new("axiomsl.util.condition.ConditionSequence", ruleNode.param("scope"));
+                        var conditionTree = rule.createTreePropertyValue("Condition");
+
+                        rule.setProperty("scopeForEach", conditionTree);
+                        conditionSequence.assembleCondition(conditionTree.getRootNode(), parser);
+
+                        var targetFact = rule.createObjectPropertyValue("ValidationSet:variable");
+                        editor.recursiveSaveVariable(ruleNode.child(0), targetFact, accessor);
+                        rule.setProperty("targetFact", targetFact);
+
+                        var ruleVariables = rule.getTable("variables");
+                        <for> var k = 1; <comma/> k != ruleNode.childCount(); <comma/> k++;
+                            <do>
+                                var variable = ruleVariables.addRow("ValidationSet:variable");
+                                editor.recursiveSaveVariable(ruleNode.child(k), variable, accessor);
+                            </do>
+                        </for>
+                    </do>
+                </for>
+
+            </do>
+        </for>
+    </saveCode>
+
+    <macros>
+        <macro name="validationFunctions">
+            var validationsFunctions = list();
+            <!--"containReport" done like in axiomsl.xbrl.validation.tag.ContainsReportTag.getSupportedTagNames-->
+            validationsFunctions.add(ndo("iaf:sum(list_of_facts)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-equal(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-less-than(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-less-equal-than(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-greater-than(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-greater-equal-than(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-add(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-subtract(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-divide(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-multiply(fact1,fact2)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:abs(fact)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:numeric-unary-minus(fact)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:min(list_of_facts)", l("Custom Function")));
+            validationsFunctions.add(ndo("iaf:max(list_of_facts)", l("Custom Function")));
+            validationsFunctions.add(ndo("xs:QName(name)", l("Custom Function")));
+            validationsFunctions.add(ndo("matches(fact, regex)", l("Custom Function. Checks if fact's value matches 'regex'")));
+
+            ;new("axiomsl.util.ui.NamedList", "Validation Functions", l("Validation Functions"), validationsFunctions.toArray())
+        </macro>
+
+        <macro name="setGrey" arguments="node">
+            var isEnabled = <node/>.param("isEnabled");
+            var list = list();
+            <if> <node/>.type().equals("CalculationRule:node")
+                <then>
+                    list.add(<node/>);
+                    isEnabled = <node/>.parent().param("isEnabled");
+                </then>
+                <else>
+                    <if>isEnabled
+                        <then>
+                            <node/>.setForeground("0,0,0");
+                        </then>
+                        <else>
+                            <node/>.setForeground("128,128,128");
+                        </else>
+                    </if>
+                    list.addAll(<node/>.children());
+                </else>
+            </if>
+
+            <for> var i1 = 0 <comma/> i1 &lt; list.size() <comma/> i1++
+                <do>
+                    var childNode = list.get(i1);
+
+                    var variableNodes = childNode.getAllNodes();
+                    <for>var j1 = 0
+                        <comma/>
+                        j1 &lt; variableNodes.size()
+                        <comma/>
+                        j1++
+                        <do>
+                            <if>isEnabled and childNode.param("isEnabled")
+                                <then>
+                                    variableNodes.get(j1).setForeground("0,0,0");
+                                </then>
+                                <else>
+                                    variableNodes.get(j1).setForeground("128,128,128");
+                                </else>
+                            </if>
+                        </do>
+                    </for>
+
+                </do>
+            </for>
+
+        </macro>
+
+        <macro name="getRuleNode" arguments="varNode">
+            var parent = <varNode/>.parent();
+            <for> <comma/> parent.type() != "CalculationRule:node" <comma/>
+                <do>
+                    parent = parent.parent();
+                </do>
+            </for>
+            ;parent
+        </macro>
+    </macros>
+
+</data_set_category>

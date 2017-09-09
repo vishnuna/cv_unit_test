@@ -1,0 +1,6 @@
+<metadata>
+    <object type="DocData" version="2">
+        <property name="comment" valueType="string" optional="true"/>
+        <property name="docFile" valueType="string" optional="true"/>
+    </object>
+</metadata>

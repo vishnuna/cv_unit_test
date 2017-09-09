@@ -1,0 +1,42 @@
+<metadata>
+	<object type="DataSourceInstance" extends="InstanceParameters,ObjectInBranch" version="6" upgraderClass="axiomsl.metadata_upgraders.SourceInstanceObjectUpgrader">
+		<property name="underlyingObjectId" valueType="string" canBeEmpty="false" upgraderClass="axiomsl.metadata_upgraders.InstanceIdUpgrader"/>
+        <property name="storageType" valueType="string" choices="PERMANENT, CONTINUOUS, CONTINUOUS_PARTITION, SEGMENTED" defaultValue="PERMANENT"/>
+        <property name="hosting" valueType="string" canBeEmpty="false" choices="INTERNAL, EXTERNAL" defaultValue="INTERNAL"/>
+        <!--
+			table is created when instance is being created.
+			if table creation fails, instance is not created.
+			if instance is removed, table is removed as well.
+			if cannot remove table, instance stays.
+		  -->
+		<!--for external data sources there will be no DataTableLayout object-->
+		<property name="dataTable" valueType="object" objectType="DataSourceInstance:dataTableInfo"/>
+		<!-- instance date/key columns are specified for a continuous instance, i.e. when an instance corresponds to a part
+         of the table -->
+		<property name="instanceDateColumn" optional="true" valueType="string"/>
+		<property name="instanceKeyColumns" optional="true" valueType="table" rowTypes="DataSourceInstance:instanceKeyColumn"/>
+        <property name="partitionType" optional="true"  valueType="string" choices="ID, DATE" defaultValue="ID"/>
+        <property name="errorMessage" optional="true" valueType="string"/>
+        <property name="errorStackTrace" optional="true" valueType="string"/>
+        <property name="freezeObjects" valueType="table" optional="true" rowTypes="FreezeObjectGroup:freezeObjectReference,FreezeObjectGroup:freezeObjectGroupReference" canBeEmpty="true"/>
+		<property name="archivePath" valueType="string" optional="true"/>
+        <!--<property name="endpointFreezeRef" valueType="object" optional="true" objectType="FreezeObjectGroup:freezeObjectReference"/>-->
+    </object>
+	<!-- a shortened object, contains just enough info on the DataTableLayout object to be able to use
+	 the table (query, update) -->
+	<object type="DataSourceInstance:dataTableInfo" version="3">
+		<!--table name is now populated for instances of all storage types -->
+		<property name="tableName" valueType="string"/>
+		<property name="dbSource" valueType="url" targetObjectType="DBSource"/>
+		<property name="partitionName" optional="true" canBeEmpty="false" valueType="string"/>
+		<!-- optional for now, for backward compatibility-->
+		<!--table layout is now populated for instances of all storage types, however if several instances reuse the
+         same table (as is the case for continuous instances), they must refer to a single DataTableLayout object
+         For EXTERNAL data sources this property is not used -->
+		<property name="tableLayout" valueType="url" optional="true" targetObjectType="DataTableLayout"/>
+	</object>
+	<object type="DataSourceInstance:instanceKeyColumn" version="2">
+		<property name="keyName" valueType="string" canBeEmpty="false"/>
+		<property name="columnName" valueType="string" canBeEmpty="false"/>
+	</object>
+</metadata>

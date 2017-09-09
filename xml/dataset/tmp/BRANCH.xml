@@ -1,0 +1,365 @@
+<data_set_category name="BRANCH" description="Project Branch" windowTitle="Project Branch Setup" entityName="Branch" icon="branch" screenWidth="800" screenHeight="500" objectType="Branch" extends="COMMON_UTILS, DOC_DATA">
+	<parameters>
+        <parameter name="branchType" description="Branch Type" type="String" defaultValue="Generic">
+            choices(asDescription(list(ndo("Generic",l("Generic")), ndo("Taxonomy",l("Taxonomy")), ndo("Taxonomy Mapping",l("Taxonomy Mapping")))))
+            <verifyForSave>
+                macro("changeBranchTypeWarning", currentParameters.param("branchType"));
+            </verifyForSave>
+            <onParameterChange>
+                <if>
+                    param("branchType") != "Generic"
+                    <then>
+                        <forTable name="branchTable">
+                            param("branchExpression") = "";
+                        </forTable>
+                    </then>
+                </if>
+            </onParameterChange>
+        </parameter>
+
+		<parameter name="isFrozen" description="Is Frozen" type="Boolean" defaultValue="false">
+			<if>
+                dataSet.getAxiomObject() == null or <!-- can freeze only existing branch -->
+                    !editor.getRemoteProxy().getPermissions().isObjectPermitted(dataSet.getAxiomObject().createObjectID(), editor.getProjectId(),
+                        if(dataSet.getAxiomObject().getOptionalBoolean("isFrozen"), "U", "F"))
+                    <!--!function("axiomsl.util.PermissionsImpl", "isObjectPermitted",-->
+                        <!--dataSet.getAxiomObject().createDbID(),-->
+                        <!--if(dataSet.getAxiomObject().getOptionalBoolean("isFrozen"), "U", "F"))-->
+                <then>
+					<readonly/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+		</parameter>
+
+         <parameter name="groupName" description="Group" type="String">
+            <attribute name="lookupFromNamedList">l("Group")
+                <comma/>
+                var list = new("axiomsl.util.ui.GroupedList", editor.getRemoteProxy(), "Branch", l("Groups"), null,  editor.getProjectId(), true, editor.getAxiomEnvironment());
+                list
+            </attribute>
+             <convertInputValue>
+                  <if> inputValue instanceof "axiomsl.util.ui.GroupFolder"
+                    <then>
+                        ;inputValue.getFullName();
+                    </then>
+                 </if>
+             </convertInputValue>
+             <validation>
+                 macro("checkGroupExists", newValue);
+             </validation>
+            <verifyForSave>
+                macro("checkGroupExists", param("groupName"));
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="defaultDBSource" description="Default DB Source" type="String" defaultValue="">
+            <choices>
+                var sources = list();
+                sources.add(ndo("", ""));
+                sources.addAll(editor.getRemoteProxy().lookupObjects("DBSource"));
+                sources
+            </choices>
+		</parameter>
+
+        <parameter name="dependency" description="" type="Component" noSerialization="yes" row="0">
+			<attribute name="componentClass">"axiomsl.toolkit.dataset_editor.dynamicparameters.BranchDependencyReferredButton"</attribute>
+		</parameter>
+		<parameter name="branchTable" description="Dependencies" type="table" keyParameter="branchAlias" length="7" tableTransposed="true" compareByID="true">
+			<if> param("isFrozen") or
+                (dataSet.getAxiomObject() != null and dataSet.getAxiomObject().getOptionalBoolean("isFrozen")) <!-- was frozen, can only unfreeze-->
+				<then>
+					<readonly/>
+				</then>
+				<else>
+					<enabled/>
+				</else>
+			</if>
+			<parameter name="branchAlias" description="Dependency Alias" type="String">
+				<validation>
+                    macro("validateNonEmpty");
+                </validation>
+				<verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+			</parameter>
+			<parameter name="branchDescr" description="Description" type="String"/>
+			<parameter name="projectName" description="Source Project" type="String" defaultValue="" length="20" isDataSet="Project">
+                    <!--choices(editor.getRemoteProxy().lookupObjects("Project"));-->
+                <onParameterChange>
+                    <if> newValue != oldValue
+                        <then>
+                            param("branchName") = "";
+                        </then>
+                    </if>
+                </onParameterChange>
+
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+			<parameter name="branchName" description="External Branch" type="String" defaultValue="" length="20" isDataSet="Branch">
+                <attribute name="projectName">
+                    <!--for lookup-->
+                    param("projectName")
+                </attribute>
+                <if> macro("isEmptyOrInvalid", param("projectName"))
+                    <then>
+						<readonly/>
+					</then>
+					<else>
+                        <enabled/>
+                    </else>
+                </if>
+
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="branchExpression" description="Branch Id Expression" type="String" length="20">
+                <if>
+                    param("branchType") == "Generic"
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <readonly/>
+                    </else>
+                </if>
+                <attribute name="lookupAppend">true</attribute>
+                <attribute name="lookupFromValues"> l("Expression") <comma/>
+                    var l = list();
+                    l.add(ndo("TIME_TAG", "Time Tag"));
+                    ;new("axiomsl.util.ui.NamedList", "Variables", l("Variables"), l.toArray()),
+                    macro("axiomExpressionLanguage"),
+                    macro("userDefinedFunctions")
+                </attribute>
+            </parameter>
+		</parameter>
+        <parameter name="hideSystemObjects" description="Hide system internal objects" type="Boolean" defaultValue="true"/>
+
+    </parameters>
+
+	<loadCode>
+        var branch = <originalAxiom/>;
+        <!--dataSetDescription = branch.getProperty("description");-->
+		<!--dataSet.setAxiomObject(branch);-->
+        var dependencies = branch.getTable("dependencies");
+        param("branchTable"); <!-- so that even empty table is inited -->
+        var isBranchRefNotUpToDate = false;
+		<for>var i = 0
+            <comma/>
+            i &lt; dependencies.size()
+            <comma/>
+            i ++
+            <do>
+                var row = param("branchTable").addLine();
+                row.param("branchAlias") = dependencies.get(i).getString("name");
+                row.param("branchDescr") = dependencies.get(i).getString("description");
+                <if> dependencies.get(i).propertyIsSet("branchExpression")
+                    <then>
+                        row.param("branchExpression") = dependencies.get(i).getOptionalString("branchExpression");
+                    </then>
+                    <else>
+                        row.param("branchExpression") = "";
+                    </else>
+                </if>
+                var dependencyBranch = dependencies.get(i).getReference("branch");
+
+                var branchRef = dependencies.get(i).getReference("branch");
+
+                <!-- check validState of the first ObjectRefElement - it could be VALID_NOT_UP_TO_DATE in a case if the reference is "not completely OK":
+                       the reference itself is "quite OK", but its objectOrSubobjectName is not correct and it is substituted while calling ObjRefElement.validate().
+                       The example is: renaming a branch from dependency. AXIOM-9155.  -->
+                <if> branchRef.getValidStateFromElement(0) == class("axiomsl.server.object_framework.ObjectReferenceImpl").VALID_NOT_UP_TO_DATE
+                    <then>
+                        isBranchRefNotUpToDate = true;
+                    </then>
+                </if>
+
+                <if>
+                    branchRef.isThisReferenceForElement(0)
+                    <then>
+                        row.param("branchName") = branch.getName();
+                        row.param("projectName") = editor.getAxiomObjectManager().getResolver().getName(new("axiomsl.server.object_framework.DbID", "Project", null, editor.getProjectId()));
+                    </then>
+                    <else>
+                        var branchName = branchRef.getTargetObjectName();
+                        macro("setProjectBranchNames", branchName, row);
+                    </else>
+                </if>
+                row.setID(dependencies.get(i).getString("id"));
+                <if>
+                    ndo(row.param("projectName"), "") not in editor.getRemoteProxy().lookupObjects("Project")
+                    <then>
+                        row.param("projectName") = "!!!" + row.param("projectName");
+                        row.param("branchName") = "!!!" + row.param("branchName");
+                    </then>
+					<else>
+						<if>
+                            ndo(row.param("branchName"), "") not in macro("branchChoices", row.param("projectName"))
+                            <then>
+                                row.param("branchName") = "!!!" + row.param("branchName");
+                            </then>
+						</if>
+					</else>
+				</if>
+			</do>
+		</for>
+		<if> branch.propertyIsSet("isFrozen")
+            <then>
+                param("isFrozen") = branch.getProperty("isFrozen");
+            </then>
+			<else>
+                param("isFrozen") = false;
+            </else>
+		</if>
+
+         var groupId = dataSet.getAxiomObject().getOptionalValue("groupNodeId", "");
+         var helper = new("axiomsl.accessors.GroupsAccessor", editor.getAxiomObjectManager(), editor.getAxiomEnvironment(), "Branch", editor.getProjectId());
+        var name = helper.getFullNameIfExists(groupId);
+        <if> name == null
+            <then>
+                name = "NONEXISTING GROUP: " + groupId;
+            </then>
+        </if>
+        param("groupName") = name;
+
+        <if> branch.propertyIsSet("defaultDBSource")
+            <then>
+                param("defaultDBSource") = branch.getReference("defaultDBSource").getTargetObjectName();
+            </then>
+            <else>
+                param("defaultDBSource") = "";
+            </else>
+        </if>
+        <if> branch.propertyIsSet("hideSystemObjects")
+            <then>
+                param("hideSystemObjects") = branch.getProperty("hideSystemObjects");
+            </then>
+            <else>
+                param("hideSystemObjects") = true;
+            </else>
+        </if>
+
+        <if> branch.propertyIsSet("branchType")
+            <then>
+                <case>
+                    branch.getProperty("branchType") == "TAXONOMY"
+                    <then>
+                        param("branchType") = "Taxonomy";
+                    </then>
+                     branch.getProperty("branchType") == "TAXONOMY_MAPPING"
+                    <then>
+                        param("branchType") = "Taxonomy Mapping";
+                    </then>
+                    <else>
+                         param("branchType") = "Generic";
+                    </else>
+                </case>
+            </then>
+            <else>
+                param("branchType") = "Generic";
+            </else>
+        </if>
+        <if> isBranchRefNotUpToDate
+            <then>
+                dataSet.dataChanged();
+            </then>
+        </if>
+    </loadCode>
+	<saveCode>
+        var branchForSave = <axiomForSave/>;
+
+        var helper = new("axiomsl.accessors.GroupsAccessor", editor.getAxiomObjectManager(), editor.getAxiomEnvironment(), "Branch", editor.getProjectId());
+        <axiomForSave/>.setProperty("groupNodeId", helper.getIdByPathIfExists(param("groupName")));
+
+        var dependenciesParam = param("branchTable");
+        var dependencies = branchForSave.createTablePropertyValue();
+        branchForSave.setProperty("dependencies", dependencies);
+        <for>var i = 0 <comma/> i &lt; dependenciesParam.size() <comma/> i ++
+            <do>
+                var row = dependencies.addRow("Branch:dependency");
+                var editorRow = dependenciesParam.get(i);
+                row.setProperty("name", editorRow.param("branchAlias"));
+                row.setProperty("description", editorRow.param("branchDescr"));
+                <if>!"".equals(editorRow.param("branchExpression"))
+                    <then>
+                        row.setProperty("branchExpression", editorRow.param("branchExpression"));
+                    </then>
+                </if>
+
+                var project = editor.locateObjectByName("Project", editorRow.param("projectName"));
+                var branchOWP = project.getTable("branches").locate(editorRow.param("branchName"));
+                
+                row.setProperty("branch", branchForSave.createReferencePropertyValue("", branchOWP.getReference("reference").getTargetObject()));
+                row.setProperty("id", editorRow.getID());
+            </do>
+		</for>
+		<if> param("isFrozen")
+            <then>
+				<if> operationType != editor.getManager().SAVE_AS
+                    <then>
+                        branchForSave.setProperty("isFrozen", param("isFrozen"));
+                    </then>
+					<else>
+                        param("isFrozen") = false;
+                    </else>
+				</if>
+			</then>
+		</if>
+
+        <if>param("defaultDBSource") != null and param("defaultDBSource") != ""
+            <then>
+                var defaultDBSource = editor.locateObjectByName("DBSource", param("defaultDBSource"));
+                branchForSave.setProperty("defaultDBSource", new("axiomsl.server.object_framework.ObjectReferenceImpl", branchForSave, function("axiomsl.server.object_framework.RouteToObject", "createDirectRoute", defaultDBSource), defaultDBSource))
+	        </then>
+        </if>
+        branchForSave.setProperty("hideSystemObjects", param("hideSystemObjects"));
+
+        <case>
+            param("branchType") == "Taxonomy"
+            <then>
+                branchForSave.setProperty("branchType", "TAXONOMY");
+            </then>
+            param("branchType") == "Taxonomy Mapping"
+            <then>
+                branchForSave.setProperty("branchType", "TAXONOMY_MAPPING");
+            </then>
+            <else>
+                branchForSave.setProperty("branchType", "GENERIC");
+            </else>
+        </case>
+    </saveCode>
+	<afterSave>        
+        currentParameters.updateParameter("isFrozen");
+        currentParameters.updateParameter("branchTable");
+    </afterSave>
+
+    <macros>
+        <macro name="checkGroupExists" arguments="value">
+            var helper = new("axiomsl.accessors.GroupsAccessor", editor.getAxiomObjectManager(), editor.getAxiomEnvironment(), "Branch", editor.getProjectId());
+            var isExists = helper.isPathExists(<value/>);
+            <if>!isExists
+                <then>
+                    errorMessage(l("Group '%1' doesn't exists!",<value/>));
+                    ;false
+                </then>
+            </if>
+        </macro>
+        <macro name="changeBranchTypeWarning" arguments="branchType">
+            var axiomObject = dataSet.getAxiomObject();
+            var message = editor.getRemoteProxy().calculateTaxonomyObjectsForRemove(axiomObject, <branchType/>);
+            <if>
+                message != null and message.length() > 0
+                <then>
+                    var branchType = function("axiomsl.xbrl.XBRLUtils", "metadata2Param", axiomObject.getString("branchType"));
+                    var res = confirm(l("All %1 objects: %2 will be removed! Do you want to continue?", branchType, message));
+                    return res;
+                </then>
+            </if>
+        </macro>
+    </macros>
+</data_set_category>

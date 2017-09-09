@@ -1,0 +1,188 @@
+<data_set_category name="DATA_MODEL"
+	description="Data Model Setup"
+	windowTitle="Data Model Setup" 
+	entityName="Data Model"
+	icon="model"
+	screenWidth="800"
+	screenHeight="500"
+    objectType="DataModel"
+    extends="COMMON_UTILS, DOC_DATA">
+	
+	<parameters>
+		<!-- one big tree parameter -->
+		<parameter name="data_model" description="Hierarchy" type="tree" length="400" group="Hierarchy" rootNodeType="DataModel:node" defaultRootName="root" namesAreGloballyUnique="true">
+			<nodeType name="DataModel:node" description="Data Model Node" icon="" renameAllowed="true" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="DataModel:node">
+				<macro name="dataModelNodeType"/>
+			</nodeType>
+		</parameter>
+        <parameter name="freezeLevel" description="Freeze level" type="integer" group="Freeze level" length="20" defaultValue="1">
+            <validation>
+                <if>newValue &lt; 1
+                    <then>
+                        return l("Freeze Level must be more or equal 1");
+                    </then>
+                </if>
+            </validation>
+        </parameter>
+        <parameter name="streamKeys" description="Stream Keys" type="table" length="2" keyParameter="name" group="Stream Setup" row="0">
+			<macro name="streamKeysTable"/>
+            <confirmAddRow>
+                var instanceKeys = param("instanceKeys");
+                var list_params = list();
+                <if>instanceKeys != null
+                    <then>
+                        list_params = list(list(),instanceKeys);
+                    </then>
+                </if>
+                macro("checkUniquenessOnConfirmIgnoreCase",list_params);
+            </confirmAddRow>
+        </parameter>
+		<parameter name="instanceKeys" description="Instance Keys" type="table" length="10" keyParameter="name" group="Instance Keys" rowType="InstanceKey">
+            <macro name="instanceKeysTable"/>
+            <confirmAddRow>
+                var list_params = list(list(),param("streamKeys"));
+                macro("checkUniquenessOnConfirmIgnoreCase",list_params);
+            </confirmAddRow>
+            <parameter name="defaultInstanceKeyValueFormula" description="Default Instance Key Value Formula" type="String">
+                <attribute name="lookupAppend">true</attribute>
+                <attribute name="lookupFromValues"> l("Field/Variable") <comma/>
+                    macro("defaultInstanceKeyValueFormula", null, "instanceKeys", "name", null)
+                </attribute>
+            </parameter>
+		</parameter>
+        <parameter name="performJoinOnAllStreamColumns" description="Perform Join On All Stream Columns" type="boolean" group="Parameters" defaultValue="false">
+        </parameter>
+        <parameter name="mustInheritSourceIKs" description="Must Inherit Source Instance Keys" type="boolean" group="Parameters" defaultValue="true">
+        </parameter>
+	</parameters>
+	<loadCode>
+	var tmp_dataModel = <originalAxiom/>;
+	<!--dataSet.setAxiomObject(dataModel);-->
+		<!--dataSetDescription = dataModel.getProperty("description");-->
+
+    var modelAccessor = new("axiomsl.accessors.DataModelAccessor", tmp_dataModel);
+    var tmp_parser = new("axiomsl.accessors.ExpressionParserImpl", modelAccessor, dataSet.getRouteFromCurrentBranch());
+    
+	macro("loadDataModelTree",tmp_dataModel.getString("name"), tmp_dataModel,tmp_parser, dataSet.getRouteFromCurrentBranch());
+    param("freezeLevel") = tmp_dataModel.getOptionalValue("freezeLevel", 1);
+    param("performJoinOnAllStreamColumns") = tmp_dataModel.getOptionalValue("performJoinOnAllStreamColumns", false);
+    param("mustInheritSourceIKs") = tmp_dataModel.getOptionalValue("mustInheritSourceIKs", true);
+</loadCode>
+	<saveCode>
+    var dataModelForSave = <axiomForSave/>;
+    var modelAccessor = new("axiomsl.accessors.DataModelAccessor", dataModelForSave);
+    var route = new("axiomsl.server.object_framework.RouteToObject");
+    var parser = new("axiomsl.accessors.ExpressionParserImpl", route, modelAccessor);
+    var rootTreeNode = param("data_model");
+    var allTreeNodes = rootTreeNode.getAllNodes();
+
+    var propertyTree = dataModelForSave.getTree("hierarchy");
+    var rootNode = propertyTree.getRootNode();
+    var rootDataSourceName = rootTreeNode.param("data_source");
+
+    var rootDataSource = editor.locateObjectByName("DataSource", rootDataSourceName);
+    rootNode.setProperty("id", rootTreeNode.getID());
+    rootNode.setProperty("name", rootTreeNode.name());
+    rootNode.setProperty("description", rootDataSource.getProperty("description"));
+    var isPermanent = rootTreeNode.param("isPermanent");
+    dataModelForSave.setProperty("isPermanent", isPermanent);
+    var defaultRule;
+    <if> isPermanent
+        <then>
+            defaultRule = "LATEST";
+        </then>
+			<else>
+            defaultRule = "EQUAL";
+        </else>
+		</if>
+    var instanceSelectionRule;
+
+
+    rootNode.setProperty("dataSource", rootNode.createReferencePropertyValue(rootDataSourceName, rootDataSource));
+    var instanceKeys = param("instanceKeys");
+
+    macro("rulesConstraints", rootNode, rootTreeNode);
+
+    <for> var i = 1 <comma/> i &lt; allTreeNodes.size() <comma/> i ++
+        <do>
+            var treeNode = allTreeNodes.get(i);
+	    var parentNode = propertyTree.locate(treeNode.parent().name(), null);
+	    macro("save_datamodel_node", treeNode, propertyTree, parentNode, parser,"DataModel:node");    
+        </do>
+		</for>
+		<!--var streamKeyTable = dataModelForSave.getTable("streamKeys");-->
+		<!--<if> operationType != editor.getManager().GENERATE-->
+		<!--<then>-->
+		<!--<for> var i=0 <comma/> i &lt; param("streamKeys").size() <comma/> i++-->
+		<!--<do>-->
+		<!--var streamKeyRow = streamKeyTable.addRow("DataModel:streamKey");-->
+		<!--streamKeyRow.setProperty("streamKeyName",param("streamKeys").get(i).param("streamKeyName"));-->
+		<!--var parsedLocalFieldReference = parser.parseExpression(param("streamKeys").get(i).param("streamKeyColumn"));-->
+		<!--<if> parsedLocalFieldReference.size() == 1-->
+		<!--<then>-->
+		<!--streamKeyRow.setProperty("streamKeyColumn",parsedLocalFieldReference.get(0));-->
+		<!--</then>-->
+		<!--</if>-->
+		<!--</do>                                       -->
+		<!--</for>-->
+		<!--</then>-->
+		<!--</if>-->
+
+    var templates = array(
+                        "forward(streamKeys.streamKeyName, name)",
+                        "object2expression(streamKeys.streamKeyColumn)",
+                        "object2expression(streamKeys.additionalStreamColumns.*)",
+                        "table2string(streamKeys.additionalStreamColumns)");
+    var params;
+    <if> operationType != editor.getManager().GENERATE
+        <then>
+            params = array("instanceKeys", "streamKeys", "freezeLevel", "performJoinOnAllStreamColumns", "mustInheritSourceIKs");
+        </then>
+			<else>
+            params = array("instanceKeys", "freezeLevel", "performJoinOnAllStreamColumns", "mustInheritSourceIKs");
+        </else>
+		</if>
+    var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+    matcher.match(dataModelForSave, currentParameters, params, null, templates, parser, route);
+</saveCode>
+    <macros>
+        <macro name="setVisibility" arguments="currentNode,paramName">
+        </macro>
+
+        <macro name="addionalDataModelNodeLoadingActions" arguments="currentNode,propertyNode">
+        </macro>
+
+        <macro name="checkUniqueness_streams">
+            macro("checkUniquenessIgnoreCase", if(param("instanceKeys")!=null,list(param("instanceKeys")),list()));
+        </macro>
+        
+        <macro name="checkUniqueness_instanceKeys">
+            macro("checkUniquenessIgnoreCase", list(param("streamKeys")));
+        </macro>
+
+        <macro name="lookupModelFields">
+            var fieldList = list();
+            var rootTreeNode = param("data_model");
+            var allNodes = rootTreeNode.getAllNodes();
+            <for> var i = 0 <comma/> i &lt; allNodes.size() <comma/> i ++
+                <do>
+                    var aNode = allNodes.get(i);
+                    var ds = aNode.param("data_source");
+
+                    <if> ds != null and ds != "" and ds.indexOf("!") &lt; 0
+                        <then>
+                            var dsFields = editor.getRemoteProxy().lookupFieldsInDataSource(aNode.param("data_source"), editor.getBranchId());
+                            <for>var j = 0<comma/>j &lt; dsFields.size()<comma/>j ++
+                                <do>
+                                    var column = dsFields.get(j);
+                                    fieldList.add(ndo(aNode.getName() + "." + column.getName(), column.getDescription()));
+                                </do>
+                            </for>
+                        </then>
+                    </if>
+                </do>
+            </for>
+            fieldList
+        </macro>
+    </macros>
+</data_set_category>

@@ -1,0 +1,72 @@
+<data_set_category name="DB_USER_GROUP" 
+	description="DBUserGroup Setup" 
+	windowTitle="DBUserGroup Setup" 
+	entityName="DBUserGroup"
+	icon=""
+	screenWidth="600"
+	screenHeight="350"
+    objectType="DBUserGroup"
+    extends="COMMON_UTILS, DOC_DATA">
+	
+<parameters>
+
+    <parameter name="help_info" description="" type="Component" noSerialization="yes">
+        <attribute name="componentClass">"axiomsl.gui.core.HelpStringComponent"</attribute>
+        <attribute name="text">l("Contains credentials to be used for all DDL (CREATE,DROP,ALTER etc) operations in DB Sources. Cannot be directly assigned to any user.")</attribute>
+        <attribute name="color">macro("LIGHT_GRAY")</attribute>
+        <if>"SYSTEM".equals(dataSet.getName())
+            <then>
+                <enabled/>
+            </then>
+            <else>
+                <removed/>
+            </else>
+        </if>
+    </parameter>
+	<parameter name="dbLogins" description="DB Logins" type="table" keyParameter="dbSource" group="Parameters">
+		<parameter name="dbSource" description="DB Source" group="Paramete  s" type="String" isDataSet="DBSource" defaultValue="" length="20"/>
+		<parameter name="userId" description="User ID" group="Parameters" type="String"
+			defaultValue="" length="20">
+		</parameter>
+		<parameter name="password" description="Password" group="Parameters" type="String" isPassword="true"
+			defaultValue="" length="20">
+		</parameter>
+	</parameter>
+</parameters>	
+
+<loadCode>
+	var db_user_group = <originalAxiom/>;
+	<!--dataSetDescription = db_user_group.getProperty("description");-->
+	
+	<for> var i = 0 <comma/> i &lt; db_user_group.getTable("dbLogins").size() <comma/> i ++
+		<do>
+			var line = param("dbLogins").addLine();
+			line.param("dbSource") = db_user_group.getTable("dbLogins").get(i).getReference("dbSource").getTargetObjectNativeName();
+			line.param("userId") = db_user_group.getTable("dbLogins").get(i).getProperty("userId");
+			line.param("password") = db_user_group.getTable("dbLogins").get(i).getProperty("password");
+		</do>
+	</for>		
+</loadCode>
+<saveCode>
+	var db_user_group_save = <axiomForSave/>;
+	
+
+	var dbLogins = db_user_group_save.getTable("dbLogins");
+	<for> var i = 0 <comma/> i &lt; param("dbLogins").size() <comma/> i ++
+		<do>
+			var loginRow = dbLogins.addRow("DBUserGroup:dbLogin");
+			
+			loginRow.setProperty("dbSource", loginRow.createReferencePropertyValue("DBSource", param("dbLogins").get(i).param("dbSource")));
+			loginRow.setProperty("userId", param("dbLogins").get(i).param("userId"));
+            var password = param("dbLogins").get(i).param("password");
+            <if>
+                !password.startsWith("#") <!-- not already loaded as encrypted -->
+                <then>
+                    password = "#"+function("axiomsl.util.basic.StringEncrypt", "getInstance").encrypt(password);
+                </then>
+            </if>
+            loginRow.setProperty("password", password);
+		</do>
+	</for>
+</saveCode>
+</data_set_category>

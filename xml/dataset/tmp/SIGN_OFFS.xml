@@ -1,0 +1,147 @@
+<data_set_category name="SIGN_OFFS"
+                   description="Sign Offs"
+                   windowTitle="Sign Off Levels Setup"
+                   entityName="Sign Offs"
+                   icon="image.reports"
+                   windowIcon="windowicon.branch"
+                   screenWidth="800"
+                   screenHeight="500"
+                   objectType="SignOffs"
+                   singleDataSet="SignOffs"
+                   fixedNameMode="true"
+                   extends="COMMON_UTILS"    
+        >
+    <parameters>
+        <parameter name="signOffs" description="Sign Offs" type="table" length="7" reorder="false">
+
+
+            <parameter name="level" description="Level" type="Integer">
+                <!--<verifyForSave>-->
+                <verifyForSave>
+                    macro("checkLevel");
+                </verifyForSave>
+            </parameter>
+
+            <parameter name="name" description="Name" type="String">
+                <validation>
+                    macro("checkUniqueness", list());
+                </validation>
+            </parameter>
+            <parameter name="description" description="Description" type="String">
+                <validation>
+                    !macro("isEmpty", newValue);
+                </validation>
+            </parameter>
+        </parameter>
+
+    </parameters>
+    <loadCode>
+        var signOffs = <originalAxiom/>.getTable("levels");
+
+        var rows = list();
+        <for>var i = 0
+            <comma/>
+            i &lt; signOffs.size()
+            <comma/>
+            i++
+            <do>
+                var signOff = signOffs.get(i);
+                var signOffRow = tableRow();
+                signOffRow.param("name") = signOff.getString("name");
+                signOffRow.param("level") = signOff.getInteger("signOffLevel");
+                signOffRow.param("description") = signOff.getString("description");
+                signOffRow.setID(signOff.getString("id"));
+                rows.add(signOffRow);
+            </do>
+        </for>
+
+         <for>var i = 0 <comma/> i &lt; rows.size() <comma/> i++
+            <do>
+                <for>var j = i <comma/> j &gt; 0 and rows.get(j - 1).param("level") > rows.get(j).param("level") <comma/> j--
+                    <do>
+                        var t = rows.get(j - 1);
+                        rows.set(j - 1, rows.get(j));
+                        rows.set(j, t);
+                    </do>
+                </for>
+            </do>
+        </for>
+
+        param("signOffs");
+        <for>var i = 0
+            <comma/>
+            i &lt; rows.size()
+            <comma/>
+            i++
+            <do>
+                param("signOffs").add(rows.get(i));
+            </do>
+        </for>
+    </loadCode>
+
+    <saveCode>
+
+        var signOffs = <axiomForSave/>.getTable("levels");
+
+        signOffs.clear();
+
+        <for>var i = 0 <comma/> param("signOffs") != null and i &lt; param("signOffs").size() <comma/> i++
+            <do>
+                var row = param("signOffs").get(i);
+                
+                var level = signOffs.addRow("SignOffs:level");
+                level.setProperty("name", row.param("name"));
+                level.setProperty("description", row.param("description"));
+                level.setProperty("id", row.getID());
+                level.setProperty("signOffLevel", row.param("level"));
+            </do>
+        </for>
+    </saveCode>
+
+    <macros>
+        <macro name="checkLevel">
+            var arr = new("java.util.ArrayList");
+
+            <for>var i = 0 <comma/> i &lt; param("signOffs").size() <comma/> i++
+                <do>
+                    arr.add(false);
+                </do>
+            </for>
+
+            <for>var i = 0 <comma/> i &lt; param("signOffs").size() <comma/> i++
+                <do>
+                    var row = param("signOffs").get(i);
+                    var origLevel = row.param("level").intValue();
+                    var level = origLevel - 1;
+                    <if>level &lt; arr.size() and level &gt;= 0
+                        <then>
+                            <if> arr.get(level)
+                                <then>
+                                    <!--errorMessage(l("The level     " +  level + "  " + row.param("level")));-->
+                                    errorMessage(l("The level '%1' occurred more than once.", origLevel));
+                                    return false;
+                                </then>
+                                <else>
+                                    arr.set(level, true);
+                                </else>
+                            </if>
+                        </then>
+                        <else>
+                            <if> level &gt;= arr.size()
+                                <then>
+                                    errorMessage(l("The level '%1' is greater than level count.", origLevel));
+                                    return false;
+                                </then>
+                                <else>
+                                    errorMessage(l("The level '%1' is not positive.", origLevel));
+                                    return false;
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </do>
+            </for>
+        </macro>
+    </macros>
+
+</data_set_category>

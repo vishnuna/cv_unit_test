@@ -1,0 +1,7 @@
+<metadata>
+	<object type="ReferencibleSubobject" version="2">
+		<property name="name" valueType="string" canBeEmpty="false" essential="true"/>
+		<property name="description" valueType="string"/>
+		<property name="id" valueType="string" canBeEmpty="false" upgraderClass="axiomsl.metadata_upgraders.GUIDGenerator" essential="true"/>
+	</object>
+</metadata>

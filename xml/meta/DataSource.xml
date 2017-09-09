@@ -1,0 +1,234 @@
+<metadata>
+	<!-- for strings, canBeEmpty is true by default
+	  for others- false -->
+	<object type="DataSource" extends="ObjectInBranch,DocData" version="18" upgraderClass="axiomsl.metadata_upgraders.DataSourceUpgrader">
+		<!-- INTERNAL means the data instances (tables, indices) for this data source are maintained by
+		  the system, EXTERNAL means they are maintained somehow outside of the system -->
+		<property name="hosting" valueType="string" canBeEmpty="false" choices="INTERNAL, EXTERNAL" defaultValue="INTERNAL"/>
+		<!--for generated data source, shows if the source is generated at execution time or at setup -->
+		<property name="populatedByTaskExecution" valueType="boolean" optional="true"/>
+		<!-- dbSource is where the data tables for this source will be stored -->
+		<property name="dbSource" valueType="url" targetObjectType="DBSource"/>
+		<!--loader is not specified for external -->
+		<property name="loader" optional="true" canBeEmpty="true" valueType="url" targetObjectType="DataSourceLoader"/>
+		<!-- whether the source is turned on by default when the model is viewed in filter -->
+		<property name="defaultVisibilityInModel" valueType="boolean" defaultValue="true"/>
+		<!-- this describes the way data is populated and used - a structure of it
+			FLAT is a simple flat table
+			AGGREGATION is a table which contains pre-aggregated finest level of drill-down, and where
+			the intermediate drill-downs can be obtained by selecting aggr_func(field) group by xxx
+			AGGREGATION_WITH_SUBTOTALS is used to store drill-down dependent subtotals, where aggregation
+			is not additive (as is the case with VaR). It contains all combination of detail values
+			with null detail value indicating a subtotal over that detail
+		-->
+		<property name="dataStructure" valueType="string" canBeEmpty="false" choices="FLAT, AGGREGATION, AGGREGATION_WITH_SUBTOTALS, HIERARCHIAL" defaultValue="FLAT"/>
+		<property name="layout" valueType="table" rowTypes="DataSource:field" essential="true"/>
+		<!-- primary key - unique identifier of records in a table -->
+		<property name="keyFields" valueType="table" rowTypes="DataSource:localFieldReference" essential="all"/>
+		<property name="index" valueType="table" rowTypes="DataSource:index" optional="true" includedByDefault="true"/>
+		<property name="createIndexOnKeyFields" valueType="boolean" defaultValue="true" optional="true" includedByDefault="true"/>
+		<!-- indexOnKeyFieldsClustered is used if createIndexOnKeyFields-->
+		<property name="indexOnKeyFieldsClustered" valueType="boolean" optional="true" includedByDefault="true" defaultValue="true"/>
+		<!-- details/aggregated fields are populated for AGGREGATION, AGGREGATION_WITH_SUBTOTALS types of data source 
+		 to distinguish fields by which user can drill down and the fields which are to be aggregated -->
+		<property name="storageType" valueType="string" canBeEmpty="false" choices="PERMANENT, CONTINUOUS, CONTINUOUS_PARTITION, SEGMENTED" defaultValue="PERMANENT" essential="true"/>
+		<!-- for internally hosted data source, this is a prefix of all data tables created for this data 
+			source. The table name is automatically generated from branch id and unique counter (and maybe a 
+			letter indicating the manual adj table vs. data table.
+			After instance was created, the specific table name can be changed using instance management tool
+			(to move data into another table). When branch is copied data is copied into new tables using
+			generated names.
+			
+			By default (in GUI or in output generator) the prefix should be set to first few letters 
+			of data source name. Later it can be changed, and it should be changed only manually.
+		-->
+		<property name="internalSourceTablePrefix" optional="true" includedByDefault="true" valueType="string"/>
+		<!-- for externally hosted data sources, if they are not segmented, the table name must be 
+			specified in externalSourceTableName property. 
+			for segmented sources, a combination of table prefix and instance date pattern must be specified
+			in externalSourceTableName property, for example
+			h33_%yyyy%mm%dd%hh%mm%ss
+			if date pattern is not specified, a default one is assumed.
+		-->
+		<property name="externalSourceTableName" optional="true" valueType="string"/>
+		<!-- only for continuous -->
+		<property name="asOfDateField" valueType="url" optional="true" urlStructure="DataSource[this].layout[*]" targetObjectType="DataSource:field" essential="true"/>
+		<!-- these properties describe instance key fields 
+		    (identifiers for a data source instance in addition to as of date) 
+		
+			For a permanent data source, there will be no instance keys.
+			For continuous data sources, instance key fields must be fields in the layout
+			For segmented - they are not, their values are recorded in the DataSourceInstances object, and
+			provide a mapping into the particular data table.
+			
+			instance keys (and as of date field) must be a subset of all data source keys (for continuous storage type)
+			
+			DataSource:localFieldReference objects are used for continuous, 
+			InstanceKey - for segmented
+		-->
+		<property name="instanceKeys" valueType="table" rowTypes="DataSource:localFieldReference, InstanceKey" optional="true" essential="true"/>
+		<!-- no purge mode anymore -->
+		<property name="loaderConfigFields" optional="true" valueType="table" rowTypes="DataSource:loaderConfigField"/>
+		<!-- table of various LoaderAction:* objects-->
+		<property name="loaderActions" optional="true" valueType="table" rowTypes="LoaderAction"/>
+		<!-- table of various Post-Table Creation Statements:* objects
+        postTableCreationStatements - only for internal
+        -->
+		<property name="postTableCreationStatements" valueType="table" optional="true" rowTypes="DataSource:postTableCreationStatement"/>
+		<property name="postAdjustmentTableCreationStatements" valueType="table" rowTypes="DataSource:postTableCreationStatement"/>
+        <property name="dataLoadVariables" valueType="table" optional="true" rowTypes="WorkFlow:parameter"/>
+		<property name="computeStatistics" valueType="string" canBeEmpty="false" choices="NONE, FOR_ALL_COLUMNS, FOR_KEY_COLUMNS" defaultValue="FOR_ALL_COLUMNS"/>
+		<property name="reapplyAdjustmentsAfterDataLoad" valueType="boolean" defaultValue="true"/>
+		<!-- todo: original data configuration, loader parameters, loader actions -->
+		<property name="archivalProperties" valueType="object" objectType="ArchivalProperties"/>
+		<!-- comparison operator for continuous source -->
+		<property name="continuousOperator" valueType="string" canBeEmpty="false" choices="=, &lt;=, &gt;=, &lt;, &gt;" defaultValue="=" optional="true"/>
+		<!-- validations for manual adjustments -->
+		<property name="validations" valueType="table" rowTypes="DataSource:validation"/>
+		<!-- TODO: problem with comma  -->
+		<property name="delimiter" valueType="string" canBeEmpty="true" defaultValue="\t" optional="true"/>
+        <property name="optionallyEnclosedBy" valueType="string" canBeEmpty="true" defaultValue="" optional="true"/>
+		<!-- number of rows to skip-->
+		<property name="skipRows" valueType="integer" defaultValue="0" optional="true"/>
+		<property name="newlineConversion" valueType="string" choices="none, dos, unix, unix2dos, dos2unix" defaultValue="none" optional="true"/>
+		<property name="targetEncoding" valueType="string" optional="true"/>
+		<property name="convertEncoding" valueType="boolean" defaultValue="false" optional="true"/>
+		<!-- source encoding-->
+		<property name="encodingFrom" valueType="string" canBeEmpty="false" choices="ISO8859-5, CP866, WIN1251" defaultValue="ISO8859-5" optional="true"/>
+		<!-- target encoding-->
+		<property name="encodingTo" valueType="string" canBeEmpty="false" choices="ISO8859-5, CP866, WIN1251" defaultValue="ISO8859-5" optional="true"/>
+		<property name="loaderEnumerationField" valueType="url" optional="true" urlStructure="DataSource[this].layout[*]" targetObjectType="DataSource:field"/>
+		<!-- Trailing null columns in file-->
+		<property name="trailingNullCols" valueType="boolean" defaultValue="true" optional="true"/>
+		<!-- Use column headers from file-->
+		<property name="columnHeadersFromFile" valueType="boolean" defaultValue="false" optional="true"/>
+        <!-- Load empty strings as default values, not nulls-->
+        <property name="loadEmptyStringsAsDefaultValues" valueType="boolean" defaultValue="true" optional="true"/>
+		<!-- loader control file  -->
+		<property name="loaderControlFile" valueType="string" canBeEmpty="true" optional="true"/>
+		<property name="parameterIsNotAFile" valueType="boolean" defaultValue="false" optional="true"/>
+		<property name="codeWillCreateFile" valueType="boolean" defaultValue="false" optional="true"/>
+		<property name="loaderPreprocessCode" valueType="string" canBeEmpty="true" optional="true"/>
+        <property name="loaderSelectDistinct" valueType="boolean" defaultValue="false" optional="true"/>
+		<property name="loaderCondition" valueType="string" canBeEmpty="true" defaultValue="" optional="true"/>
+		<property name="fourEyesCheck" valueType="boolean" defaultValue="false"/>
+        <property name="readOnlyAdjustment" valueType="boolean" defaultValue="false" optional="true"/>/>
+        <!-- Keep current table content on load-->
+		<property name="keepTableContent" valueType="boolean" defaultValue="false" optional="true"/>
+		<property name="loadSheetName" valueType="string" defaultValue="" optional="true"/>
+		<property name="dbSourceToLoadFrom" valueType="url" targetObjectType="DBSource" optional="true"/>
+		<property name="tableLoadingMethod" valueType="string" choices="direct,memoryBased,fileBased" defaultValue="direct" optional="true"/>
+        <property name="maxErrors" valueType="integer" defaultValue="2147483647" optional="true"/>
+        <property name="doNotFailIfRejected" valueType="boolean" defaultValue="false" optional="true"/>
+        <property name="doNotFailIfTruncated" valueType="boolean" defaultValue="false" optional="true"/>
+        <property name="freezeLevel" valueType="integer" defaultValue="1" optional="true"/>
+        <property name="instanceRebuildRestriction" valueType="string" choices="AlterFullRebuild, AlterOnly, FullRebuildOnly" defaultValue="AlterFullRebuild" optional="true"/>
+    </object>
+	<object type="DataSource:field" extends="ReferencibleSubobject" version="5">
+		<property name="title" valueType="string"/>
+		<property name="type" valueType="string" canBeEmpty="false" choices="VARCHAR, INTEGER, FLOAT, DATE, TEXT, UNICODE, UNICODE_TEXT, DB_SPECIFIC" defaultValue="VARCHAR" essential="true"/>
+		<property name="dataPermissionEntity" optional="true" valueType="url" targetObjectType="DataPermissionEntity" essential="true"/>
+        <property name="streamCombination" optional="true" valueType="table" rowTypes="DataSource:streamDataPermission"/>
+
+        <property name="dataPermissionJoinSource" valueType="url" optional="true" targetObjectType="DataSource" essential="true"/>
+        <property name="dataPermissionJoinField" valueType="url" optional="true" targetObjectType="DataSource:field" essential="true"/>
+		<!-- todo: auto-increment -->
+		<!-- only for DB_SPECIFIC -->
+		<property name="dbSpecificType" valueType="string" canBeEmpty="false" optional="true" essential="true"/>
+		<!-- only for varchar and DB_SPECIFIC -->
+		<property name="size" valueType="integer" optional="true" essential="true"/>
+		<!-- only for DB_SPECIFIC -->
+		<property name="precision" valueType="integer" optional="true" essential="true"/>
+		<property name="allowNulls" valueType="boolean" defaultValue="false" essential="true"/>
+		<property name="allowDefault" valueType="boolean" defaultValue="false"/>
+
+        <property name="isAutoUniqueId" valueType="boolean" defaultValue="false" optional="true" essential="true"/>
+
+        <!-- if allowDefault==true -->
+		<property name="defaultValue" valueType="string" optional="true" canBeEmpty="false"/>
+		<property name="syntheticContent" valueType="table" rowTypes="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, DataSource:localFieldReference"/>
+		<property name="lookupSource" valueType="url" canBeEmpty="true" targetObjectType="DataSource" essential="true"/>
+		<!-- if lookupSource is not empty -->
+		<property name="codeField" valueType="url" optional="true" targetObjectType="DataSource:field" essential="true"/>
+		<property name="descriptionField" valueType="url" optional="true" targetObjectType="DataSource:field" essential="true"/>
+		<!-- parent fields for joining with lookup source -->
+		<property name="parentFields" valueType="table" rowTypes="DataSource:localFieldReference" essential="true"/>
+		<!-- these properties are used in data viewer -->
+		<!-- if a field is an aggregated field, this is a function used for aggregation, e.g. SUM -->
+		<property name="aggregatedFunction" valueType="string"/>
+		<!-- for aggregation data sources, in order to calculate averages correctly for all drill-downs,
+				we store sum() and count() in 2 separate fields. A sum field has aggregation function = AVG,
+				and count field has the isCountFieldFor property populated with reference to a sum field.
+			-->
+		<property name="isCountFieldFor" valueType="url" canBeEmpty="true" urlStructure="DataSource[this].layout[*]" targetObjectType="DataSource:field"/>
+		<!-- if the field was generated from a field in the input data model (e.g. as a detail or calc field
+		 in the aggregation), here we'll specify how it was produced, as an expression per input object (e.g. model) -->
+		<property name="producingMap" valueType="table" rowTypes="DataSource:fieldProducingMap"/>
+		<property name="displayFormat" valueType="string"/>
+		<!-- showSubtotal is false by default because for non-numeric datatype the parameter will be disabled in gui -->
+		<property name="showSubtotal" valueType="boolean" defaultValue="false" upgraderClass="axiomsl.metadata_upgraders.SourceShowsubtotalUpgrader"/>
+		<!--if field is hidden, it does not appear at all in the viewer -->
+		<property name="isHidden" valueType="boolean" defaultValue="false" optional="true"/>
+		<!--isArtificialKey is for example, enumerator field in the aggregation-->
+		<property name="isArtificialKey" valueType="boolean" defaultValue="false" optional="true"/>
+		<!--isLogicalKey is for example, a detail field in the aggregation. It should be treated in the viewer as the real key field-->
+		<property name="isLogicalKey" valueType="boolean" defaultValue="false" optional="true"/>
+		<!--todo: portfolioLevel etc won't be reliably populated unless portfolio metadata has increased from version 9-->
+		<property name="fieldType" choices="calculatedField, detail, enumerator, countField, modelUsageField,portfolioLevel, portfolioNodePath, portfolioAdditionalField" optional="true" valueType="string"/>
+		<property name="defaultInstanceKeyValueFormula" optional="true" valueType="string"/>
+        <property name="removeNonNullValuesOnColumnDelete" optional="true" valueType="boolean"/>
+	</object>
+	<object type="DataSource:index" version="3">
+		<property name="clustered" valueType="boolean" defaultValue="false"/>
+		<property name="unique" valueType="boolean" defaultValue="true"/>
+		<property name="fields" valueType="table" canBeEmpty="false" rowTypes="DataSource:localFieldReference"/>
+	</object>
+	<object type="DataSource:validation" version="3">
+		<property name="field" valueType="url" urlStructure="DataSource[this].layout[*]" targetObjectType="DataSource:field"/>
+        <property name="type" valueType="string" canBeEmpty="false" choices="ON_EDIT_ONLY, ON_SAVE_ONLY, ON_EDIT_AND_SAVE, ON_DELETE_ONLY" defaultValue="ON_EDIT_ONLY" optional="true"/>
+        <property name="expression" valueType="string"/>
+	</object>
+	<object type="DataSource:reference" version="3">
+		<property name="value" valueType="url" targetObjectType="DataSource"/>
+	</object>
+	<object type="DataSource:fieldReference" version="3">
+		<property name="value" valueType="url" targetObjectType="DataSource:field"/>
+	</object>
+    <object type="DataSource:streamDataPermission" version="1">
+        <property name="name" valueType="string" canBeEmpty="false"/>
+        <property name="dataPermissionEntity" optional="true" valueType="url" targetObjectType="DataPermissionEntity"/>
+        <property name="dataPermissionJoinSource" valueType="url" optional="true" targetObjectType="DataSource"/>
+        <property name="dataPermissionJoinField" valueType="url" optional="true" targetObjectType="DataSource:field"/>
+    </object>
+	<object type="DataSource:localFieldReference" version="3">
+		<property name="value" valueType="url" urlStructure="DataSource[this].layout[*]" targetObjectType="DataSource:field"/>
+	</object>
+	<object type="DataSource:fieldProducingMap" version="3">
+		<!-- for now we don't fix the types of input (producing) objects, which generally are data models,
+		maybe detail sets, and unlikely data sources -->
+		<property name="inputObject" valueType="url"/>
+		<!-- the elements of producingExpression will be fields from the input object (e.g. data model),
+		SQLExpressionParts and so on.-->
+		<property name="producingExpression" valueType="table" rowType="SQLPattern, SQLExpressionPart, SQLConstant, SQLFormula, DataModel:fieldReference"/>
+	</object>
+	<object type="DataSource:loaderConfigField" version="3">
+		<!-- only includes nonempty original columns
+         as of date, instance keys and synthetic fields must not be present in loaderConfigFields table
+        -->
+		<property name="sourceField" valueType="url" urlStructure="DataSource[this].layout[*]" targetObjectType="DataSource:field"/>
+		<!-- origColumn is the following:
+			if loading from table, the name of the table column                 
+			if loading from file - 
+				if columnHeadersFromFile - column header
+				else - the number of the column in a file (1, 2, 3....).
+		-->
+		<property name="origColumn" valueType="string" canBeEmpty="false"/>
+		<property name="format" valueType="string" canBeEmpty="true"/>
+	</object>
+	<object type="DataSource:postTableCreationStatement" version="3">
+		<property name="name" valueType="string" canBeEmpty="false"/>
+		<property name="statement" valueType="string" canBeEmpty="false"/>
+        <property name="canBeReexecuted" valueType="boolean" optional="true"/>
+        <property name="alwaysReexecute" valueType="boolean" defaultValue="false" optional="true"/>
+	</object>
+</metadata>

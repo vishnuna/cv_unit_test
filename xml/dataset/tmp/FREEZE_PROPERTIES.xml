@@ -1,0 +1,30 @@
+<data_set_category name="FREEZE_PROPERTIES"
+	description=""
+	windowTitle=""
+	objectType="">
+
+    <parameters>
+        <parameter name="freezeLevel" description="Freeze level (0 means take freeze level from source data models)" group="Freeze level" type="Integer"/>
+    </parameters>
+
+    <loadCode>
+        var properties = <originalAxiom/>;
+        param("freezeLevel") = 0;
+        <if> properties.propertyIsSet("freezeLevel")
+            <then>
+                param("freezeLevel") = properties.getProperty("freezeLevel");
+            </then>
+        </if>
+    </loadCode>
+
+    <saveCode>
+        var properties = <axiomForSave/>;
+        <if> param("freezeLevel") != 0
+        <then>
+            properties.setProperty("freezeLevel", param("freezeLevel"));
+        </then>
+        </if>
+    </saveCode>
+
+
+</data_set_category>

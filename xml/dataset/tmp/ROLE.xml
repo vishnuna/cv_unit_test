@@ -1,0 +1,73 @@
+<data_set_category name="ROLE" description="Role" windowTitle="Role Setup" entityName="Role" icon="role" screenWidth="800" screenHeight="500" objectType="Role" extends="COMMON_UTILS, DOC_DATA">
+
+    <parameters>
+        <parameter name="users" description="Users" group="Users" type="table" keyParameter="user" defaultValue="" length="20">
+            <parameter name="user" description="User Name" type="String" isDataSet="User" length="20">
+                <attribute name="lookupFromValues">
+                l("User Name")
+                <comma/>
+                    var results = list();
+                    var userList = objectManager.getResolver().lookupObjects('User', null);
+                    <for> var i = 0 <comma/> i &lt; userList.size() <comma/> i++
+                        <do>
+                            var userObj = editor.getRemoteProxy().getAxiomObjectManager().locate(userList.get(i).createObjectID());
+                            <if> !userObj.getOptionalBoolean('isDeleted');
+                                <then>
+                                    var nameDescription = ndo(userList.get(i).getName(), userList.get(i).getDescription());
+                                    results.add(nameDescription);
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+                    results;
+                </attribute>
+            </parameter>
+        </parameter>
+        <parameter name="roles" description="Roles" type="table" keyParameter="role" group="Roles">
+            <parameter name="role" description="Role Name" type="String" isDataSet="Role" length="20"/>
+        </parameter>
+        <parameter name="additionalEmails" description="Additional E-Mails" type="table" keyParameter="email" group="Additional Emails">
+            <parameter name="email" description="E-Mail" type="String" length="20">
+                <validation>
+                    macro("checkUniquenessBy", list(), "email");
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+        </parameter>
+        <parameter name="isDashboardSuperUser" description="Is Dashboard Super User" type="Boolean" group="Parameters"/>
+	</parameters>
+
+	<loadCode>
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var matcher = new("axiomsl.gui.util.MatchingCopyUtil");
+        param("additionalEmails");
+        matcher.match(<originalAxiom/>, currentParameters, array("roles", "users", "additionalEmails", "isDashboardSuperUser"), null, array("forward(roles.value, role)", "forward(users.value, user)","forward(additionalEmails.value, email)"), null, route);
+	</loadCode>
+    
+	<saveCode>
+        var route = new("axiomsl.server.object_framework.RouteToObject");
+        var matcher = new("axiomsl.gui.util.MatchingSaveUtil");
+        matcher.match(<axiomForSave/>, currentParameters, array("users", "additionalEmails", "isDashboardSuperUser"), null, array("forward(users.value, user)","forward(additionalEmails.value, email)"), null, route);
+
+        <!--to prevent self referenes-->
+        var roles = param("roles");
+        var rolesTable = <axiomForSave/>.createTablePropertyValue();
+        <axiomForSave/>.setProperty("roles", rolesTable);
+        <for>var i = 0
+            <comma/>
+            i &lt; roles.size()
+            <comma/>
+            i ++
+            <do>
+                var row = rolesTable.addRow("Role:refRole");
+                var editorRow = roles.get(i);
+
+                var targetId = function("axiomsl.server.object_framework.ObjectID", "createNameId", "Role", null, editorRow.param("role"));
+                var emptyRoute = function("axiomsl.server.object_framework.RouteToObject", "createEmptyRoute");
+                row.setProperty("value", new("axiomsl.server.object_framework.ObjectReferenceImpl", <axiomForSave/>, emptyRoute, targetId));
+            </do>
+		</for>
+    </saveCode>
+</data_set_category>

@@ -1,0 +1,298 @@
+<data_set_category name="STREAMS"
+                   description="Streams">
+
+    <parameters>
+
+        <parameter name="asOfDate" description="Report Date" type="Date" group="Dates/Streams for Preview" freehand="no">
+            <!--<onParameterChange>-->
+                <!--editor.setRrp(class("axiomsl.server.object_framework.ObjectProxiesUtils").createRrp(newValue, null, editor.getAxiomObjectManager()));-->
+            <!--</onParameterChange>-->
+        </parameter>
+
+        <parameter name="hasStreams" description="" type="boolean" defaultValue="false" hidden="true">
+            <if> updateInfo.isDependencyUpdate
+                <then>
+                    <equals>
+                        var keys = macro("getStreamKeyUnion");
+                        return !keys.isEmpty();
+                    </equals>
+                </then>
+            </if>
+        </parameter>
+
+        <parameter name="streams" description="" type="table" fixedLength="true" reorder="false" allowAddRemove="false" allowCopyPaste="false" group="Dates/Streams for Preview" keyParameter="streamKeyName" freehand="no">
+
+            <if>
+                param("hasStreams")
+                <then>
+                    <enabled/>
+
+                    <if> updateInfo.isDependencyUpdate
+                        <then>
+                            <equals>
+                                var prevConfig = param("streams");
+                                var prevValues = new("java.util.HashMap");
+                                <if>
+                                    prevConfig != null
+                                    <then>
+                                        <for> var j = 0 <comma/> j &lt; prevConfig.size() <comma/> j++
+                                            <do>
+                                                prevValues.put(prevConfig.get(j).param("streamKeyName"), prevConfig.get(j).param("streamKeyValue"));
+                                            </do>
+                                        </for>
+                                    </then>
+                                </if>
+
+                                trace("");
+                                var result = macro("matchStreams", prevValues);
+                                return result;
+                            </equals>
+                        </then>
+                    </if>
+                </then>
+                <else>
+                    <removed/>
+                </else>
+            </if>
+
+            <parameter name="streamKeyName" type="String" description="Stream Key" freehand="no"/>
+
+            <parameter name="streamKeyValue" type="String" description="Stream Key Value" wrapOnReport="true" freehand="no">
+                <onParameterChange>
+                    macro("streamChanged", param("streamKeyName"));
+                </onParameterChange>
+
+                <attribute name="lookupAppendSeparator">", "</attribute>
+                <attribute name="lookupEnabled">
+                    var ref = macro("getKeyReference", param("streamKeyName"));
+                    var field = ref.getTargetObject();
+                    field != null and !field.propertyIsEmpty("lookupSource")
+                </attribute>
+                <attribute name="lookupSelectOldValues">true</attribute>
+                <attribute name="lookupFromValues">
+                    l("Stream Key Value") <comma/>
+                    var ref = macro("getKeyReference", param("streamKeyName"));                    
+                    var field = ref.getTargetObject();                    
+                    <if> field != null and !field.propertyIsEmpty("lookupSource")
+                        <then>
+
+                            var helper = new("axiomsl.proxy.LookupHelper");
+                            var dataSource = field.getReference("lookupSource").getTargetObject();                            
+                            var lookupCodeField = field.getReference("codeField").getTargetObject();
+                            var lookupDescriptionField = field.getReference("descriptionField").getTargetObject();
+
+                            var result = helper.lookupValues(dataSource,
+                                        null, null,
+                                        lookupCodeField,
+                                        lookupDescriptionField,
+                                        null,
+                                        null,
+                                        editor.getUser().getUserName(), editor.getAxiomEnvironment());
+                            return result;
+                        </then>
+                    </if>
+                </attribute>
+            </parameter>
+
+        </parameter>
+
+    </parameters>
+
+    <loadCode>
+        param("asOfDate") = <originalAxiom/>.getProperty("asOfDate");
+
+        <!--caching prev values-->
+        var cache = new("java.util.HashMap");
+        var prevStreams = <originalAxiom/>.getTable("streams");
+        <for> var i = 0 <comma/> i &lt; prevStreams.size() <comma/> i++
+            <do>
+                var row = prevStreams.get(i);
+                var prevValues = row.getTable("values");
+                <if> !prevValues.isEmpty()    <!-- backward compatibility -->
+                    <then>
+                        var oldValue = new("java.lang.StringBuffer");
+                        <for> var j = 0
+                                <comma/>
+                                j &lt; prevValues.size()
+                                <comma/> j++
+                           <do>
+                               var prevValue = prevValues.get(j).getProperty("value");
+                               <if> oldValue.length() != 0
+                                   <then>
+                                       oldValue.append(", ");
+                                   </then>
+                               </if>
+                               oldValue.append(prevValue);
+                            </do>
+                        </for>
+                        cache.put(row.getProperty("streamKeyName"), oldValue.toString());
+                    </then>
+                </if>                
+            </do>
+        </for>
+        <!--models should be set before!!!!!-->
+        param("streams") = macro("matchStreams", cache);
+        <if>
+            !cache.isEmpty()
+            <then>
+                trace("Stream(s) " + cache.keySet() + " are no longer available");
+                dataSet.dataChanged();
+            </then>
+        </if>
+
+        param("hasStreams") = !param("streams").isEmpty();
+    </loadCode>
+
+    <saveCode>
+        <axiomForSave/>.setProperty("asOfDate", param("asOfDate"));
+
+        var streamTable = <axiomForSave/>.getTable("streams");
+        <for> var i = 0 <comma/> param("streams") != null and i &lt; param("streams").size() <comma/> i++
+            <do>
+                var row = param("streams").get(i);
+                var values = row.param("streamKeyValue");
+
+                <if> values instanceof "axiomsl.server.object_framework.FreehandPropertyValue"
+                    <then>
+                        var streamRow = streamTable.addRow("Task:streamKeyValues");
+                        streamRow.setProperty("streamKeyName", row.param("streamKeyName"));
+                        streamRow.setProperty("values", values);
+                    </then>
+                    <else>
+                        <!--only add stream row if values are not empty-->
+                        <if>values != ""
+                            <then>
+                                var streamRow = streamTable.addRow("Task:streamKeyValues");
+                                streamRow.setProperty("streamKeyName", row.param("streamKeyName"));
+                                var valuesTable = streamRow.getTable("values");
+
+                                var valuesArray = values.split(",");
+                                <for> var j = 0
+                                    <comma/>
+                                    j &lt; valuesArray.size()
+                                    <comma/> j++
+                                    <do>
+                                        var valueRow = valuesTable.addRow("Task:streamKeyValue");
+                                        valueRow.setProperty("value", valuesArray.get(j).trim());
+                                    </do>
+                                </for>
+                            </then>
+                        </if>
+                    </else>
+                </if>
+            </do>
+        </for>
+    </saveCode>
+
+    <macros>
+        <!--returns vector of vector(2) - key names and descriptions-->
+        <macro name="getStreamKeyUnion">
+            var models1 = param("models");
+            var streamNames = list(); 
+            var streamNamesAndDescriptions = list();
+            <for> var i = 0
+                    <comma/>
+                    i &lt; models1.size()
+                    <comma/> i++
+               <do>
+                   var modelName = models1.get(i).param("name");
+                   <if> modelName != null and modelName != "" and modelName.indexOf("!!!") &lt; 0
+                       <then>
+                       var model = editor.locateObjectByNameIfExists("DataModel", modelName);
+                       <if> model != null
+                           <then>
+                               var streams = model.getTable("streamKeys");
+                               <for> var j = 0
+                                       <comma/>
+                                       j &lt; streams.size()
+                                       <comma/> j++
+                                  <do>
+                                      var name = streams.get(j).getString("streamKeyName");
+                                      <if> !streamNames.contains(name)
+                                          <then>
+                                              streamNames.add(name);
+                                              var columnObject = streams.get(j).getObject("streamKeyColumn").getReference("value").getTargetObject();
+                                              var streamDescription = columnObject.getString("title");
+                                              <if> streamDescription == ""
+                                                  <then>streamDescription = columnObject.getString("description");</then>
+                                              </if>
+                                              <if> streamDescription == ""
+                                                  <then>streamDescription = name;</then>
+                                              </if>
+                                              streamNamesAndDescriptions.add(list(name, streamDescription));
+                                          </then>
+                                      </if>
+                                   </do>
+                               </for>
+                           </then>
+                       </if>
+                    </then>
+                   </if>
+                </do>
+            </for>
+            ;streamNamesAndDescriptions
+        </macro>
+
+
+        <macro name="getKeyReference" arguments="keyName">
+            var models1 = param("models");
+            var res = null;
+            <for> var i = 0
+                    <comma/>
+                    i &lt; models1.size()
+                    <comma/> i++
+               <do>
+                   var modelName = models1.get(i).param("name");
+                   var model = editor.locateObjectByNameIfExists("DataModel", modelName);
+                   <if> model != null
+                       <then>
+                           var streams = model.getTable("streamKeys");
+                           <for> var j = 0
+                                   <comma/>
+                                   j &lt; streams.size()
+                                   <comma/> j++
+                              <do>
+                                  var name = streams.get(j).getString("streamKeyName");
+                                  <if> <keyName/> == name
+                                      <then>
+                                          res = streams.get(j).getProperty("streamKeyColumn").getReference("value");
+                                          break;
+                                      </then>
+                                  </if>
+                               </do>
+                           </for>
+                       </then>
+                   </if>
+                </do>
+            </for>
+            ;res
+        </macro>
+
+        <macro name="matchStreams" arguments="prevValues">
+            var prevValues1 = <prevValues/>;
+            var keys = macro("getStreamKeyUnion");
+            <!-- the code to match new layout to old values -->            
+            var newStreams = list();            
+            <for> var i = 0 <comma/> i &lt; keys.size() <comma/> i++
+                <do>
+                    var row = tableRow();
+                    row.param("streamKeyName") = keys.get(i).get(0);
+                    <!--row.param("streamKeyDescription") = keys.get(i).get(1);-->
+                    var orig = prevValues1.remove(row.param("streamKeyName"));
+                    <if> orig == null
+                        <then>
+                            orig = "";
+                        </then>
+                    </if>
+                    row.param("streamKeyValue") = orig;
+                    newStreams.add(row);
+                </do>
+            </for>
+            ;newStreams
+        </macro>
+
+
+        <!--to be overriden-->
+        <macro name="streamChanged" arguments="streamName"/>
+    </macros>
+</data_set_category>

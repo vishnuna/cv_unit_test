@@ -1,0 +1,1918 @@
+<data_set_category name="COMPUTATION" description="Computation Setup" windowTitle="Computation Setup" entityName="Computation" icon="rcomputation"
+                   screenWidth="800" screenHeight="500" objectType="Computation" extends="COMMON_UTILS">
+    <events>
+        <event name="modelUpdate">
+            <filter property="eventType" value="AXIOM_OBJECT_UPDATE_EVENT"/>
+            <filter property="objectType" value="DataModel"/>
+        </event>
+    </events>
+
+    <parameters>
+        <parameter name="models" description="Models" type="table" length="7" group="Models" keyParameter="name">
+            <parameter name="name" description="Model Name" lookupInPlace="yes" type="String" length="20" isDataSet="DataModel" wrapOnReport="true">
+                <onParameterChange>
+                    <currentParameters/>.setID(editor.getObjectIdFromName("DataModel", newValue));
+                </onParameterChange>
+
+                <validation>
+                    macro("checkModelExists");
+                    macro("checkUniqueness", list());
+                </validation>
+                <verifyForSave>
+                    <if>currentParameter.getParameterValue() == ""
+                        <then>
+                            errorMessage(l("%1 cannot be empty", currentParameter.getDescription(true)));
+                            false
+                        </then>
+                        <else>
+                            <if>currentParameter.getParameterValue().indexOf("!!!") &gt;= 0
+                                <then>
+                                    errorMessage(l("Data model '%1' is invalid", currentParameter.getParameterValue()));
+                                    false
+                                </then>
+                                <else>
+                                    macro("warningIfModelIsNotUsed", currentParameter.getParameterValue());
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </verifyForSave>
+            </parameter>
+
+            <confirmAddRow>
+                macro("checkModelExistsOnConfirm");
+                macro("checkUniquenessOnConfirm", list());
+            </confirmAddRow>
+
+            <parameter name="description" description="Model Description" noSerialization="yes" type="String" wrapOnReport="true">
+                <readonly/>
+                <equals>
+                    <if> param("name") == ""
+                        <then>""</then>
+                        <else>
+                            editor.getRemoteProxy().getModelDescription(param("name"), editor.getBranchId());
+                        </else>
+                    </if>
+                </equals>
+            </parameter>
+
+            <parameter name="alias" description="Model Alias" type="String" length="20" >
+                <validation>
+                    macro("validateNonEmpty");
+                    macro("checkUniquenessBy", list(), "alias");
+                    <if>!function("axiomsl.util.basic.NameDescriptionObject", "isAlphaNumeric", newValue, false, true)
+                        or (newValue.length() > 0 and !function("java.lang.Character", "isLetter", newValue.charAt(0)))
+                        <then>
+                            return l("Alias must be alphanumeric and start with a letter")
+                        </then>
+                    </if>
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+                <onParameterChange>
+                    macro("updateAliasInUsedFields");
+                </onParameterChange>
+            </parameter>
+
+            <confirmAddRow>
+                macro("checkModelExistsOnConfirm");
+                macro("checkUniquenessOnConfirm", list());
+            </confirmAddRow>
+
+            <onRowAdded>
+                var modelName = addedRow.param("name");
+                <if>!macro("isEmpty", modelName)
+                    <then>
+                        addedRow.setID(editor.getObjectIdFromName("DataModel", modelName));
+                    </then>
+                </if>
+                <if> macro("isEmpty", addedRow.param("alias"))
+                    <then>
+                         addedRow.param("alias") = macro("getDefaultAliasName");
+                    </then>
+                </if>
+            </onRowAdded>
+        </parameter>
+
+        <parameter name="requiresAllModels" description="Requires all models for execution" group="Models" type="Boolean" optional="true" defaultValue="true"/>
+
+        <parameter name="usedFields" description="Used Fields" group="Used Fields" type="table" >
+            <parameter name="name" description="Field Name" type="string" length="20">
+				<attribute name="lookupFromNamedList"> l("Used Field") <comma/>
+                    macro("getAvailableUsedFields")
+                </attribute>
+                <convertInputValue>
+                    inputValue.get(2);
+                </convertInputValue>
+
+				<onParameterChange>
+                    <if>inputValue != null &amp;&amp; !(inputValue instanceof "java.lang.String")
+                        <then>
+                            param("description") = inputValue.get(3);
+                            param("model") = inputValue.get(0);
+                            param("modelField") = inputValue.get(1) + "." + inputValue.get(2);
+                        </then>
+                    </if>
+                    param("referenceName") = macro("getAliasForModel", param("model")) + "$" + newValue;
+                </onParameterChange>
+
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("usedFields")));
+                    <if>!isAnIdentifier(newValue)
+                        <then>
+                            return l("Field name must be alpha-numeric and start with a letter");
+                        </then>
+                    </if>
+                </validation>
+
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+
+            </parameter>
+
+            <parameter name="description" description="Field Description" type="string" length="20">
+                <readonly/>
+            </parameter>
+
+            <parameter name="model" description="Model" type="string" length="20">
+                <readonly/>
+                
+                <verifyForSave>
+                    var models = param("models");
+                    var found = false;
+                    <for>var j = 0 <comma/> j &lt; models.size() <comma/> j++
+                        <do>
+                            <if>models.get(j).param("name") == currentParameter.getParameterValue()
+                                <then>
+                                    found = true;
+                                    break;
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+                    <if>!found
+                        <then>
+                            errorMessage(l("Invalid Data Model %1 in Used Fields. Cannot find it in the list of producing models", currentParameter.getParameterValue()));
+                            return false;
+                        </then>
+                    </if>
+                </verifyForSave>
+            </parameter>
+
+            <parameter name="modelField" description="Model Field" type="string" length="20">
+                <readonly/>
+            </parameter>
+
+            <parameter name="referenceName" description="Reference Name in R Script" type="string" length="20">
+                <readonly/>
+            </parameter>
+        </parameter>
+
+        <parameter name="condition" description="Conditions" type="Condition" length="7" group="Conditions">
+            <attribute name="models">
+                var l = list();
+                var models = param("models");
+                <for>var i = 0
+                        <comma/>
+                        i &lt; models.size()
+                        <comma/>
+                        i ++
+                        <do>
+                            var model = models.get(i);
+                            l.add(model.param("name"));
+                        </do>
+				</for>
+                l
+            </attribute>
+        </parameter>
+
+        <parameter name="parameters" description="Variable Definitions" type="table" length="4" keyParameter="name" group="Variables">
+            <parameter name="name" description="Variable Name" type="String" freehand="no">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniqueness", list());
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+            <parameter name="description" description="Description" type="String" freehand="no"/>
+            <parameter name="dataType" description="Type" type="String" freehand="no">
+                choices(<asDescription>list(ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE")))
+                </asDescription>)
+                <default>
+                'VARCHAR'
+                </default>
+            </parameter>
+            <!--<parameter name="lookupFormula" description="Lookup Expression" type="String" wrapOnReport="true" freehand="yes"/>-->
+            <confirmAddRow>
+                macro("checkUniquenessOnConfirm", list());
+            </confirmAddRow>
+        </parameter>
+
+        <parameter name="variables" description="External Variables" group="External Variables" type="table" >
+            <parameter name="name" description="Variable Name" type="string" length="20">
+                <validation>
+                    macro("validateColumnName");
+                    macro("checkUniquenessIgnoreCase", list(param("usedFields")));
+                    <if>!isAnIdentifier(newValue)
+                        <then>
+                            return l("Field name must be alpha-numeric and start with a letter");
+                        </then>
+                    </if>
+                </validation>
+
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+            </parameter>
+
+            <parameter name="description" description="Description" type="string" length="20"/>
+
+            <parameter name="dataType" description="Type" type="String" freehand="no">
+                choices(<asDescription>list(ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE")))
+                </asDescription>)
+                <default>
+                    'VARCHAR'
+                </default>
+            </parameter>
+        </parameter>
+
+        <parameter name="resultingDataSources" description="Resulting Data Sources" type="tree" group="Resulting Data Sources" rootNodeType="ResultingDataSources:root">
+            <nodeType name="ResultingDataSources:root" description="Resulting Data Sources" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="false"
+                      childrenTypes="ResultingDataSources:layout"/>
+            <nodeType name="ResultingDataSources:layout" description="Data Source" renameAllowed="true" deleteAllowed="true" hasChildren="false">
+                <parameter name="description" description="Description" type="string"/>
+                <parameter name="layout" description="Resulting Data Source Layout" type="table" length="10" keyParameter="name" tableTransposed="true" compareByID="true">
+                    <parameter name="name" description="Field Name" type="String">
+                        <validation>
+                            macro("validateColumnName");
+                            macro("checkUniqueness", list());
+                        </validation>
+                        <verifyForSave>
+                            macro("verifyNonEmpty");
+                        </verifyForSave>
+                    </parameter>
+                    <parameter name="description" description="Description" type="String"/>
+                    <parameter name="title" description="Title" type="String"/>
+                    <parameter name="type" description="Data Type" type="String">
+                        choices(<asDescription>list(ndo("VARCHAR", l("VARCHAR")), ndo("INTEGER", l("INTEGER")),ndo("FLOAT", l("FLOAT")), ndo("DATE", l("DATE")), ndo("TEXT", l("TEXT")), ndo("UNICODE",l("UNICODE")),
+                        ndo("UNICODE_TEXT", l("UNICODE_TEXT")))
+                    </asDescription>)
+                        <default>
+                            'VARCHAR'
+                        </default>
+                    </parameter>
+                    <parameter name="size" description="Size" type="Integer">
+                        <if>
+                            <param name="type"/>
+                            not in ("VARCHAR", "UNICODE")
+                            <then>
+                                <disabled/>
+                            </then>
+                            <else>
+                                <enabled/>
+                                <default>10</default>
+                            </else>
+                        </if>
+                    </parameter>
+                    <parameter name="allowNulls" description="Allow Nulls" type="Boolean"/>
+                    <parameter name="allowDefault" description="Allow Defaults" type="Boolean"/>
+                    <parameter name="defaultValue" description="Default Value" type="String">
+                        <if>
+                            !param("allowDefault")
+                            <then>
+                                <disabled/>
+                            </then>
+                            <else>
+                                <enabled/>
+                                <equals>
+                                    <case>
+                                        param("type") in ('VARCHAR', 'TEXT', 'UNICODE', 'UNICODE_TEXT')
+                                        <then>
+                                            <string>''</string>
+                                        </then>
+                                        <param name="type"/> == 'INTEGER'
+                                        <then>
+                                            '0'
+                                        </then>
+                                        <param name="type"/> == 'FLOAT'
+                                        <then>
+                                            '0.0'
+                                        </then>
+                                        <param name="type"/> == 'DATE'
+                                        <then>
+                                            <string>{ts '1990-01-01 00:00:00'}</string>
+                                        </then>
+                                    </case>
+                                </equals>
+                            </else>
+                        </if>
+                    </parameter>
+                    <parameter name="showSubtotal" description="Show Subtotal" type="Boolean">
+                        <if>
+                            param("type") in ("FLOAT", "INTEGER")
+                            <then>
+                                <enabled/>
+                            </then>
+                            <else>
+                                <disabled/>
+                            </else>
+                        </if>
+                    </parameter>
+                    <parameter name="streamKeyName" description="Stream Key Name" type="String" defaultValue="">
+                        <attribute name="lookupFromValues">l("Stream Name")
+                            <comma/>
+                            macro("getAvailableStreams");
+                        </attribute>
+                        <verifyForSave>
+                            var availableStreams=macro("getAvailableStreams");
+                            <if>
+                                currentParameter.getParameterValue()=="" or availableStreams.contains(currentParameter.getParameterValue())
+                                <then>
+                                    true;
+                                </then>
+                                <else>
+                                    return confirm(l(<string>Stream %1 specified in resulting source is not available in input models.
+        Do you want to proceed with saving ?</string>,currentParameter.getParameterValue()))
+                                </else>
+                            </if>
+                        </verifyForSave>
+                    </parameter>
+
+                    <confirmAddRow>
+                        macro("checkUniquenessOnConfirm", list());
+                    </confirmAddRow>
+                    <onRowDeleted>
+                        var value = deletedRow.param("name");
+                        <!-- delete row from source keys (key fields) -->
+                        <if>value != ""
+                            <then>
+                                var keys = param("keyFields");
+                                <for>var i = 0 <comma/> i &lt; keys.size() <comma/> i++
+                                    <do>
+                                        <if>keys.get(i).param("name") == value
+                                            <then>
+                                                keys.remove(i);
+                                                break;
+                                            </then>
+                                        </if>
+                                    </do>
+                                </for>
+                            </then>
+                        </if>
+                    </onRowDeleted>
+                </parameter>
+
+                <parameter name="keyFields" description="Key Fields" type="table" group="Key Fields" keyParameter="name">
+                    <parameter name="name" description="Field Name" type="String" length="10">
+                        <readonly/>
+                        <!-- only chosen from lookup -->
+                        <attribute name="lookupFromValues">l("Field Name")
+                            <comma/>
+                            <forTable name="layout">
+                                param("name");
+                            </forTable>
+                        </attribute>
+                    </parameter>
+                </parameter>
+
+            </nodeType>
+        </parameter>
+
+        <parameter name="resultingModels" description="Resulting Data Models" type="tree" group="Resulting Data Models" rootNodeType="ResultingDataModels:root">
+            <nodeType name="ResultingDataModels:root" description="Resulting Data Models" renameAllowed="false" deleteAllowed="false" hasChildren="true" childrenAreFixed="false"
+                      childrenTypes="ResultingDataModels:model"/>
+
+            <nodeType name="ResultingDataModels:model" description="Data Model" renameAllowed="true" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" maxChildrenNumber="1" childrenTypes="ResultingDataModels:modelNode, ResultingDataModels:sourceModelRoot">
+                <parameter name="description" description="Description" type="String" group="Properties"/>
+
+                <parameter name="isPermanent" description="Is Permanent" type="Boolean" defaultValue="false" group="Properties"/>
+                <parameter name="inheritInputModelStreams" description="Inherit Input Model Streams" type="Boolean" defaultValue="false" group="Properties"/>
+            </nodeType>
+
+            <nodeType name="ResultingDataModels:sourceModelRoot" description="Producing Data Model Root" renameAllowed="false" deleteAllowed="true" hasChildren="true" childrenTypes="ResultingDataModels:modelNode, ResultingDataModels:sourceModelRoot">
+                <nodeNameValidation>
+                    macro("validateModelNodeName", currentNode, newValue);
+                </nodeNameValidation>
+                
+                <nodeNameLookup>
+                    var models = param("models");
+                    var res = list();
+                    <for>var j = 0 <comma/> j &lt; models.size() <comma/> j++
+                        <do>
+                            var modelName = models.get(j).param("name");
+                            var modelAlias = models.get(j).param("alias");
+                            var model = editor.locateObjectByName("DataModel", modelName);
+                            res.add(ndo(modelAlias, l("Model %1 %2", modelName, model.getString("description"))));
+                        </do>
+                    </for>
+                    res;
+                </nodeNameLookup>
+
+                <nodeNameValidation>
+                    return null;
+                </nodeNameValidation>
+
+                <parameter name="dataModel" description="Data Model" type="String" group="Properties">
+                    <if>event("modelUpdate") != null
+                        <then>
+                            <if>event("modelUpdate").getDbId().getDbId() == currentNode.param("dataModelDbId")
+                                <then>
+                                    var dataModel = editor.locateObjectByDBId("DataModel", currentNode.param("dataModelDbId"));
+                                    var dataModelTree = dataModel.getTree("hierarchy");
+                                    currentNode.setName(dataModelTree.getRootNode().getProperty("name"));
+                                    currentNode.setID(dataModelTree.getRootNode().getProperty("id"));
+                                </then>
+                            </if>
+                        </then>
+                    </if>
+
+                    <attribute name="lookupFromValues">l("Data Model")
+                        <comma/>
+                        var models = param("models");
+                        var res = list();
+                        <for>var j = 0 <comma/> j &lt; models.size() <comma/> j++
+                            <do>
+                                var modelName = models.get(j).param("name");
+                                var model = editor.locateObjectByName("DataModel", modelName);
+                                res.add(ndo(modelName, model.getString("description")));
+                            </do>
+                        </for>
+                        res;
+                    </attribute>
+
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+
+                        var models = param("models");
+                        var found = false;
+                        <for>var j = 0 <comma/> j &lt; models.size() <comma/> j++
+                            <do>
+                                <if>models.get(j).param("name") == currentParameter.getParameterValue()
+                                    <then>
+                                        found = true;
+                                        break;
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+                        <if>!found
+                            <then>
+                                errorMessage(l("Cannot find %1 in the list of producing models", currentParameter.getParameterValue()));
+                                return false;
+                            </then>
+                        </if>
+                    </verifyForSave>
+
+                    <validation>
+                        macro("validateNonEmpty");
+
+                        var models = param("models");
+                        var found = false;
+                        <for>var j = 0 <comma/> j &lt; models.size() <comma/> j++
+                            <do>
+                                <if>models.get(j).param("name") == newValue
+                                    <then>
+                                        found = true;
+                                        break;
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+                        <if>!found
+                            <then>
+                                errorMessage(l("Cannot find %1 in the list of producing models", newValue));
+                                return false;
+                            </then>
+                        </if>
+                    </validation>
+
+                    <onParameterChange>
+                        var dataModel = editor.locateObjectByName("DataModel", currentNode.param("dataModel"));
+                        var dataModelTree = dataModel.getTree("hierarchy");
+                        currentNode.setName(dataModelTree.getRootNode().getProperty("name"));
+                        currentNode.setID(dataModelTree.getRootNode().getProperty("id"));
+                        currentNode.param("dataModelDbId") = dataModel.getDbId();
+                    </onParameterChange>
+                </parameter>
+
+                <parameter name="dataModelDbId" type="string" hidden="true" group="Propereties"/>
+
+                <macro name="relationshipParameter"/>
+
+                <macro name="mandatoryInJoinParameter"/>
+
+                <macro name="additionalJoinExpressionParameter"/>
+
+                <macro name="joinFieldsParameter"/>
+            </nodeType>
+
+            <nodeType name="ResultingDataModels:modelNode" description="Data Model Node" renameAllowed="true" deleteAllowed="true" hasChildren="true" childrenAreFixed="false" childrenTypes="ResultingDataModels:modelNode, ResultingDataModels:sourceModelRoot">
+                <defaultNodeName>
+                    <if>currentNode.parent().type() == "ResultingDataModels:model"
+                        <then>
+                            "root";
+                        </then>
+                        <else>
+                            macro("getDefaultModelModeName", currentNode);
+                        </else>
+                    </if>
+                </defaultNodeName>
+
+                <nodeNameValidation>
+                    macro("validateModelNodeName", currentNode, newValue);
+                </nodeNameValidation>
+
+                <macro name="dataSourceInDataModelParameter"/>
+
+                <macro name="relationshipParameter"/>
+
+                <macro name="mandatoryInJoinParameter"/>
+
+                <macro name="optionalConstraintParameter"/>
+
+                <macro name="additionalJoinExpressionParameter"/>
+
+                <parameter name="defaultRule" description="Instance Date Selection Rule" type="String" length="20" group="Properties">
+                    choices(asDescription(list(ndo("EQUAL",l("EQUAL")),ndo("LATEST",l("LATEST")))))
+                </parameter>
+
+                <macro name="joinFieldsParameter"/>
+            </nodeType>
+
+            <onNodeAdded>
+                <if> addedNode.type() == "ResultingDataModels:sourceModelRoot" and (addedNode.param("dataModel") == null or addedNode.param("dataModel") == "")
+                    <then>
+                        var models = param("models");
+
+                        var modelName = null;
+
+                        <for>var j = 0 <comma/> j &lt; models.size() <comma/> j++
+                            <do>
+                                <if>models.get(j).param("alias") == addedNode.getName()
+                                    <then>
+                                        modelName = models.get(j).param("name");
+
+                                        break;
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+
+                        <if>modelName == null
+                            <then>
+                                return l("Model with alias %1 not found.", addedNode.getName());
+                            </then>
+                        </if>
+
+                        var dataModel = editor.locateObjectByName("DataModel", modelName);
+                        addedNode.param("dataModel") = modelName;
+                        var dataModelTree = dataModel.getTree("hierarchy");
+                        addedNode.name() = dataModelTree.getRootNode().getProperty("name");
+                        addedNode.setID(dataModelTree.getRootNode().getProperty("id"));
+                        addedNode.param("dataModelDbId") = dataModel.getDbId();
+                    </then>
+                </if>
+            </onNodeAdded>
+
+            <validateNode>
+                <if> newNode.type() == "ResultingDataModels:sourceModelRoot" and (newNode.param("dataModel") == null or newNode.param("dataModel") == "")
+                    <then>
+                        var models = param("models");
+
+                        var modelName = null;
+
+                        <for>var j = 0 <comma/> j &lt; models.size() <comma/> j++
+                            <do>
+                                <if>models.get(j).param("alias") == newNode.getName()
+                                    <then>
+                                        modelName = models.get(j).param("name");
+
+                                        break;
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+
+                        <if>modelName == null
+                            <then>
+                                return l("Model with alias %1 not found.", newNode.getName());
+                            </then>
+                        </if>
+
+                        var model = editor.locateObjectByName("DataModel", modelName);
+                        var allNodes = model.getTree("hierarchy").getAllNodes();
+                        <for>var nodeIndex = 0 <comma/> nodeIndex &lt; allNodes.size() <comma/> nodeIndex++
+                            <do>
+                                macro("validateModelNodeName", newNode, allNodes.get(nodeIndex).getString("name"));
+                            </do>
+                        </for>
+                    </then>
+                </if>
+            </validateNode>
+
+            <verifyForSave>
+                var result = true;
+                <for>var j = 0 <comma/> j &lt; currentParameter.getParameterValue().getChildCount() <comma/> j++
+                    <do>
+                        <if>currentParameter.getParameterValue().getChildAt(j).getChildCount() == 0
+                            <then>
+                                errorMessage(l("%1 model hierarchy cannot be empty", currentParameter.getParameterValue().getChildAt(j).getName()));
+                                result = false;
+                            </then>
+                        </if>
+                    </do>
+                </for>
+                result
+            </verifyForSave>
+        </parameter>
+
+        <parameter name="dataGeneration" description="Data generation" group="Data Generation" type="String" defaultValue="" length="20">
+            <attribute name="multiLine">10</attribute>
+            <attribute name="unlimitedSize"> true </attribute>
+            <attribute name="syntax">"R"</attribute>
+            <!-- because we're saving via task parameters and that removes newlines -->
+            <attribute name="lookupAppend">true</attribute>
+            <attribute name="lookupFromValues">l("Variable")
+                <comma/>
+                var lookup = list();
+
+                var modelFields = param("usedFields");
+                <for>var j = 0 <comma/> j &lt; modelFields.size() <comma/> j++
+                    <do>
+                        lookup.add(ndo(modelFields.get(j).param("referenceName"), modelFields.get(j).param("description")));
+                    </do>
+                </for>
+
+                var dataSources = param("resultingDataSources");
+                <for>var j = 0 <comma/> j &lt; dataSources.childCount() <comma/> j++
+                    <do>
+                        var dataSourceChild = dataSources.child(j);
+                        var layout = dataSourceChild.param("layout");
+                        <for>var i = 0 <comma/> i &lt; layout.size() <comma/> i++
+                            <do>
+                                lookup.add(ndo(dataSourceChild.getName() + "$" + layout.get(i).param("name"), layout.get(i).param("description")));
+                            </do>
+                        </for>
+                    </do>
+                </for>
+
+                <for>var j = 0 <comma/> j &lt; param("variables").size() <comma/> j++
+                    <do>
+                        var variable = param("variables").get(j);
+                        lookup.add(ndo(variable.param("name"), variable.param("description")));
+                    </do>
+                </for>
+                ;lookup
+            </attribute>
+
+            <default>
+                "# The producing models data is stored in data frames with model alias names
+# The resulting data source data must be written to data frames with the same name as data sources
+"
+            </default>
+
+            <validation>
+                <!--trace("Validating R script - not implemented yet");-->
+            </validation>
+        </parameter>
+
+        <parameter name="storageType" description="Storage Type" group="Parameters" type="String" defaultValue="CONTINUOUS_PARTITION" length="20">
+            choices(
+            <asDescription>list(ndo("PERMANENT", l("PERMANENT")), ndo("SEGMENTED", l("SEGMENTED")), ndo("CONTINUOUS", l("CONTINUOUS")), ndo("CONTINUOUS_PARTITION", l("CONTINUOUS_PARTITION")))
+            </asDescription>
+            )
+        </parameter>
+
+        <parameter name="dbSourceForResults" description="DB Source" group="Parameters" type="String" defaultValue="" length="20">
+            <choices>
+                var sources = editor.getRemoteProxy().lookupObjects("DBSource");
+            </choices>
+            <default>
+                macro("getDefaultDBSource");
+            </default>
+        </parameter>
+        <parameter name="computeStatistics" description="Compute Statistics On Results" type="String" group="Parameters" length="20">
+            choices(<asDescription>list(ndo("NONE", l("NONE")), ndo("FOR_ALL_COLUMNS", l("FOR_ALL_COLUMNS")), ndo("FOR_KEY_COLUMNS", l("FOR_KEY_COLUMNS")))
+            </asDescription>)
+            <default>
+                'FOR_ALL_COLUMNS'
+            </default>
+		</parameter>
+        <parameter name="quotes" description="Quoting Characters" type="String" group="Parameters" length="20">
+            <default>
+                '"' + "'"
+            </default>
+        </parameter>
+        <parameter name="allowExternalDataPermissions" description="Allow External Data Permissions" group="Parameters" type="Boolean" optional="true" defaultValue="true"/>
+    </parameters>
+    <loadCode>
+        var rComputation = <originalAxiom/>;
+        var route = dataSet.getRouteFromCurrentBranch();
+
+        var acccessor = new("axiomsl.accessors.ComputationAccessor", rComputation);
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", acccessor, route);
+
+        var models = rComputation.getTable("models");
+        var aliases = rComputation.getTable("producingModelAliases");
+        param("models");
+        <for>var i = 0 <comma/> i &lt; models.size() <comma/> i ++
+            <do>
+                var row = param("models").addLine();
+                var modelRef = models.get(i).getReference("dataModel");
+                row.param("name") = modelRef.getTargetObjectName(route);
+                row.param("alias") = aliases.get(i).getString("alias");
+                row.setID(modelRef.getTargetObjectID(route, editor.getBranchId()).getObjectId());
+            </do>
+        </for>
+
+        param("requiresAllModels") = rComputation.getOptionalValue("requiresAllModels", false);
+
+        <if> rComputation.propertyIsSet("usedFields")
+            <then>
+                param("usedFields");
+                var usedFields = rComputation.getTable("usedFields");
+                <for>var i = 0 <comma/> i &lt; usedFields.size() <comma/> i ++
+                    <do>
+                        var row = param("usedFields").addLine();
+                        var field = usedFields.get(i);
+                        row.param("name") = field.getString("name");
+                        var ref = field.getObject("modelField").getReference("value");
+                        row.param("model") = ref.getTargetObjectNameFromElement(0);
+                        row.param("referenceName") = macro("getAliasForModel", row.param("model")) + "$" + row.param("name");
+                        row.param("modelField") = ref.getObjectNativeNameForPathElement(1) + "." + ref.getTargetObjectNativeName();
+
+                        <if>ref.getValidState() == 0 or ref.getValidState() == 1
+                            <then>
+                                row.param("description") = ref.getTargetObject().getString("description");
+                            </then>
+                            <else>
+                                row.param("description") = "!!!Invalid";
+                            </else>
+                        </if>
+                    </do>
+                </for>
+            </then>
+        </if>
+
+        param("variables");
+        <if> rComputation.propertyIsSet("variables")
+            <then>
+                var variables = rComputation.getTable("variables");
+                <for>var i = 0 <comma/> i &lt; variables.size() <comma/> i ++
+                    <do>
+                        var row = param("variables").addLine();
+                        var variable = variables.get(i);
+                        row.param("name") = variable.getString("name");
+                        row.param("description") = variable.getString("description");
+                        row.param("dataType") = variable.getString("dataType");
+                    </do>
+                </for>
+            </then>
+        </if>
+
+        <if> rComputation.propertyIsSet("condition")
+            <then>
+                param("condition") =  new("axiomsl.util.condition.ConditionSequence", rComputation.getTree("condition").getRootNode(), parser);
+            </then>
+			<else>
+                param("condition") =  new("axiomsl.util.condition.ConditionSequence");
+            </else>
+		</if>
+
+        var dataSources = rComputation.getTable("resultingDataSources");
+        <for>var j = 0 <comma/> j &lt; dataSources.size() <comma/> j++
+            <do>
+                var dataSource = dataSources.get(j);
+                var dataSourceName = dataSource.getProperty("name");
+
+                var layoutChild = param("resultingDataSources").createChild("ResultingDataSources:layout", dataSourceName);
+                layoutChild.setID(dataSource.getString("id"));
+                layoutChild.param("description") = dataSource.getString("description");
+
+                var layout = dataSource.getTable("layout");
+
+                var rows = list();
+                <for>var i = 0 <comma/> i &lt; layout.size() <comma/> i++
+                    <do>
+                        var field = layout.get(i);
+                        var fieldRow = tableRow();
+
+                        fieldRow.param("name") = field.getString("name");
+                        fieldRow.param("title") = field.getString("title");
+                        fieldRow.param("description") = field.getString("description");
+                        fieldRow.param("type") = field.getString("type");
+                        <if>field.propertyIsSet("size")
+                            <then>
+                                fieldRow.param("size") = field.getInteger("size");
+                            </then>
+                        </if>
+                        fieldRow.param("allowNulls") = field.getBoolean("allowNulls");
+                        
+                        <if>field.propertyIsSet("showSubtotal")
+                            <then>
+                                fieldRow.param("showSubtotal") = field.getBoolean("showSubtotal");
+                            </then>
+                        </if>
+
+                        fieldRow.param("allowDefault") = field.getBoolean("allowDefault");
+                        <if>field.propertyIsSet("defaultValue")
+                            <then>
+                                fieldRow.param("defaultValue") = field.getString("defaultValue");
+                            </then>
+                        </if>
+                        fieldRow.param("streamKeyName")="";
+                        rows.add(fieldRow);
+                    </do>
+                </for>
+
+                layoutChild.param("layout");
+                <for>var i = 0 <comma/> i &lt; rows.size() <comma/> i++
+                    <do>
+                        layoutChild.param("layout").add(rows.get(i));
+                    </do>
+                </for>
+
+                layoutChild.param("keyFields");
+                var keyFields = dataSource.getTable("keyFields");
+                <for>var i = 0 <comma/> i &lt; keyFields.size() <comma/> i++
+                    <do>
+                        var keyFieldRow = tableRow();
+                        keyFieldRow.param("name") = keyFields.get(i).getReference("value").getTargetObject().getString("name");
+                        layoutChild.param("keyFields").add(keyFieldRow);
+                    </do>
+                </for>
+                var streamFields = dataSource.getOptionalValue("streamFields",null);
+                <if> streamFields != null
+                    <then>
+                        <for>var i = 0 <comma/> i &lt; streamFields.size() <comma/> i++
+                            <do>
+                            <for>var k = 0 <comma/> k &lt; rows.size() <comma/> k++
+                                <do>
+                                    <if>rows.get(k).param("name")==streamFields.get(i).getObject("streamKeyColumn").getReference("value").getTargetObject().getString("name")
+                                        <then>
+                                            rows.get(k).param("streamKeyName") = streamFields.get(i).getString("streamKeyName");
+                                        </then>
+                                    </if>
+                                 </do>
+                            </for>
+                            </do>
+                        </for>
+
+                    </then>
+                </if>
+
+                layoutChild.addToParent();
+            </do>
+        </for>
+
+        var resultingModels = rComputation.getTable("resultingDataModels");
+        <for>var j = 0 <comma/> j &lt; resultingModels.size() <comma/> j++
+            <do>
+                var dataModel = resultingModels.get(j);
+                var dataModelName = dataModel.getProperty("name");
+                var dataModelChild = param("resultingModels").createChild("ResultingDataModels:model", dataModelName);
+
+                dataModelChild.setID(dataModel.getProperty("id"))
+            	dataModelChild.param("isPermanent") = dataModel.getBoolean("isPermanent");
+	            dataModelChild.param("description") = dataModel.getString("description");
+                dataModelChild.param("inheritInputModelStreams") = dataModel.getOptionalBoolean("inheritInputModelStreams");
+                dataModelChild.addToParent();
+
+                var dataModelTree = dataModel.getTree("hierarchy");
+
+                var dataModelRootNode;
+                <if> dataModelTree.getRootNode().propertyIsSet("dataModel")
+                    <then>
+                        var dmRef = dataModelTree.getRootNode().getReference("dataModel");
+                        var dm = editor.locateIfExists(dmRef.getTargetObjectID());
+                        <if> dm == null
+                            <then>
+                                dataModelRootNode = dataModelChild.createChild("ResultingDataModels:sourceModelRoot", "!!!" + dataModelTree.getRootNode().getProperty("name"));
+                                dataModelRootNode.param("dataModel") = dmRef.getTargetObjectName();
+                                dataModelRootNode.param("dataModelDbId") = "";
+                            </then>
+                            <else>
+                                dataModelRootNode = dataModelChild.createChild("ResultingDataModels:sourceModelRoot", dm.getTree("hierarchy").getRootNode().getProperty("name"));
+                                dataModelRootNode.param("dataModel") = dmRef.getTargetObjectName();
+                                dataModelRootNode.param("dataModelDbId") = dm.getDbId();
+                            </else>
+                        </if>
+                    </then>
+                    <else>
+                        dataModelRootNode = dataModelChild.createChild("ResultingDataModels:modelNode", dataModelTree.getRootNode().getProperty("name"));
+                        dataModelRootNode.param("dataSource") = dataModelTree.getRootNode().getReference("dataSource").getTargetObjectNativeName();
+                        dataModelRootNode.param("defaultRule") = dataModelTree.getRootNode().getObject("instanceSelectionRule").getProperty("instanceDateRule").getString("type");
+                        dataModelRootNode.param("optionalConstraint") = parser.getExpressionString(dataModelTree.getRootNode().getTable("additionalConstraint"));
+                    </else>
+                </if>
+                dataModelRootNode.addToParent();
+
+                <for> var i = 1 <comma/> i &lt; dataModelTree.getAllNodes().size() <comma/> i ++
+                    <do>
+                        var propertyNode = dataModelTree.getAllNodes().get(i);
+                        var parentModelNode = propertyNode.getParentNode();
+                        var parentName;
+
+                        <if>parentModelNode.propertyIsSet("dataModel")
+                            <then>
+                                var dmRef = parentModelNode.getReference("dataModel");
+                                var dm = editor.locateIfExists(dmRef.getTargetObjectID());
+                                <if>dm == null
+                                    <then>
+                                        parentName = "!!!" + parentModelNode.getProperty("name")
+                                    </then>
+                                    <else>
+                                        parentName = dm.getTree("hierarchy").getRootNode().getProperty("name");
+                                    </else>
+                                </if>
+                            </then>
+                            <else>
+                                parentName = parentModelNode.getProperty("name")
+                            </else>
+                        </if>
+
+                        var parentNode = dataModelRootNode.findNodeByName(parentName);
+                        var node;
+                        <if> propertyNode.propertyIsSet("dataModel")
+                            <then>
+                                node = macro("loadSourceDataModelNode", parentNode, propertyNode);
+                            </then>
+                            <else>
+                                node = macro("loadDataModelNode", parentNode, propertyNode);
+                            </else>
+                        </if>
+
+                        node.parent().add(node);
+                    </do>
+                </for>
+            </do>
+        </for>
+
+        var dataGenerationBytes = function("axiomsl.util.basic.GenericClassUtils", "hexStringToBlob", rComputation.getString("dataGeneration"));
+        <if>dataGenerationBytes != null
+            <then>
+                param("dataGeneration") = new("java.lang.String", dataGenerationBytes);
+            </then>
+            <else>
+                param("dataGeneration") = "";
+            </else>
+        </if>
+
+        <if>rComputation.propertyIsSet("dbSourceForResults") and rComputation.propertyIsSet("storageType")
+            <then>
+                param("dbSourceForResults") = rComputation.getReference("dbSourceForResults").getTargetObjectNativeName();
+                param("storageType") = rComputation.getString("storageType");
+            </then>
+        </if>
+        param("computeStatistics") = rComputation.getOptionalValue("computeStatistics","FOR_ALL_COLUMNS");
+        param("allowExternalDataPermissions") = rComputation.getOptionalValue("allowExternalDataPermissions",false)
+
+        param("parameters");
+        <if>rComputation.propertyIsSet("parameters")
+            <then>
+            var parameters = rComputation.getTable("parameters");
+            <for>var i = 0
+                <comma/>
+                i &lt; parameters.size()
+                <comma/>
+                i ++
+                <do>
+                    var row = param("parameters").addLine();
+                    row.param("name") = parameters.get(i).getString("name");
+                    row.param("dataType") = parameters.get(i).getString("dataType");
+                    row.param("description") = parameters.get(i).getString("description");
+                </do>
+            </for>
+            </then>
+        </if>
+
+        <if>rComputation.propertyIsSet("quotes")
+            <then>
+                param("quotes") = rComputation.getString("quotes");
+            </then>
+            <else>
+                param("quotes") = '"' + "'";
+            </else>
+        </if>
+    </loadCode>
+
+    <saveCode>
+        var rComputation =<axiomForSave/>;
+        
+        var acccessor = new("axiomsl.accessors.ComputationAccessor", rComputation);
+        var parser = new("axiomsl.accessors.ExpressionParserImpl", new("axiomsl.server.object_framework.RouteToObject"), acccessor);
+
+        rComputation.setProperty("dataGeneration", function("axiomsl.util.basic.GenericClassUtils", "blobToHexString", param("dataGeneration").getBytes()));
+
+        <!--producing model save -->
+        var modelTable = rComputation.getTable("models");
+        var aliasTable = rComputation.getTable("producingModelAliases");
+        var models = param("models");
+        var instanceKeySet = new("java.util.HashSet");
+        <for>var i = 0 <comma/> i &lt; models.size() <comma/> i ++
+            <do>
+                var row = models.get(i);
+                var modelName = row.param("name");
+                var modelRow = modelTable.addRow("ModelBasedTask:modelEntry");
+                modelRow.setProperty("dataModel", modelRow.createReferencePropertyValue("DataModel", modelName));
+
+                var model = editor.locateObjectByName("DataModel", modelName);
+                <if>model.propertyIsSet("instanceKeys")
+                    <then>
+                        var instanceKeyTable = model.getTable("instanceKeys");
+                        <for>var j = 0 <comma/> j &lt; instanceKeyTable.size() <comma/> j ++
+                            <do>
+                                instanceKeySet.add(instanceKeyTable.get(j).getString("name"));
+                            </do>
+                        </for>
+                    </then>
+                </if>
+
+                var aliasRow = aliasTable.addRow("Computation:producingModelAlias");
+                aliasRow.setProperty("alias", row.param("alias"));
+            </do>
+        </for>
+        var instanceKeys = new("java.util.Vector", instanceKeySet);
+
+        rComputation.setProperty("requiresAllModels", param("requiresAllModels"));
+
+        var fields = param("usedFields");
+        var fieldTable = rComputation.getTable("usedFields");
+        <for>var i = 0 <comma/> i &lt; fields.size() <comma/> i ++
+            <do>
+                var fieldRow = fieldTable.addRow("Computation:usedField");
+                fieldRow.setProperty("name", fields.get(i).param("name"));
+                var modelField = fields.get(i).param("modelField");
+                var alias = modelField.substring(0, modelField.indexOf("."));
+                var fieldName = modelField.substring(modelField.indexOf(".") + 1);
+
+                var fieldRef = fieldRow.createObjectPropertyValue("DataModel:fieldReference");
+                fieldRef.setProperty("value", function("axiomsl.accessors.ModelsBasedTaskAccessor", "createModelFieldReference", rComputation, fields.get(i).param("model"), alias, fieldName));
+                fieldRow.setProperty("modelField", fieldRef);
+            </do>
+        </for>
+
+        var variables = param("variables");
+        var variableTable = rComputation.getTable("variables");
+        <for>var i = 0 <comma/> i &lt; variables.size() <comma/> i ++
+            <do>
+                var variableRow = variableTable.addRow("Computation:variable");
+                variableRow.setProperty("name", variables.get(i).param("name"));
+                variableRow.setProperty("description", variables.get(i).param("description"));
+                variableRow.setProperty("dataType", variables.get(i).param("dataType"));
+            </do>
+        </for>
+
+        var parameters = param("parameters");
+        var parametersTable = null;
+        <if> !rComputation.propertyIsSet("parameters")
+            <then>
+                parametersTable = rComputation.createTablePropertyValue();
+                rComputation.setProperty("parameters", parametersTable);
+            </then>
+            <else>
+                parametersTable = rComputation.getTable("parameters");
+            </else>
+        </if>
+
+        <for>var i = 0
+            <comma/>
+            i &lt; parameters.size()
+            <comma/>
+            i ++
+            <do>
+                var variable = parametersTable.addRow("WorkFlow:parameter");
+
+                variable.setProperty("name", parameters.get(i).param("name"));
+                variable.setProperty("dataType", parameters.get(i).param("dataType"));
+                variable.setProperty("description", parameters.get(i).param("description"));
+             </do>
+		</for>
+
+        var condSeq = new("axiomsl.util.condition.ConditionSequence", param("condition"));
+        parser.setContext(rComputation);
+        <if>
+            !condSeq.isEmpty();
+            <then>
+                var condTree = rComputation.createTreePropertyValue("Condition");
+                rComputation.setProperty("condition", condTree);
+                condSeq.assembleCondition(condTree.getRootNode(), parser);
+            </then>
+		</if>
+
+        <!--resulting data source save -->
+        var dataSources = param("resultingDataSources");
+        <for>var j = 0 <comma/> j &lt; dataSources.childCount() <comma/> j++
+            <do>
+                var dataSourceChild = dataSources.child(j);
+                var dataSource = rComputation.getTable("resultingDataSources").addRow("Computation:resultingDataSource");
+                dataSource.setProperty("name", dataSourceChild.getName());
+                dataSource.setProperty("description", dataSourceChild.param("description"));
+                dataSource.setProperty("id", dataSourceChild.getID());
+
+                var layout = dataSource.getTable("layout");
+                var streamKeys = null;
+                <for>var i = 0
+                    <comma/>
+                    i &lt; dataSourceChild.param("layout").size()
+                    <comma/>
+                    i++
+                    <do>
+                        var row = dataSourceChild.param("layout").get(i);
+
+                        var field = layout.addRow("DataSource:field");
+
+                        field.setProperty("id", row.param("name"));
+                        field.setProperty("name", row.param("name"));
+                        field.setProperty("title", row.param("title"));
+                        field.setProperty("description", row.param("description"));
+                        field.setProperty("type", row.param("type"));
+                        <if>row.param("size") != null
+                            <then>
+                                field.setProperty("size", row.param("size"));
+                            </then>
+                        </if>
+                        field.setProperty("allowNulls", row.param("allowNulls"));
+
+                        <if>row.param("showSubtotal") != null
+                            <then>
+                                field.setProperty("showSubtotal", row.param("showSubtotal"));
+                            </then>
+                        </if>
+
+                        field.setProperty("allowDefault", row.param("allowDefault"));
+                        <if>row.param("allowDefault") != null and row.param("defaultValue") != null
+                            <then>
+                                field.setProperty("defaultValue", row.param("defaultValue"));
+                            </then>
+                        </if>
+                        <if> row.param("streamKeyName")!=null and row.param("streamKeyName")!=""
+                            <then>
+                                <if>streamKeys==null
+                                    <then>
+                                        streamKeys=dataSource.createTablePropertyValue();
+                                    </then>
+                                </if>
+                                var streamKeysRow=streamKeys.addRow("Computation:resultingDataSourceStream");
+                                streamKeysRow.setProperty("streamKeyName",row.param("streamKeyName"));
+                                var ref = streamKeysRow.getObject("streamKeyColumn").createReferencePropertyValue(function("axiomsl.server.object_framework.RouteToObject", "createEmptyRoute"),
+                                array(rComputation, "resultingDataSources", dataSource, "layout", field));
+                                streamKeysRow.getObject("streamKeyColumn").setProperty("value",ref);
+                            </then>
+                        </if>
+                    </do>
+                </for>
+
+                var keyFields = dataSource.getTable("keyFields");
+                <for>var i = 0 <comma/> i &lt; dataSourceChild.param("keyFields").size() <comma/> i++
+                    <do>
+                        var row = dataSourceChild.param("keyFields").get(i);
+                        <for>var k = 0
+                            <comma/>
+                            k &lt; layout.size()
+                            <comma/>
+                            k++
+                            <do>
+                                var field = layout.get(k);
+                                <if>field.getString("name").equals(row.param("name"))
+                                    <then>
+                                        var keyField = rComputation.createObjectPropertyValue("DataSource:fieldReference");
+                                        var ref = keyField.createReferencePropertyValue(function("axiomsl.server.object_framework.RouteToObject", "createEmptyRoute"),
+                                        array(rComputation, "resultingDataSources", dataSource, "layout", field));
+                                        keyField.setProperty("value", ref);
+                                        keyFields.addRow(keyField);
+                                        break;
+                                    </then>
+                                </if>
+                            </do>
+                        </for>
+                    </do>
+                </for>
+                <if>streamKeys!=null
+                    <then>
+                        dataSource.setProperty("streamFields",streamKeys);
+                    </then>
+                </if>
+            </do>
+        </for>
+
+        <!--resulting model save -->
+        var resultingModels = param("resultingModels");
+        <for>var j = 0 <comma/> j &lt; resultingModels.childCount() <comma/> j++
+            <do>
+                var dataModelChild = resultingModels.child(j);
+                var resultingModel = rComputation.getTable("resultingDataModels").addRow("Computation:resultingDataModel");
+                parser.setContext(resultingModel);
+                resultingModel.setProperty("name", dataModelChild.getName());
+                resultingModel.setProperty("description", dataModelChild.param("description"));
+                resultingModel.setProperty("id", dataModelChild.getID());
+                resultingModel.setProperty("isPermanent", dataModelChild.param("isPermanent"));
+                resultingModel.setProperty("inheritInputModelStreams", dataModelChild.param("inheritInputModelStreams"));
+
+
+                <if> dataModelChild.childCount() == 0
+                    <then>
+                        continue;
+                    </then>
+                </if>
+
+                var dataModelRootNode = dataModelChild.child(0);
+                var allModelNodes = dataModelRootNode.getAllNodes();
+
+                var propertyTree = resultingModel.getTree("hierarchy");
+                var hierarchyRootNode = propertyTree.getRootNode();
+
+                hierarchyRootNode.setProperty("id", dataModelRootNode.getID());
+                hierarchyRootNode.setProperty("name", dataModelRootNode.getName());
+                var defaultRule;
+                <if>dataModelChild.param("isPermanent")
+                    <then>
+                        defaultRule = "LATEST";
+                    </then>
+                    <else>
+                        defaultRule = "EQUAL";
+                    </else>
+                </if>
+
+                var dataSourceTable = rComputation.getTable("resultingDataSources");
+                var parentDataSource;
+                <if> dataModelRootNode.type() == "ResultingDataModels:modelNode"
+                    <then>
+                        var hierarchyRootDataSourceName = dataModelRootNode.param("dataSource");
+                        parentDataSource = macro("getResultingDataSourceOWP", hierarchyRootDataSourceName, dataSourceTable);
+                        hierarchyRootNode.setProperty("dataSource", hierarchyRootNode.createReferencePropertyValue(function("axiomsl.server.object_framework.RouteToObject", "createEmptyRoute"), array(rComputation, "resultingDataSources", parentDataSource)));
+                        hierarchyRootNode.setProperty("additionalConstraint", parser.parseExpression(dataModelRootNode.param("optionalConstraint")));
+                        macro("saveInstanceRules", hierarchyRootNode, dataModelRootNode, instanceKeys, dataModelRootNode.param("defaultRule"), defaultRule);
+                    </then>
+                    <else>
+                        var dataModel = editor.locateObjectByName("DataModel", dataModelRootNode.param("dataModel"));
+                        var sourceModelRoot = dataModel.getTree("hierarchy").getRootNode();
+                        parentDataSource = sourceModelRoot.getReference("dataSource").getTargetObject();
+                        hierarchyRootNode.setProperty("dataModel", hierarchyRootNode.createReferencePropertyValue(dataModelRootNode.param("dataModel"), dataModel));
+                        macro("saveInstanceRules", hierarchyRootNode, dataModelRootNode, instanceKeys, sourceModelRoot.getObject("instanceSelectionRule").getObject("instanceDateRule").getProperty("type"), defaultRule);
+                    </else>
+                </if>
+                hierarchyRootNode.setProperty("description", parentDataSource.getProperty("description"));
+
+                <for>var i = 1 <comma/> i &lt; allModelNodes.size() <comma/> i ++
+                    <do>
+                        var treeNode = allModelNodes.get(i);
+                        var parentName = treeNode.parent().name();
+
+                        var parentNode = propertyTree.locate(parentName, null);
+                        <if> treeNode.type() == "ResultingDataModels:modelNode"
+                            <then>
+                                macro("saveDataModelNode", treeNode, parentNode, parser);
+                            </then>
+                            <else>
+                                macro("saveSourceDataModelNode", treeNode, parentNode, parser);
+                            </else>
+                        </if>
+
+                    </do>
+                </for>
+
+            </do>
+        </for>
+
+        rComputation.setProperty("dbSourceForResults", rComputation.createReferencePropertyValue("DBSource", param("dbSourceForResults")));
+        rComputation.setProperty("storageType", param("storageType"));
+        rComputation.setProperty("computeStatistics", param("computeStatistics"));
+        rComputation.setProperty("quotes", param("quotes"));
+        rComputation.setProperty("allowExternalDataPermissions", param("allowExternalDataPermissions"));
+
+    </saveCode>
+
+    <macros>
+        <macro name="getResultingDataSources">
+            var dataSources = param("resultingDataSources");
+            var res = list();
+            <for>var j = 0 <comma/> j &lt; dataSources.childCount() <comma/> j++
+                <do>
+                    var dataSourceChild = dataSources.child(j);
+                    res.add(ndo(dataSourceChild.getName(), dataSourceChild.param("description")));
+                </do>
+            </for>
+            ;res
+        </macro>
+
+        <macro name="getResultingDataSourceFields" arguments="dataSourceName">
+            var dataSources = param("resultingDataSources");
+            var res = list();
+            <for>var j = 0 <comma/> j &lt; dataSources.childCount() <comma/> j++
+                <do>
+                    var dataSourceChild = dataSources.child(j);
+                    <if>dataSourceChild.getName() == <dataSourceName/>
+                        <then>
+                            var layout = dataSourceChild.param("layout");
+                            <for>var i = 0 <comma/> i &lt; layout.size() <comma/> i++
+                                <do>
+                                    res.add(ndo(layout.get(i).param("name"), layout.get(i).param("description")));
+                                </do>
+                            </for>
+                            break;
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;res
+        </macro>
+
+        <macro name="getResultingModelFields" arguments="node">
+             var columns;
+            <if>
+                <node/>.type() == "ResultingDataModels:modelNode"
+                <then>
+                    columns = macro("getResultingDataSourceFields", <node/>.param("dataSource"));
+                </then>
+                <else>
+                    var dataModel = editor.locateObjectByName("DataModel", <node/>.param("dataModel"));
+                    var dataSourceRef = dataModel.getTree("hierarchy").getRootNode().getReference("dataSource");
+                    var dataSourceName = dataSourceRef.getTargetObjectNativeName();
+                    var dataSourceBranch = dataSourceRef.getTargetObject().getOptionalString("branchId");
+                    columns = editor.getRemoteProxy().lookupFieldsInDataSource(dataSourceName, dataSourceBranch);
+                </else>
+            </if>
+
+             var result = list();
+	         <for> var i = 0 <comma/> i &lt; columns.size() <comma/> i ++
+                 <do>
+                     var row = list();
+                     row.add("$" + <node/>.getName() + "." + columns.get(i).getName());
+                     row.add(columns.get(i).getDescription());
+                     result.add(row);
+                 </do>
+             </for>
+            ;result
+        </macro>
+
+        <macro name="getResultingDataSourceOWP" arguments="dataSourceName, dataSourceTable">
+            var result;
+            <for>var dataSourceIndex = 0 <comma/>dataSourceIndex &lt; <dataSourceTable/>.size()<comma/>dataSourceIndex ++
+                <do>
+                    <if><dataSourceTable/>.get(dataSourceIndex).getString("name") == <dataSourceName/>
+                        <then>
+                            result = dataSourceTable.get(dataSourceIndex);
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;result
+        </macro>
+
+        <macro name="loadDataModelParameters" arguments="parentNode, propertyNode, childNode">
+            childNode.setID(<propertyNode/>.getProperty("id"));
+            childNode.param("relationship") = <propertyNode/>.getProperty("relationshipToParent");
+            childNode.param("mandatoryInJoin") = <propertyNode/>.getProperty("mandatoryInJoin");
+            childNode.param("additionalJoinExpression") = parser.getExpressionString(<propertyNode/>.getTable("additionalJoinExpression"));
+
+            var joinColumns = <propertyNode/>.getTable("join");
+            var joinParams = childNode.param("joinFields");
+
+            <for>var k = 0 <comma/> k &lt; joinColumns.size() <comma/> k ++
+                <do>
+                    var row = joinParams.addLine();
+                    row.param("sourceColumn") = joinColumns.get(k).getReference("sourceField").getTargetObjectNativeName();
+                    row.param("parentColumn") = joinColumns.get(k).getReference("parentField").getTargetObjectNativeName();
+                </do>
+            </for>
+
+        </macro>
+
+        <macro name="loadDataModelNode" arguments="parentNode, propertyNode">
+            var childNode = <parentNode/>.createChild("ResultingDataModels:modelNode", <propertyNode/>.getProperty("name"));
+            childNode.param("dataSource") = <propertyNode/>.getReference("dataSource").getTargetObject().getString("name");
+            childNode.param("defaultRule") = <propertyNode/>.getObject("instanceSelectionRule").getProperty("instanceDateRule").getString("type");
+            childNode.param("optionalConstraint") = parser.getExpressionString(<propertyNode/>.getTable("additionalConstraint"));
+
+            macro("loadDataModelParameters", <parentNode/>, <propertyNode/>, childNode);
+            ;childNode
+        </macro>
+
+        <macro name="loadSourceDataModelNode" arguments="parentNode, propertyNode">
+            var childNode =<parentNode/>.createChild("ResultingDataModels:sourceModelRoot",<propertyNode/>.getProperty("name"));
+            var modelRef = <propertyNode/>.getReference("dataModel");
+            childNode.param("dataModel") = modelRef.getTargetObjectName();
+
+            <if>editor.locateIfExists(modelRef.getTargetObjectID()) != null
+                <then>
+                    childNode.param("dataModelDbId") = <propertyNode/>.getReference("dataModel").getTargetObject().getDbId();
+                </then>
+                <else>
+                    childNode.param("dataModelDbId") = "";
+                </else>
+            </if>
+
+            macro("loadDataModelParameters", <parentNode/>, <propertyNode/>, childNode);
+            ;childNode
+        </macro>
+
+        <macro name="saveDataModelParameters" arguments="treeNode, parentNode, parser, childNode, dataSource">
+            var childDataSourceNameOrRoute;
+            <if> <treeNode/>.type() == "ResultingDataModels:modelNode"
+                <then>
+                </then>
+                <else>
+                    var dataModelName = <treeNode/>.param("dataModel");
+                    var childDataModel = editor.locateObjectByName("DataModel", dataModelName);
+                    var dataModelRef = <childNode/>.createReferencePropertyValue("DataModel", dataModelName);
+                    var dataSourceRef = childDataModel.getTree("hierarchy").getRootNode().getReference("dataSource");
+                    childDataSourceNameOrRoute = dataModelRef.getRouteToTarget().append(dataSourceRef.getRouteToTarget());
+                </else>
+            </if>
+            var parentDataSourceNameOrRoute;
+            <if> <treeNode/>.parent().type() == "ResultingDataModels:modelNode"
+                <then>
+                    parentDataSourceNameOrRoute = <treeNode/>.parent().param("dataSource");
+                    parentDataSource = macro("getResultingDataSourceOWP", parentDataSourceNameOrRoute, dataSourceTable);
+                </then>
+                <else>
+                    var dataModelName = <treeNode/>.parent().param("dataModel");
+                    var parentDataModel = editor.locateObjectByName("DataModel", dataModelName);
+                    var dataModelRef = <parentNode/>.createReferencePropertyValue("DataModel", dataModelName);
+                    var dataSourceRef = parentDataModel.getTree("hierarchy").getRootNode().getReference("dataSource");
+                    parentDataSource = dataSourceRef.getTargetObject();
+                    parentDataSourceNameOrRoute = dataModelRef.getRouteToTarget().append(dataSourceRef.getRouteToTarget());
+                </else>
+            </if>
+
+            <childNode/>.setProperty("id", <treeNode/>.getID());
+            <childNode/>.setProperty("name", <treeNode/>.name());
+            <childNode/>.setProperty("description", <dataSource/>.getProperty("description"));
+
+            <childNode/>.setProperty("relationshipToParent", <treeNode/>.param("relationship"));
+            <childNode/>.setProperty("mandatoryInJoin", <treeNode/>.param("mandatoryInJoin"));
+
+            <childNode/>.setProperty("additionalJoinExpression", <parser/>.parseExpression(<treeNode/>.param("additionalJoinExpression")));
+
+            var joins = <childNode/>.getTable("join");
+            <for>var joinIndex = 0 <comma/> joinIndex &lt;<treeNode/>.param("joinFields").size() <comma/> joinIndex ++
+                <do>
+                    var joinRow = joins.addRow("DataModel:node:join");
+                    var sourceField = <dataSource/>.getTable("layout").locate(<treeNode/>.param("joinFields").get(joinIndex).param("sourceColumn"), null);
+                    <if><treeNode/>.type() == "ResultingDataModels:modelNode"
+                        <then>
+                            joinRow.setProperty("sourceField", childNode.createReferencePropertyValue(function("axiomsl.server.object_framework.RouteToObject", "createEmptyRoute"),
+                                                            array(rComputation, "resultingDataSources", childDataSource, "layout", sourceField)));
+                        </then>
+                        <else>
+                            joinRow.setProperty("sourceField", childNode.createReferencePropertyValue(childDataSourceNameOrRoute, array(childDataSource, "layout", sourceField)));
+                        </else>
+                    </if>
+
+                    var parentField = parentDataSource.getTable("layout").locate(<treeNode/>.param("joinFields").get(joinIndex).param("parentColumn"), null);
+                    <if> <treeNode/>.parent().type() == "ResultingDataModels:modelNode"
+                        <then>
+                            joinRow.setProperty("parentField", <parentNode/>.createReferencePropertyValue(function("axiomsl.server.object_framework.RouteToObject", "createEmptyRoute"),
+                                        array(rComputation, "resultingDataSources", parentDataSource, "layout", parentField)));
+                        </then>
+                        <else>
+                            joinRow.setProperty("parentField", <parentNode/>.createReferencePropertyValue(parentDataSourceNameOrRoute, array(parentDataSource, "layout", parentField)));
+                        </else>
+                    </if>
+                </do>
+            </for>
+
+        </macro>
+
+        <macro name="saveDataModelNode" arguments="treeNode, parentNode, parser">
+            var childNode = <parentNode/>.addChild("Computation:resultingModelNode");
+            var childDataSourceName = <treeNode/>.param("dataSource");
+            var childDataSource = macro("getResultingDataSourceOWP", childDataSourceName, dataSourceTable);;
+
+            childNode.setProperty("dataSource", childNode.createReferencePropertyValue(function("axiomsl.server.object_framework.RouteToObject", "createEmptyRoute"),
+                                array(rComputation, "resultingDataSources", childDataSource)));
+
+            macro("saveInstanceRules", childNode, <treeNode/>, instanceKeys, <treeNode/>.param("defaultRule"), defaultRule);
+
+            macro("saveDataModelParameters", <treeNode/>, <parentNode/>, <parser/>, childNode, childDataSource);
+            childNode.setProperty("additionalConstraint", parser.parseExpression(<treeNode/>.param("optionalConstraint")));
+        </macro>
+
+        <macro name="saveSourceDataModelNode" arguments="treeNode, parentNode, parser">
+            var childNode = <parentNode/>.addChild("Computation:resultingModelNode");
+            var dataModel = editor.locateObjectByName("DataModel", <treeNode/>.param("dataModel"));
+            var childDataSource = dataModel.getTree("hierarchy").getRootNode().getReference("dataSource").getTargetObject();
+
+            childNode.setProperty("dataModel", childNode.createReferencePropertyValue(<treeNode/>.param("dataModel"), dataModel));
+            macro("saveInstanceRules", childNode, <treeNode/>, instanceKeys, dataModel.getTree("hierarchy").getRootNode().getObject("instanceSelectionRule").getObject("instanceDateRule").getProperty("type"), defaultRule);
+
+            macro("saveDataModelParameters", <treeNode/>, <parentNode/>, <parser/>, childNode, childDataSource);
+        </macro>
+
+        <macro name="dataSourceInDataModelParameter">
+            <parameter name="dataSource" description="Data Source" type="String" length="20" group="Properties">
+                <attribute name="lookupFromValues">l("Data Source")
+                    <comma/>
+                    <macro name="getResultingDataSources"/>
+                </attribute>
+
+                <validation>
+                    macro("validateNonEmpty");
+                    var dataSources = param("resultingDataSources");
+                    var exists = false;
+                    <for>var j = 0 <comma/> j &lt; dataSources.childCount() <comma/> j++
+                        <do>
+                            var dataSourceChild = dataSources.child(j);
+                            <if>dataSourceChild.getName() == newValue
+                                <then>
+                                    exists = true;
+                                    break;
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+                    <if>!exists
+                        <then>
+                            errorMessage(l('Data Source %1 does not exist in the list of resulting Data Sources', newValue));
+                            return false;
+                        </then>
+                    </if>
+                </validation>
+                <verifyForSave>
+                    macro("verifyNonEmpty");
+                </verifyForSave>
+                <onParameterChange>
+                    <if>currentNode.childCount() != 0
+                        <then>
+                            var columns = macro("getResultingDataSourceFields", newValue);
+                            <for>var j = 0 <comma/> j &lt; currentNode.childCount() <comma/> j++
+                                <do>
+                                    <for>var i = 0 <comma/> i &lt; currentNode.child(j).param("joinFields").size() <comma/> i++
+                                        <do>
+                                            <if>!columns.contains(ndo(currentNode.child(j).param("joinFields").get(i).param("parentColumn"), ""))
+                                                <then>
+                                                    currentNode.child(j).param("joinFields").remove(i);
+                                                    i--;
+                                                </then>
+                                            </if>
+                                        </do>
+                                    </for>
+                                </do>
+                            </for>
+                        </then>
+                    </if>
+
+                    <if>currentNode.parent().type() != "ResultingDataModels:model"
+                        <then>
+                            var joinColumns = param("joinFields");
+                            var columns = macro("getResultingDataSourceFields", newValue);
+                            <for>var i = 0 <comma/> i &lt; joinColumns.size() <comma/> i++
+                                <do>
+                                    <if>!columns.contains(ndo(joinColumns.get(i).param("sourceColumn"), ""))
+                                        <then>
+                                            joinColumns.remove(i);
+                                            i--;
+                                        </then>
+                                    </if>
+                                </do>
+                            </for>
+                        </then>
+                    </if>
+                </onParameterChange>
+            </parameter>
+        </macro>
+
+        <macro name="relationshipParameter">
+            <parameter name="relationship" description="Relationship to parent" type="String" length="20" group="Properties">
+                <if>currentNode.parent().type() == "ResultingDataModels:model"
+                    <then>
+                        <removed/>
+                    </then>
+                    <else>
+                        <enabled/>
+                        macro("relationshipTypes")
+                    </else>
+                </if>
+            </parameter>
+        </macro>
+
+        <macro name="optionalConstraintParameter">
+            <parameter name="optionalConstraint" description="Optional constraint" type="String" length="20" group="Properties">
+                <attribute name="lookupAppend">true</attribute>
+                <attribute name="lookupFromValues">"alias.field"
+                    <comma/>
+                    new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), macro("getResultingModelFields", currentNode).toArray()),
+                    macro("instanceDateKeysUnionFromModelsVariables", false, false, false),
+                    macro("sqlMacros"),
+                    macro("axiomExpressionLanguage"),
+                    macro("userDefinedFunctions")
+                </attribute>
+                <if>param("dataSource") != null AND param("dataSource") != ""
+                    <then>
+                        <enabled/>
+                    </then>
+                    <else>
+                        <disabled/>
+                    </else>
+                </if>
+            </parameter>
+        </macro>
+
+        <macro name="joinFieldsParameter">
+            <parameter name="joinFields" description="Join Fields" type="table" keyParameter="sourceColumn" group="Properties">
+                <if>currentNode.parent().type() == "ResultingDataModels:model"
+                    <then>
+                        <removed/>
+                    </then>
+                    <else>
+                        <enabled/>
+                    </else>
+                </if>
+
+                <parameter name="sourceColumn" description="Source Field" type="String" length="20" group="Properties">
+                    <attribute name="lookupFromValues">l("Source Field")
+                        <comma/>
+                        <if>currentNode.type() == "ResultingDataModels:sourceModelRoot"
+                            <then>
+                                var dataModel = editor.locateObjectByName("DataModel", currentNode.param("dataModel"));
+                                var route = function("axiomsl.server.object_framework.RouteToObject", "createNameRouteFromObjectName", editor.getAxiomObjectManager(), editor.getBranchId(), currentNode.param("dataModel"));
+                                editor.getRemoteProxy().lookupFieldsInDataSource(route.getNameRoute() + dataModel.getTree("hierarchy").getRootNode().getReference("dataSource").getTargetObjectName(), editor.getBranchId())
+                            </then>
+                            <else>
+                                macro("getResultingDataSourceFields",currentNode.param("dataSource"));
+                            </else>
+                        </if>
+                    </attribute>
+                    <validation>
+                        macro("validateNonEmpty");
+                    </validation>
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+                </parameter>
+                <parameter name="parentColumn" description="Parent Field" type="String" length="20" group="Properties"
+                           defaultValue="">
+                    <attribute name="lookupFromValues">l("Parent Field")
+                        <comma/>
+                        <if>currentNode.parent().type() == "ResultingDataModels:sourceModelRoot"
+                            <then>
+                                var dataModel = editor.locateObjectByName("DataModel", currentNode.parent().param("dataModel"));
+                                var route = function("axiomsl.server.object_framework.RouteToObject", "createNameRouteFromObjectName", editor.getAxiomObjectManager(), editor.getBranchId(), currentNode.parent().param("dataModel"));
+                                editor.getRemoteProxy().lookupFieldsInDataSource(route.getNameRoute() + dataModel.getTree("hierarchy").getRootNode().getReference("dataSource").getTargetObjectName(), editor.getBranchId())
+                            </then>
+                            <else>
+                                macro("getResultingDataSourceFields", currentNode.parent().param("dataSource"));
+                            </else>
+                        </if>
+                    </attribute>
+                    <validation>
+                        macro("validateNonEmpty");
+                    </validation>
+                    <verifyForSave>
+                        macro("verifyNonEmpty");
+                    </verifyForSave>
+                </parameter>
+            </parameter>
+        </macro>
+
+        <macro name="mandatoryInJoinParameter">
+            <parameter name="mandatoryInJoin" description="Mandatory in Join" type="Boolean" length="10" group="Properties">
+                <if>currentNode.parent().type() == "ResultingDataModels:model"
+                    <then>
+                        <removed/>
+                    </then>
+                    <else>
+                        <enabled/>
+                    </else>
+                </if>
+            </parameter>
+        </macro>
+
+        <macro name="additionalJoinExpressionParameter">
+            <parameter name="additionalJoinExpression" description="Additional join expression" type="String" length="20" group="Properties">
+                <if>currentNode.parent().type() == "ResultingDataModels:model"
+                    <then>
+                        <removed/>
+                    </then>
+                    <else>
+                        <enabled/>
+                    </else>
+                </if>
+
+                <attribute name="lookupAppend">true</attribute>
+                <attribute name="lookupFromValues">"alias.field"
+                    <comma/>
+                    var values = macro("getResultingModelFields", currentNode.parent());
+                    var modelFields = macro("getResultingModelFields", currentNode);
+                    <for> var i = 0 <comma/> i &lt; modelFields.size() <comma/> i ++
+                        <do>
+                            values.add(modelFields.get(i));
+                        </do>
+                    </for>
+                    new("axiomsl.util.ui.NamedList", "Fields", l("Fields"), values.toArray()),
+                    macro("instanceDateKeysUnionFromModelsVariables", false, false, false),
+                    macro("sqlMacros"),
+                    macro("axiomExpressionLanguage"),
+                    macro("userDefinedFunctions")
+                </attribute>
+            </parameter>
+        </macro>
+
+        <macro name="validateModelNodeName" arguments="node, nodeName">
+            var modelNode = <node/>;
+            <for><comma/> modelNode != null and modelNode.type() != "ResultingDataModels:model"<comma/>
+                <do>
+                     modelNode = modelNode.parent()
+                </do>
+            </for>
+
+            var all = modelNode.getAllNodes();
+            <for>var i = 1 <comma/> i &lt; all.size() <comma/> i++
+                <do>
+                    var iNode = all.get(i);
+                    <if>iNode.getName().equals(<nodeName/>) and iNode.getID() != <node/>.getID()
+                        <then>
+                            return l("Model node %1 already exists", <nodeName/>);
+                        </then>
+                    </if>
+                </do>
+            </for>
+        </macro>
+
+        <macro name="getDefaultAliasName">
+            var result;
+            <for>var suffix = 1 <comma/> true <comma/> suffix++
+                <do>
+                    var name = "alias_" + new("java.text.DecimalFormat", "000").format(suffix);
+                    var found = false;
+                    <for>var i = 0 <comma/> i &lt; currentTable.size() <comma/> i++
+                        <do>
+                            <if>currentTable.get(i).param("alias") == name
+                                <then>
+                                    found = true;
+                                    break;
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+                    <if>!found
+                        <then>
+                            result = name;
+                            break;
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;result
+        </macro>
+
+        <macro name="getDefaultModelModeName" arguments="node">
+            var modelNode = <node/>;
+            <for><comma/> modelNode != null and modelNode.type() != "ResultingDataModels:model"<comma/>
+                <do>
+                     modelNode = modelNode.parent()
+                </do>
+            </for>
+
+            var allNodeNames = modelNode.getAllNodeNames();
+            var result;
+            <for>var suffix = 1 <comma/> true <comma/> suffix++
+                <do>
+                    var name = "New_Data_Model_Node_" + new("java.text.DecimalFormat", "000").format(suffix);
+                    var found = false;
+                    <for>var i = 1 <comma/> i &lt; allNodeNames.size() <comma/> i++
+                        <do>
+                            <if>allNodeNames.get(i) == name
+                                <then>
+                                    found = true;
+                                    break;
+                                </then>
+                            </if>
+                        </do>
+                    </for>
+                    <if>!found
+                        <then>
+                            result = name;
+                            break;
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;result
+        </macro>
+
+        <macro name="saveInstanceRules" arguments="node, treeNode, instanceKeys, defaultRuleParam, defaultRule">
+            var instanceSelectionRule = <node/>.getObject("instanceSelectionRule");
+            instanceSelectionRule.getObject("instanceDateRule").setProperty("type", <defaultRuleParam/>);
+            <if> <instanceKeys/> != null
+               <then>
+                   var instanceKeyRule;
+                   var instanceKeyRules = instanceSelectionRule.getTable("instanceKeyRules");
+                   <for> var instanceKeyIndex = 0 <comma/> instanceKeyIndex &lt; <instanceKeys/>.size() <comma/> instanceKeyIndex ++
+                       <do>
+                           instanceKeyRule = instanceKeyRules.addRow("InstanceSelectionRule:instanceKeyRule");
+                           instanceKeyRule.setProperty("instanceKeyName", <instanceKeys/>.get(instanceKeyIndex));
+                           instanceKeyRule.setProperty("type", <defaultRule/>);
+                       </do>
+                   </for>
+               </then>
+            </if>
+        </macro>
+
+        <macro name="getAvailableUsedFields">
+            var validModels = list();
+            var fieldList = list();
+            var models = param("models");
+            <for>var i = 0; <comma/> i &lt; models.size() <comma/>  i ++
+                <do>
+                    var model = models.get(i).param("name");
+                    <if>model != "" and model.indexOf("!!!") &lt; 0
+                        <then>
+                            var fields = editor.getRemoteProxy().lookupFieldsInModel(model, editor.getBranchId());
+                            <for>var j = 0; <comma/> j &lt; fields.size() <comma/>  j ++
+                                <do>
+                                    validModels.add(model);
+                                    fieldList.add(fields.get(j));
+                                </do>
+                            </for>
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;new("axiomsl.util.ui.MultiModelFieldList", validModels, fieldList);
+        </macro>
+        <macro name="getAvailableStreams">
+            var streamList = list();
+            var models = param("models");
+            <for>var i = 0; <comma/> i &lt; models.size() <comma/>  i ++
+                <do>
+                    var model = models.get(i).param("name");
+                    <if>model != "" and model.indexOf("!!!") &lt; 0
+                        <then>
+                            var dataModel = editor.locateObjectByName("DataModel", model);
+                            var streams = dataModel.getTable("streamKeys");
+                            <for>var j = 0; <comma/> j &lt; streams.size() <comma/>  j ++
+                                <do>
+                                    streamList.add(streams.get(j).getString("streamKeyName"));
+                                </do>
+                            </for>
+                        </then>
+                    </if>
+                </do>
+            </for>
+            streamList;
+        </macro>
+
+        <macro name="getAliasForModel" arguments="modelName">
+            var producingModels = param("models");
+            var result = "";
+            <for>var k = 0; <comma/> k &lt; producingModels.size() <comma/>  k ++
+                <do>
+                    <if>producingModels.get(k).param("name") == <modelName/>
+                        <then>
+                            result = producingModels.get(k).param("alias");
+                            break;
+                        </then>
+                    </if>
+                </do>
+            </for>
+            ;result
+        </macro>
+
+        <macro name="updateAliasInUsedFields">
+            var usedFields = param("usedFields");
+            var dollar = "$".charAt(0);
+            <for>var i = 0; <comma/> i &lt; usedFields.size() <comma/>  i ++
+                <do>
+                    var referenceName = usedFields.get(i).param("referenceName");
+                    <if>referenceName.startsWith(oldValue) and referenceName.charAt(oldValue.length()) == dollar
+                        <then>
+                            usedFields.get(i).param("referenceName") = newValue + referenceName.substring(oldValue.length());
+                        </then>
+                    </if>
+                </do>
+            </for>
+        </macro>
+
+        <macro name="warningIfModelIsNotUsed" arguments="modelName">
+            var usedFields = param("usedFields");
+            var found = false;
+            <for>var i = 0; <comma/> i &lt; usedFields.size() <comma/>  i ++
+                <do>
+                    var m = usedFields.get(i).param("model");
+                    <if>m == <modelName/>
+                        <then>
+                            found = true;
+                            break;
+                        </then>
+                    </if>
+                </do>
+            </for>
+            <if>!found
+                <then>
+                    confirm(l("There is no fields selected in the model %1. Are you sure you want to include it in Computation as producing model?", <modelName/>));
+                </then>
+                <else>
+                    true
+                </else>
+            </if>
+        </macro>
+
+    </macros>
+</data_set_category>

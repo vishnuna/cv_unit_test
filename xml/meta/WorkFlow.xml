@@ -1,0 +1,110 @@
+<metadata>
+	<object type="WorkFlow" extends="ObjectInBranch,DocData" version="43" upgraderClass="axiomsl.metadata_upgraders.WorkFlowUpgrader">
+		<property name="modules" valueType="table" rowTypes="WorkFlow:controlModule, WorkFlow:taskModule, WorkFlow:ifModule"/>
+		<property name="archivalProperties" valueType="object" objectType="ArchivalProperties"/>
+		<property name="iterators" valueType="table" rowTypes="WorkFlow:iterator"/>
+        <property name="runIteratorsInParallel" valueType="boolean" optional="true"/>
+        <property name="iterationsPoolSize" valueType="integer" optional="true"/>
+		<property name="keyParameters" valueType="table" rowTypes="WorkFlow:parameter" essential="true"/>
+		<property name="nonKeyParameters" valueType="table" rowTypes="WorkFlow:parameter" essential="true"/>
+	</object>
+	<object type="WorkFlow:iterator" version="1">
+		<property name="name" valueType="string"/>
+		<!--not a freehand, must be parsed explicitly-->
+		<property name="valuesListFormula" valueType="string"/>
+	</object>
+	<object type="WorkFlow:parameter" version="2">
+		<property name="name" valueType="string"/>
+		<property name="description" valueType="string"/>
+		<property name="dataType" valueType="string" choices="VARCHAR, INTEGER, FLOAT, DATE"/>
+		<property name="lookupFormula" valueType="string"/>
+	</object>
+	<object type="WorkFlow:taskModule" extends="ReferencibleSubobject" version="28">
+		<property name="taskType" valueType="string" canBeEmpty="false"/>
+		<!-- if underlying object is not set, task name will be the description property of task module,
+          and branch id will be the branch id of the workflow.
+          If underlying object is set, taks branch id will be the branch id of the underlying object -->
+		<property name="underlyingObject" valueType="url" optional="true"/>
+		<!-- formula expression for date of the task, if empty, use workflow date -->
+		<!--not a freehand, must be parsed explicitly-->
+		<property name="asOfDateFormula" valueType="string"/>
+
+		<!-- to specify formulas for instance keys and key/nonkey parameters, use freehand type in property values, and pass formula as string -->
+        <property name="instanceKeyValues" valueType="table" rowTypes="InstanceObject:instanceKeyValue"/>
+
+        <!--parameters are stored in the relative form in which they will be in the task (without changes) - relative to the underlying object's branch -->
+        <property name="keyParameters" valueType="object" includedByDefault="false" objectType="Task:keyParameters_{taskType}"/>
+		<property name="nonKeyParameters" valueType="object" includedByDefault="false" objectType="Task:nonKeyParameters_{taskType}"/>
+		<property name="parentModules" valueType="table" rowTypes="WorkFlow:parentModule"/>
+		<property name="locationX" valueType="double"/>
+		<property name="locationY" valueType="double"/>
+	</object>
+	<object type="WorkFlow:controlModule" extends="ReferencibleSubobject" version="9">
+		<property name="moduleType" valueType="string" canBeEmpty="false" choices="If,Error,Warning,DataCheck,ETL,AxiomScript,Email,Obsolete"/>
+		<!-- to specify formulas for parameters, use freehand type in property values, and pass formula as string -->
+		<property name="parameters" valueType="object" includedByDefault="false" objectType="WorkFlow:parameters_{moduleType}"/>
+		<property name="parentModules" valueType="table" rowTypes="WorkFlow:parentModule"/>
+		<property name="locationX" valueType="double"/>
+		<property name="locationY" valueType="double"/>
+	</object>
+    <!--deprecated-->
+    <object type="WorkFlow:ifModule" extends="ReferencibleSubobject" version="2">
+		<property name="expression" valueType="string" canBeEmpty="false"/>
+        <property name="parentModules" valueType="table" rowTypes="WorkFlow:parentModule"/>
+		<property name="locationX" valueType="double"/>
+		<property name="locationY" valueType="double"/>
+	</object>
+	<object type="WorkFlow:parentModule" version="2">
+		<property name="id" valueType="string"/>
+		<!-- parent module's id property -->
+		<property name="output" optional="true" valueType="string"/>
+		<property name="lineConnectors" valueType="table" rowTypes="WorkFlow:lineConnector"/>
+		<!-- dots -->
+	</object>
+	<object type="WorkFlow:lineConnector" version="2">
+		<property name="locationX" valueType="double"/>
+		<property name="locationY" valueType="double"/>
+	</object>
+	<object type="WorkFlow:parameters_If" version="5">
+		<property name="expression" valueType="string"/>
+        <property name="xmlSyntax" valueType="boolean"/>
+	</object>
+    <object type="WorkFlow:parameters_AxiomScript" version="1">
+		<property name="script" valueType="string"/>
+	</object>
+    <object type="WorkFlow:parameters_Email" version="1">
+		<property name="to" valueType="string"/>
+		<property name="from" valueType="string"/>
+        <property name="cc" valueType="string"/>
+        <property name="bcc" valueType="string"/>
+		<property name="template" valueType="url" targetObjectType="EmailTemplate" optional="true"/>
+        <property name="subject" valueType="string"/>
+        <property name="body" valueType="string"/>
+        <property name="attachment" valueType="string"/>
+        <property name="emailFunction" valueType="url" targetObjectType="Function" optional="true"/>
+        <property name="variables" valueType="table" rowTypes="WorkFlow:variableValue"/>
+	</object>
+    <object type="WorkFlow:variableValue" version="1">
+        <property name="name" valueType="string"/>
+        <property name="value" valueType="string"/>
+    </object>
+	<object type="WorkFlow:parameters_Error" version="4">
+		<property name="message" valueType="string"/>
+	</object>
+	<object type="WorkFlow:parameters_Warning" version="4">
+		<property name="message" valueType="string"/>
+	</object>
+    <object type="WorkFlow:parameters_DataCheck" version="9">
+		<property name="model" valueType="url" targetObjectType="DataModel"/>
+        <property name="instanceDateAndKeysValues" valueType="object" objectType="InstanceDateAndKeysValues" upgraderClass="axiomsl.metadata_upgraders.InstanceDateAndKeysValuesUpgrader"/>
+        <property name="aggrFunction" valueType="string"/>
+        <property name="field" valueType="object" objectType="DataModel:fieldReference"/>
+        <property name="conditionOnData" valueType="tree" rootNodeType="Condition"/>
+        <property name="conditionToCheck" valueType="string" canBeEmpty="false"/>
+        <property name="xmlSyntax" valueType="boolean"/>
+    </object>
+    <object type="WorkFlow:parameters_Obsolete" version="1">
+        <property name="obsoleteModuleName" valueType="string" canBeEmpty="true"/>
+        <property name="obsoleteModuleType" valueType="string" canBeEmpty="false"/>
+    </object>
+</metadata>

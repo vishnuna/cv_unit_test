@@ -1,0 +1,35 @@
+<object stamp="b6d0194a-bcfd-45b1-9b0c-c8924d4ad03c_1504104135763" type="DataModel" version="6">
+	<property name="name" value="test_dm" valueType="string"/>
+	<property name="description" value="Test DM" valueType="string"/>
+	<property name="objectId" value="3d9b27a9-7cf2-4784-b2f2-5678c2582114" valueType="string"/>
+	<property name="branchId" value="68b7506a-69d3-4255-9a4b-a03c53614e96" valueType="string"/>
+	<property name="isPermanent" value="false" valueType="boolean"/>
+	<property name="instanceKeys" valueType="table"/>
+	<property name="hierarchy" valueType="tree">
+		<objectNode type="DataModel:node" version="3">
+			<property name="name" value="root" valueType="string"/>
+			<property name="description" value="Test Fields" valueType="string"/>
+			<property name="id" value="7bac2712-75fd-438f-96fe-6714e8f6a6f4" valueType="string"/>
+			<property name="dataSource" valueType="url">DataSource["test_fields"{7f5ef73b-757f-4ffa-83d9-cb5cf259fc1d}]</property>
+			<property name="relationshipToParent" value="ONE_TO_ONE" valueType="string"/>
+			<property name="mandatoryInJoin" value="false" valueType="boolean"/>
+			<property name="additionalConstraint" valueType="table"/>
+			<property name="additionalJoinExpression" valueType="table"/>
+			<property name="instanceSelectionRule" valueType="object">
+				<object type="InstanceSelectionRule" version="3">
+					<property name="instanceDateRule" valueType="object">
+						<object type="InstanceSelectionRule:rule" version="3">
+							<property name="type" value="EQUAL" valueType="string"/>
+						</object>
+					</property>
+					<property name="instanceKeyRules" valueType="table"/>
+				</object>
+			</property>
+			<property name="join" valueType="table"/>
+		</objectNode>
+	</property>
+	<property name="streamKeys" valueType="table"/>
+	<property name="freezeLevel" value="1" valueType="integer"/>
+	<property name="performJoinOnAllStreamColumns" value="false" valueType="boolean"/>
+	<property name="mustInheritSourceIKs" value="true" valueType="boolean"/>
+</object>
